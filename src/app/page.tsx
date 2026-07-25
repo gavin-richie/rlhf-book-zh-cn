@@ -1,9 +1,17 @@
+import TopBar from "@/components/TopBar";
+import HeroSection from "@/components/HeroSection";
+import ChapterGrid from "@/components/ChapterGrid";
+import Footer from "@/components/Footer";
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground">
-        Clone target not yet built. Run <code className="font-mono text-foreground">/clone-website</code> to start.
-      </p>
-    </main>
+    <div className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
+      <TopBar />
+      <main>
+        <HeroSection />
+        <ChapterGrid />
+      </main>
+      <Footer />
+    </div>
   );
 }
