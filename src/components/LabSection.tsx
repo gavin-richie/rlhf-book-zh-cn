@@ -8,31 +8,55 @@ export default function LabSection({ chapterId }: { chapterId: string }) {
   useEffect(() => {
     const scriptUrl = `/assets/widgets/${chapterId}.js`;
 
-    // Clean up previous script if any
-    const cleanup = () => {
-      if (scriptRef.current) {
-        scriptRef.current.remove();
-        scriptRef.current = null;
-      }
-      (window as typeof window & { ChapterWidget?: unknown }).ChapterWidget = undefined;
-      document.querySelectorAll(`script[src="${scriptUrl}"]`).forEach(s => s.remove());
-    };
+    // Clear DOM content immediately to remove stale widget during navigation
+    const labRoot = document.getElementById("lab-root");
+    if (labRoot) labRoot.textContent = "";
+    const labIntro = document.getElementById("lab-intro");
+    if (labIntro) labIntro.textContent = "";
 
-    // When chapterId changes, cleanup happens at top of effect before loading new script
-    // (React fires cleanup of old effect before new effect runs)
+    // Remove ALL widget scripts so they don't accumulate across navigations
+    document.querySelectorAll('script[src^="/assets/widgets/"]').forEach(s => s.remove());
+    (window as typeof window & { ChapterWidget?: unknown }).ChapterWidget = undefined;
+
+    // Ensure KaTeX JS is loaded before widget script (many widgets use tex()).
+    // Load the CSS <link> if not already present.
+    if (!document.getElementById("katex-css")) {
+      const cssLink = document.createElement("link");
+      cssLink.id = "katex-css";
+      cssLink.rel = "stylesheet";
+      cssLink.href = "/assets/katex/katex.min.css";
+      document.head.appendChild(cssLink);
+    }
+    if (!(window as typeof window & { __KatexLoaded?: boolean }).__KatexLoaded) {
+      const kt = document.createElement("script");
+      kt.src = "/assets/katex/katex.min.js";
+      kt.async = true;
+      kt.onload = () => { (window as typeof window & { __KatexLoaded?: boolean }).__KatexLoaded = true; };
+      document.head.appendChild(kt);
+    }
 
     const script = document.createElement("script");
     script.src = scriptUrl;
     script.async = true;
     scriptRef.current = script;
 
-    const loadWidget = () => {
+    // Append and let scripts load sequentially. When this script's onload
+    // fires, check if THIS script element is still in the DOM. If it was
+    // removed by cleanup (a newer widget loaded), bail — the newer widget
+    // already rendered.
+    script.onload = () => {
+      if (!document.head.contains(script)) return;
+
       const w = (window as typeof window & { ChapterWidget?: {
         render: (el: Element) => void;
         title?: string;
         intro?: string;
-      } }).ChapterWidget;
+      } | undefined }).ChapterWidget;
       if (!w) return;
+
+      const root = document.getElementById("lab-root");
+      if (!root) return;
+      root.textContent = "";
 
       const lab = document.getElementById("lab");
       if (!lab) return;
@@ -46,7 +70,7 @@ export default function LabSection({ chapterId }: { chapterId: string }) {
 
       if (w.title) {
         const titleEl = lab.querySelector(".lab-title") as HTMLElement | null;
-        if (titleEl) titleEl.textContent = `🧪 互動實驗室 · ${w.title}`;
+        if (titleEl) titleEl.textContent = `🧪 互动实验室 · ${w.title}`;
       }
       if (w.intro) {
         const introEl = document.getElementById("lab-intro");
@@ -56,14 +80,12 @@ export default function LabSection({ chapterId }: { chapterId: string }) {
         }
       }
       try {
-        const labRoot = document.getElementById("lab-root");
-        if (labRoot) w.render(labRoot);
+        w.render(root);
       } catch (err) {
         console.error("widget render failed:", err);
       }
     };
 
-    script.onload = loadWidget;
     script.onerror = () => {
       console.error(`Failed to load widget: ${scriptUrl}`);
     };
@@ -71,9 +93,24 @@ export default function LabSection({ chapterId }: { chapterId: string }) {
     document.head.appendChild(script);
 
     return () => {
-      script.remove();
-      scriptRef.current = null;
+      // Remove this script from DOM. Next time a script's onload fires,
+      // document.head.contains(script) will be false and it will bail.
+      if (scriptRef.current) {
+        scriptRef.current.remove();
+        scriptRef.current = null;
+      }
       (window as typeof window & { ChapterWidget?: unknown }).ChapterWidget = undefined;
+      const root = document.getElementById("lab-root");
+      if (root) root.textContent = "";
+      const intro = document.getElementById("lab-intro");
+      if (intro) intro.textContent = "";
+      const lab = document.getElementById("lab");
+      if (lab) {
+        lab.style.visibility = "hidden";
+        lab.style.height = "0";
+        lab.style.overflow = "hidden";
+        lab.setAttribute("aria-hidden", "true");
+      }
     };
   }, [chapterId]);
 
@@ -84,7 +121,7 @@ export default function LabSection({ chapterId }: { chapterId: string }) {
       style={{ visibility: "hidden", height: 0, overflow: "hidden", margin: 0, padding: 0 }}
       aria-hidden="true"
     >
-      <h2 className="lab-title">🧪 互動實驗室</h2>
+      <h2 className="lab-title">🧪 互动实验室</h2>
       <div id="lab-intro" />
       <div id="lab-root" />
     </section>
