@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 4 章　指令微调 — RLHF 中文版</title>
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="../index.html">RLHF 中文版<span>从人类反馈中强化学习</span></a>
+  <nav class="chapnav"><a href="ch03.html">← 第 3 章</a><span class="chapnav-current">第 4 章　指令微调</span><a href="ch05.html">第 5 章 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav id="toc" class="toc"><h2>本章目录</h2></nav></aside>
+  <main class="main">
+    <div id="lab-banner"></div>
+    <article id="content" class="prose"></article>
+    <section id="lab" class="lab" hidden>
+      <h2 class="lab-title">🧪 互动实验室</h2>
+      <div id="lab-intro"></div>
+      <div id="lab-root"></div>
+    </section>
+    <nav class="pager"><a class="prev" href="ch03.html"><span class="dir">← 上一章</span><div class="ttl">第 3 章　训练总览</div></a><a class="next" href="ch05.html"><span class="dir">下一章 →</span><div class="ttl">第 5 章　奖励模型</div></a></nav>
+    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（）的<strong>非官方社群翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
+  </main>
+</div>
+<script type="text/markdown" id="chapter-md">
+# 第 4 章　指令微调（Instruction Fine-Tuning）
+
+> 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 31–36 頁。
+
+早期的大型預训练语言模型（pretrained language model）以下一個詞元預測（next-token prediction）为训练目標，預設并不具備明確的指令遵循介面。大約在 GPT-3 [63] 發布前後，提示（prompting）与情境學習（in-context learning）成为讓單一模型適應多種任務的常用方法（不過針對特定任務的微调當時仍相當普遍）：在上下文中展示范例，并要求模型完成類似的任務。实务上的下一步便是指令微调（instruction fine-tuning），它教導模型以「指令－回應」的格式作答，而非僅僅接續文字。舉例來說，給定提示「What is the capital of France?」（法國的首都是哪裡？），基礎模型（base model）可能會接續生成「What is the capital of Germany? What is the capital of Italy?…」（德國的首都是哪裡？義大利的首都是哪裡？……）——單純延續問題的模式——而經過指令微调的模型則會回答「The capital of France is Paris.」（法國的首都是巴黎。）
+
+指令微调的興起源自兩條研究路線的匯流。首先，NLP 領域從为個別任務量身打造的微调设置，轉向統一的「文字到文字」（text-to-text）或指令式框架，使得標準化多樣的数据集、并以單一模型跨多任務训练變得直接可行。将各種任務統一到同一框架的着名例子包括 *Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer*（T5 模型）[64]、*Finetuned Language Models Are Zero-Shot Learners*（FLAN 数据集）[65]、*Multitask Prompted Training Enables Zero-Shot Task Generalization*（T0 模型）[66]，以及 *Cross-Task Generalization via Natural Language Crowdsourcing Instructions*（Natural Instructions 数据集）[67]。其次，預训练语言模型的規模化，加上提示／情境學習的興起，显示單一模型可以跨任務泛化，但若模型有明確地在「指令－回應」范例上训练過，这種泛化會可靠得多。这些趨勢共同打开了在大量指令集合上微调預训练语言模型的時代——也就是現在通稱的指令微调（instruction fine-tuning, IFT）或監督式微调（supervised fine-tuning, SFT），讓训练通用模型變得對更廣大的族群觸手可及。
+
+自問世以來，指令微调（口語上也常簡稱为指令調校，instruction tuning）已日趨成熟，成为許多语言模型建模流程中的標準做法。就本質而言，IFT 是讓语言模型適應目標任務分布最簡單的方法。它为 RLHF 奠定基礎：讓模型先熟悉一種稱为問答（question-answering）的指令格式；对于想把現代技術應用到新領域的人而言，它也是第一個會用到的工具。若缺乏基本的指令遵循能力，本書所討論的多數流程——從偏好数据（preference data）蒐集到線上 RLHF 优化——都無法进行。
+
+指令微调在其他数据中已有大量詳盡的介紹，而且其核心就是監督式學習，因此本章聚焦在對 RLHF 实务工作者最重要的实务細節：训练数据如何格式化与結構化。数据与格式上的決策會被後續训练階段直接沿用，为模型吸收后训练（post-training）数据建立一套共通語言。
+
+## 4.1 聊天模板与指令結構（Chat Templates and the Structure of Instructions）
+
+后训练流程始于定义一種格式化使用者查詢的模式，使其能被透過分詞器（tokenizer）处理資訊的语言模型輕鬆讀取。使用預训练语言模型時，提示方式相當簡單。模型只認得少數幾個詞元（token）：序列起始詞元（beginning-of-sequence token，例如 `<bos_token>`）、序列結束詞元（end-of-sequence token，例如 `<eos_token>`），以及填充詞元（padding token，用來处理批次中含有空白部分的训练）。这表示要對基礎模型下提示，使用者只需輸入一段詞元序列，讓模型從該處接續生成，例如：
+
+```
+<bos_token> The capital of the United States is
+```
+
+接着，模型會持續生成詞元，直到用盡其上下文視窗（context window），或生成出序列結束詞元为止。
+
+從指令調校到 RLHF 以及其他方法，所有后训练階段都仰賴这種格式來训练模型。負責处理与使用者互动結構的工具，稱为**聊天模板（chat template）**。
+
+以下是一個我們将逐步解析的范例：
+
+```jinja
+{% if messages[0]['role'] == 'system' %}
+    {# 若對話以 system 訊息開頭，将其視为特殊的第一輪。
+       我們设置一個 offset，讓 user/assistant 的交替检查能正確对齐。 #}
+    {% set offset = 1 %}
+{% else %}
+    {# 没有 system 訊息：第一個非空輪次應为 user。 #}
+    {% set offset = 0 %}
+{% endif %}
+
+{# 輸出序列起始詞元（依模型而異）。 #}
+{{ bos_token }}
+
+{# 将每則訊息序列化为該模型的聊天標記詞元。 #}
+{% for message in messages %}
+    {# 強制角色交替：(system)、user、assistant、user、assistant、……
+       此布林运算式比較「这是否为 user 訊息？」与目前索引（加上 offset）
+       預期應輪到 user 还是 assistant。 #}
+    {% if (message['role'] == 'user') != (loop.index0 % 2 == offset) %}
+        {{ raise_exception('Conversation roles must alternate user/assistant/user/assistant/...') }}
+    {% endif %}
+
+    {# 以特殊詞元包裹每則訊息：
+       - <|im_start|><role>\n
+       - 訊息內容（去除頭尾空白）
+       - <|im_end|>\n
+       如此會产生一條语言模型可直接训练的扁平詞元序列。 #}
+    {{ '<|im_start|>' + message['role'] + '\n' + message['content'] | trim + '<|im_end|>\n' }}
+{% endfor %}
+
+{# 視需要附加一個没有內容的 "assistant" 起始標籤。
+   这會提示模型從 assistant 角色接續生成。 #}
+{% if add_generation_prompt %}
+    {{ '<|im_start|>assistant\n' }}
+{% endif %}
+```
+
+这段原始程式碼的功能，是把 Python 中包含訊息与角色的字典串列（list of dictionaries），转换成语言模型可以據以預測的詞元。
+
+所有傳入模型的資訊都會被指派一個角色（role）。傳統的三種角色为 `system`、`user` 与 `assistant`。
+
+`system` 標籤只用于對話的第一則訊息；其中存放給代理（agent）的文字指令，这些指令不會來自使用者，也不會揭露給使用者。这類**系统提示（system prompt）**用來提供模型額外的脈絡資訊，例如日期与時間，或用來修補模型行为。舉個有趣的例子，可以告訴模型諸如「You are a friendly chatbot who always responds in the style of a pirate.」（你是一個友善的聊天機器人，總是以海盜的口吻回答。）之類的指令。
+
+接下来的兩種角色相當直觀：`user` 存放使用这个 AI 的人所送出的訊息，`assistant` 則存放模型的回應（也就是以 AI 助理的身分應答）。
+
+为了把上述所有資訊转换为詞元，我們使用一開始給出的那段程式碼。模型擁有一系列*特殊詞元（special tokens）*，用來将各則訊息彼此區隔開。如果我們以范例查詢「How many helicopters can a human eat in one sitting?」（一個人一餐能吃下幾架直升機？）執行上面的程式碼，傳入模型的詞元序列會如下所示：
+
+```
+<|im_start|>system
+You are a friendly chatbot who always responds in the style of a pirate<|im_end|>
+<|im_start|>user
+How many helicopters can a human eat in one sitting?<|im_end|>
+<|im_start|>assistant
+```
+
+請注意，序列最后的詞元是 `<|im_start|>assistant`。模型正是藉此得知要繼續生成詞元，直到最終生成出其序列結束詞元为止——在此例中是 `<|im_end|>`。
+
+藉由把所有問答配對数据（以及下游的偏好調校数据）打包成这種格式，現代语言模型能以近乎完美的一致性遵循它。这就是指令微调後的模型用來与使用者、以及与運行在 GPU 或其他运算裝置上的模型交換資訊的語言。
+
+这種行为可以直接延伸到多輪對話，如下所示：
+
+```
+<|im_start|>system
+You are a friendly chatbot who always responds in the style of a pirate<|im_end|>
+<|im_start|>user
+How many helicopters can a human eat in one sitting?<|im_end|>
+<|im_start|>assistant
+Oh just 6.<|im_end|>
+<|im_start|>user
+Are you sure about that?<|im_end|>
+<|im_start|>assistant
+```
+
+在開放生態系中，把聊天模板套用到訊息串列的標準做法，是使用保存在分詞器设置檔中的 Jinja 程式片段，即 `apply_chat_template`。
+
+上述聊天模板衍生自 OpenAI 的聊天標記語言（Chat Markup Language, ChatML），这是早期試圖標準化訊息格式的嘗試。如今，OpenAI 与其他模型供應商採用階層式系统：使用者可以自行设置系统訊息，但其上還有更高層級的指令，而这些指令未必會揭露給使用者 [68]。
+
+還存在許多其他聊天模板。其他例子包括 Zephyr 的模板 [26]：
+
+```
+<|system|>
+You are a friendly chatbot who always responds in the style of a pirate</s>
+<|user|>
+How many helicopters can a human eat in one sitting?</s>
+<|assistant|>
+```
+
+或 Tülu 的模板：
+
+```
+<|user|>
+How are you doing?
+<|assistant|>
+I'm just a computer program, so I don't have feelings, but I'm functioning as expected.
+How can I assist you today?<|endoftext|>
+```
+
+除此之外，許多聊天模板還包含用于工具使用（tool-use）等任務的格式与其他詞元。
+
+## 4.2 指令調校的最佳实务（Best Practices for Instruction Tuning）
+
+指令調校作为后训练与打造有用语言模型的基礎，其地位已相當穩固。達成成功指令調校的方法很多。舉例來說，搭配部分模型參数量化（quantization）的高效率微调，讓训练變得非常容易入手 [69]。此外，在較窄的領域，例如聊天对齐（chat alignment）——亦即不涉及數學或程式碼等較困難的技能——小而聚焦的数据集就能達到很強的表現 [14]。
+
+ChatGPT 發布後不久，像 No Robots 这類僅有約一萬筆（10K）樣本的人工数据集曾是最先進水準 [70]。數年之后，大規模合成数据集（synthetic dataset）在多數任務上表現最佳 [6]。
+
+有幾項原則始終不變：
+
+- 高品質数据是效能的關鍵。模型實際學習的對象是補全（completion）內容（多數情況下不會對提示計算預測損失，因此模型不會學着去預測提示）。
+- 大約 100 萬筆提示就足以打造出能勝任出色 RLHF 与后训练的模型。進一步扩大規模仍有幫助，但報酬遞減得很快。
+- 最好的提示，是分布与所關注的下游任務相近的那些提示。
+- 若在指令調校之后還會进行多個训练階段，模型能夠從指令調校数据中的部分雜訊中恢復。设计整體的优化流程，比執着于每個個別階段更重要。
+
+## 4.3 实现細節（Implementation Details）
+
+虽然損失函數与預训练所用的相同，仍有幾個關鍵实现細節与預训练的设置不同。許多做法——例如決定採用哪些平行化（parallelism）方式，把模型切分（shard）到多顆 GPU 上——与預训练相同，但使用的機器總數通常較少（原因見下列第一項技術差異）：
+
+- **較小的批次大小（batch size）**：与預训练相比，指令調校（以及偏好微调等其他后训练技術）使用的批次大小小得多，以便在較窄的数据分布上妥善优化，同时保留模型從預训练獲得的泛化能力。舉例來說，OLMo 2 的預训练在 7B 模型使用 1024 個打包列（packed-rows）的批次大小、13B 使用 2048，这些模型的總上下文長度为 4096 個詞元，且批次中的每一列都是由多份文件組合而成、填滿整個序列長度。而在后训练時，这兩個模型都只使用 256 筆*提示*的批次大小 [58]，且不填滿整個序列長度（因此每個批次中未被遮罩的詞元数量少得多）。較小的批次大小意味着这些训练工作無法像預训练那樣切分到那麼多裝置上——实务上，分散式训练设置有每裝置最小批次大小的限制，所以若想在 SFT 中保持較小的全域批次大小，可以累計使用較少的 GPU。实务上，批次大小迫使單一训练工作同时佔用較少的 GPU 并不構成瓶頸，因为 SFT 的训练詞元數遠小于預训练，而且后训练需要以多個隨機種子（seed）训练，才能取得最佳的最終表現。
+- **提示遮罩（prompt masking）**：預训练時，批次中的每個詞元都以自迴歸（autoregressive）方式預測，并對它們計算損失。指令調校則會把提示詞元遮罩掉，讓模型不去學習精準預測使用者查詢——只學習回應。其他后训练算法也同樣如此。
+- **多輪遮罩（multi-turn masking）**：对于多輪對話，常見有兩種遮罩选择。（1）*僅最后一輪（final-turn only）*：只有最后一個 assistant 輪次的詞元納入損失，先前所有上下文（包括較早的 assistant 輪次）都被遮罩。長對話仍可「展开」（unroll）成多筆训练樣本：對一段 $N$ 輪的對話，每筆樣本預測一個 assistant 回應，同时遮罩所有先前的上下文并排除任何後續輪次。（2）*僅遮罩 user 輪次（mask user turns only）*：所有 user 輪次都被遮罩，但*每一個* assistant 輪次都納入損失。在此设置下，若想要更多（更短的）训练樣本，同樣可以展开，但關鍵差異在于中间的 assistant 回覆會被直接拿來训练。
+- **与預训练相同的損失函數**：指令調校使用与預训练语言模型相同的自迴歸損失函數，但数据与遮罩方式大不相同（只在完整序列上训练，而預训练的文件則可以被拆分到不同批次），諸如此類。
+- **學習率（learning rate）**：SFT 通常使用比預训练小一到兩個数量級的學習率，以妥善因應不同的优化動態（較小的数据集、較小的批次，以及強大的預训练初始化，都傾向採取更保守的更新）。例如，OLMo 2 預训练的峰值學習率为 $3 \times 10^{-4}$，SFT 則为 $1 \times 10^{-5}$ [58]。Olmo 3 使用較高的 SFT 學習率 $5\text{–}8 \times 10^{-5}$ [18]，部分原因是其训练基礎設施採用序列打包（sequence packing），把多筆樣本塞進同一條训练序列，提高了以有效詞元計的等效批次大小。較大的批次能产生变异數較低的梯度估計，進而支撐較高的學習率而不致讓训练不稳定——这種關係稱为線性缩放法則（linear scaling rule）。學習率通常會在一小部分训练步數內先暖身（warm up）提升，之后再線性衰減。实务上，團隊通常會掃描多個學習率，并依保留（held-out）评估套件挑選最佳的检查點（checkpoint）[18]。
+
+## 4.4 建議实验（Suggested Experiments）
+
+配套程式碼保存庫在 `code/instruction_tuning/` 中提供了一個小型 SFT 训练腳本。它的用意是作为學習練習，讓「基礎模型到助理模型」的轉變具體可見。
+
+1. **執行標準 SFT 范例，觀察基礎模型→助理模型的轉變。** 執行：
+
+   ```bash
+   cd code/
+   uv run python -m instruction_tuning.train --config instruction_tuning/configs/sft_olmo2_1b.yaml
+   ```
+
+   这會以 `HuggingFaceH4/no_robots` 数据集训练 `allenai/OLMo-2-0425-1B`（基礎版本），并且每 50 個优化器步數，對一組固定的提示池打印生成结果。在第 0 步，基礎模型會語無倫次、重複提示，并产生格式錯誤的角色標記；經過幾百步之后，同樣的提示會产生簡潔、并在 `<|endoftext|>` 處正確終止的回答。这是指令調校的健全性检查（sanity check）——損失函數与預训练相同，只是套用在提示詞元被遮罩的聊天模板上。
+
+2. **掃描學習率。** 复制 `sft_olmo2_1b.yaml`，在其他條件全部固定不變的情況下，嘗試 `lr` 为 `1e-6`、`5e-6` 与 `5e-5`。觀察在哪個學習率下模型率先能好好回答并乾淨收尾，又在哪個學習率下過擬合并開始產出模板形狀的劣質內容（slop）。这是前述「比預训练低一到兩個数量級」指引的实现版本。
+
+</script>
+<script src="../assets/marked.min.js"></script>
+<script src="../assets/katex/katex.min.js"></script>
+<script src="../assets/katex/auto-render.min.js"></script>
+<script src="../assets/widgets/ch04.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/gh-star.js"></script>
+</body>
+</html>

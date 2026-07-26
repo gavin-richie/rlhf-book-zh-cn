@@ -1,6 +1,11 @@
 "use client";
 
+import { useLocale } from "@/i18n/locale-context";
+
 export default function LabLink() {
+  const locale = useLocale();
+  const isZhTw = locale === "zh-tw";
+
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const lab = document.getElementById("lab");
@@ -18,7 +23,7 @@ export default function LabLink() {
 
   return (
     <a href="#lab" onClick={handleClick}>
-      前往實驗室 ↓
+      {isZhTw ? "前往實驗室 ↓" : "前往实验室 ↓"}
     </a>
   );
 }

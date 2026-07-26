@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 12 章　合成数据与蒸馏 — RLHF 中文版</title>
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="../index.html">RLHF 中文版<span>从人类反馈中强化学习</span></a>
+  <nav class="chapnav"><a href="ch11.html">← 第 11 章</a><span class="chapnav-current">第 12 章　合成数据与蒸馏</span><a href="ch13.html">第 13 章 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav id="toc" class="toc"><h2>本章目录</h2></nav></aside>
+  <main class="main">
+    <div id="lab-banner"></div>
+    <article id="content" class="prose"></article>
+    <section id="lab" class="lab" hidden>
+      <h2 class="lab-title">🧪 互动实验室</h2>
+      <div id="lab-intro"></div>
+      <div id="lab-root"></div>
+    </section>
+    <nav class="pager"><a class="prev" href="ch11.html"><span class="dir">← 上一章</span><div class="ttl">第 11 章　偏好数据</div></a><a class="next" href="ch13.html"><span class="dir">下一章 →</span><div class="ttl">第 13 章　工具使用与函数呼叫</div></a></nav>
+    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（）的<strong>非官方社群翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
+  </main>
+</div>
+<script type="text/markdown" id="chapter-md">
+# 第 12 章　合成数据与蒸馏（Synthetic Data & Distillation）
+
+> 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 143–158 頁。
+
+來自*人類反馈*的强化學習，深植于一個理念：讓人類的影響力持續存在于我們所打造的模型之中。當第一批模型成功以 RLHF 训练完成時，人類数据是以这種方式改進模型的*唯一*可行途徑。
+
+當時，只有人類能为训练撰寫出品質夠高的問題回覆；也只有人類能蒐集可靠且具體的反馈数据來训练奖励模型。
+
+隨着 AI 模型愈來愈強，这个假設迅速瓦解。合成数据遠比人類数据便宜、也更容易迭代，它的出現降低了实验与研究的成本，促成了 RLHF 的普及。这也使得 RLHF 成为更廣義的「后训练」（post-training）模型塑造方法中，最早受到關注的核心。本章将概略介紹合成数据如何、以及为何正在取代或扩充 RLHF 流程中的許多環節。
+
+## 12.1 合成数据的角色（The Roles of Synthetic Data）
+
+對合成数据常見的批評之一是**模型崩潰**（model collapse）——指反覆在模型自身的生成內容上训练，會逐漸窄化有效的训练分布 [270]。隨着多樣性下降，罕見的事實与風格會被低估，小錯誤也可能在多次迭代中被放大，導致泛化能力變差。实务上，这些失敗大多与「在未經過濾、重複、單一模型的輸出上自我训练」有關；混入真實／人類数据、使用多樣的教師模型、去重複，以及嚴格的品質過濾，大致就能避開崩潰的情境。就今日前沿实验室的训练流程而言，證據显示合成数据可以、也应该被大規模使用，而不會出現崩潰論最強版本所暗示的災難性退化 [271] [272]。
+
+領先的模型**需要合成数据**才能達到最佳效能。現代后训练中的合成数据涵蓋训练的許多環節——语言模型被用來從種子范例生成新的训练提示 [273]、修改既有提示、为提示生成完成（completion）[274]、提供 AI 反馈以建立偏好数据 [28]、過濾完成 [275]，以及更多其他用途。合成数据是后训练的關鍵。
+
+合成数据能發揮到这種程度的影響力，是從 GPT-4 等級的模型才開始的。在早期语言模型（如 Llama 2 与 GPT-3.5-Turbo）的時代，模型在生成或監督数据流程方面還不夠可靠。在一到兩年之內，语言模型生成答案的能力就遠遠超越了人類。在從 GPT-3.5 過渡到 GPT-4 等級模型的過程中，模型執行 LLM 評審（LLM-as-a-judge）任務的能力也隨之浮現。GPT-4 或更好的模型在對一段內容生成反馈或評分時，穩健性与一致性都高出許多。
+
+自 2022 年底 ChatGPT 問世以來的这些年間，我們見到許多具有影響力的合成数据集。其中包括：UltraFeedback [28]，第一個着名的合成偏好数据集，打开了 DPO 革命；Stanford Alpaca，2023 年最早的聊天式微调数据集之一；Tülu 3 [6] 中聚焦特定技能（例如數學、程式、指令遵循）的合成数据集；以及 OpenThoughts 3 和 2025 年許多其他用于训练思考模型的合成推理数据集 [173]。今日要入門業界等級后训练的多數經典參考数据，都涉及上述的 Tülu 3 或 OpenThoughts 3 之類的数据集，而快速入門指南往往從較小、較簡單的数据集（如 Alpaca）着手，因为训练速度快得多。
+
+另一項重大變化与数据集規模有關：微调数据集的提示数量不斷成長——Alpaca 是 5.2 萬筆，OpenThoughts 与 Tülu 3 則是百萬筆以上——回覆的長度也在增加。更長的回覆与更多的提示，使得 Alpaca 数据集約在 1,000 萬训练 token 之譜，Tülu 大約大 50 倍、約 5 億 token，OpenThoughts 3 更大，約在 100 億 token 之譜。
+
+在这段轉變過程中，合成数据并非在整條流程中均勻地取代人類数据。就**指令数据（SFT）**而言，合成生成已大致勝出——如今從更強模型蒸馏而得的完成，品質高于大多數人類寫作者在規模化情境下所能提供的（在最困難的前沿推理問題上有些例外）。就 **RLHF 的偏好数据**而言，情況比較分歧：學術研究显示合成偏好数据表現相當，但前沿实验室仍将人類偏好数据視为競爭護城河。就**評測**而言，分工又是另一種樣貌：LLM 評審讓模型輸出的*評分*得以低成本規模化，但底層的基準测试与標準答案標籤仍需由人類建立。整體模式是：在模型可靠度超越人類之處，合成数据佔據主導；而在能力前沿、建立標準答案，以及引導训练方面，人類仍不可或缺。
+
+## 12.2 以合成数据进行蒸馏（Distillation with Synthetic Data）
+
+在關于合成数据在语言模型中角色的討論裡，「蒸馏」（distillation）一直是最有力的說法。蒸馏一詞源自深度學習文獻中師生知識蒸馏（teacher-student Knowledge Distillation, KD）的技術定义 [276]。
+
+![圖](../webapp/assets/figures/fig-p144-1.png)
+*圖 36：傳統知識蒸馏以 KL 散度損失训练較小的學生模型，去匹配較大教師模型的軟機率分布。兩個模型同时处理相同的輸入，而溫度缩放（$\tau > 1$）會使分布變得平滑，以揭露更多類別之間關係的資訊。*
+
+蒸馏在口語上則泛指使用較強模型的輸出来训练較小的模型。
+
+![圖](../webapp/assets/figures/fig-p145-1.png)
+*（示意圖：提示 $\{x_i\}$ 輸入強模型（例如 GPT-4）产生完成 $\{y_i\}$，兩者構成用于训练較小模型的合成数据集 $\{(x_i, y_i)\}$。）*
+
+在后训练中，这種廣義的蒸馏概念通常有兩種形式：
+
+1. 作为橫跨后训练流程各環節的数据引擎：为指令生成完成、偏好数据（或憲法式 AI（Constitutional AI）），或 RL 的验证。
+2. 将特定技能從較強模型轉移到較弱模型，这通常用于數學推理或程式撰寫等特定技能。
+
+第一種策略隨着语言模型的演進而日益流行，因为在各式任務上，模型撰寫答案已比人類更可靠。GPT-4 等級的模型将其范畴扩大到：針對數學与程式等複雜任務蒸馏更強的模型（如前所述）。在这裡，蒸馏促成了一種模型套件（model suite）的作法：实验室往往會训练一個大型的内部模型，例如 Claude Opus 或 Gemini Ultra，不對外釋出，只在内部用來讓較強的模型變得更好。在開放模型的世界，常見作法是将封閉 API 模型的训练数据蒸馏到較小、公開釋出權重的模型中 [26]。在此之中，策劃高品質的提示并過濾教師模型的回覆，是效能最大化的關鍵。
+
+将特定技能轉移到較小的语言模型，使用的是同樣的蒸馏原理——取得可用于训练的最佳数据。这方面已有許多論文研究如何使用來自較強模型的有限数据集，來改進对齐 [14]、數學推理 [277] [278]，以及测试時扩展（test-time scaling）[158]。
+
+本章其餘部分的合成数据方法，都是把语言模型輸出直接用于训练流程之中的各種数据配方。
+
+## 12.3 邁向 on-policy 師生蒸馏（The Path to On-Policy, Teacher-Student Distillation）
+
+虽然廣義的蒸馏已成为语言模型后训练的標準作法，但隨着后训练配方轉向推理与代理式（agentic）模型，「師生知識蒸馏」这个特定子領域重新受到關注。以新形式知識蒸馏训练的領先模型包括阿里巴巴的 Qwen3 [60]、小米的 MiMo-V2-Flash [184]、智譜 AI 的 GLM-5 [279]，以及 DeepSeek-V4-Pro [280]。
+
+蒸馏之所以放在本章，是因为現代后训练中許多合成数据的用法，实务上就是受蒸馏啟發的流程：由較強的模型产生標籤、完成、logits、評語或其他監督訊號，再以这些訊號训练學生模型。与此同时，蒸馏的技術文獻正逐漸發展为自成一格的后训练方法，特別是隨着 on-policy 与自我蒸馏（self-distillation）配方日益普及。目前我們把它視为合成数据工具箱的一部分來介紹，但本書未來的版本或許值得为蒸馏另闢專章，作为与指令微调、强化學習等并列的训练工具。
+
+### 12.3.1 将知識蒸馏调整至语言模型（Adapting Knowledge-Distillation for LMs）
+
+最初的文獻引入知識蒸馏，是特別作为一種從已训练完成、更強及／或更大的*教師*網路训练*學生*模型的方法 [276]。KD 的特點是使用*軟*训练標籤，而非標準目標函數（例如以交叉熵損失做下一個 token 預測）所用的 one-hot 標籤。基于軟標籤的目標函數關注所有可能的下一個 token 或預測的完整分布，而不只是單一預測 token 是否正確，并训练學生分布去匹配教師分布。
+
+KD 原則上可以套用于任何深度學習問題，例如對輸入預測單一類別。若要将它特別套用到自迴歸式的语言模型，可以把損失分解成逐 token 的分布匹配損失。2016 年，Kim 与 Rush 将 KD 應用于讓學生模型從教師模型生成的*序列*中學習 [281]。
+
+令 $s$ 为來源句子或提示，$u = (u_1, \ldots, u_J)$ 为來自教師模型的完整輸出序列，$\mathcal{V}$ 为輸出词汇表（分詞器中所有可能的 token），$q$ 为教師模型在下一個 token 上的分布，$p$ 为學生分布。这裡我們用 $u$ 作为完整教師輸出序列的中性符號，把 $a$ 保留給下文 on-policy／RL 記號中由學生取樣的完成／動作序列。請注意，原論文稱此为詞層級（word-level）蒸馏，但對現代语言模型而言，最好把它理解为在分詞器词汇表上的逐 token 分布匹配，因为該論文早于現代的子詞（sub-word）分詞器：
+
+$$\mathcal{L}_{\text{WORD-KD}} = -\sum_{j=1}^{J}\sum_{k=1}^{|\mathcal{V}|} q(u_j = k \mid s, u_{<j}) \log p(u_j = k \mid s, u_{<j}). \tag{127}$$
+
+WORD-KD 是将經典的、受 Hinton 啟發的師生知識蒸馏應用于语言模型。这通常會在训练語料中既有的一段靜態文本上进行。
+
+它具有一般的交叉熵形式 $-\sum_z q(z)\log p(z)$。在每個位置 $j$，教師分布 $q$ 對每個可能的下一個 token $k \in \mathcal{V}$ 都指派機率，而當學生分布 $p$ 對教師認为可能性高的 token 給出低機率時，就會受到懲罰。
+
+序列層級蒸馏則把 $\mathcal{U}$ 視为所有可能輸出序列的空間，讓學生匹配教師在完整序列上的分布。由于對所有完整序列 $u \in \mathcal{U}$ 求和是不可行的——这需要對指數多的潛在序列求和——Kim 与 Rush 以單一高機率教師輸出 $\hat{u}$ 上的點質量（point mass）來近似教師的序列分布。这裡 $\hat{u}$ 是以教師模型透過束搜索（beam search）产生的序列，因此 $\hat{u} = \text{BeamSearch}_q(s) \approx \arg\max_{u\in\mathcal{U}} q(u \mid s)$：
+
+$$\begin{aligned}
+\mathcal{L}_{\text{SEQ-KD}}(s) &= -\sum_{u \in \mathcal{U}} q(u \mid s)\log p(u \mid s) \approx -\log p(\hat{u} \mid s) \\
+&= -\sum_{j=1}^{|\hat{u}|} \log p(\hat{u}_j \mid s, \hat{u}_{<j}).
+\end{aligned} \tag{128}$$
+
+SEQ-KD 朝現代方法邁進了一步：由教師模型生成 token 作为學生的訊號。这是解锁我們稍後将看到的各種 on-policy 蒸馏風格的核心步驟，也是讓「對所有可能序列的計算」變得可行的必要條件。在過渡到現代模型常用的 KD 變體時，我們會把这種風格的训练稱为*離線*（offline）KD——意即用于训练學生模型的生成內容是事先（a priori）产生的。
+
+在繼續之前，有兩個關聯值得一提。
+
+第一，过去有一系列以離線 KD 训练的知名模型，例如分類器 DistilBERT [282] 与 TinyBERT [283]，它們把语言模型的其他改進与離線蒸馏結合（值得注意的是，并非*序列*蒸馏，因为这些编码器模型并不是为多 token 自迴歸預測而蒸馏的）。
+
+第二，我們可以把它連結到第 15 章對 Kullback-Leibler（KL）散度的完整討論，因为上面使用的交叉熵目標与 KL 散度密切相關。對教師分布 $q$ 与學生分布 $p$，交叉熵定义为
+
+$$H(q,p) = -\sum_z q(z)\log p(z). \tag{129}$$
+
+这与式 (127) 及式 (128) 的第一項具有相同形式。交叉熵也可以分解为教師分布的熵加上一個 KL 散度：
+
+$$\begin{aligned}
+H(q,p) &= H(q) + D_{\text{KL}}(q \,\|\, p) \\
+&= -\sum_z q(z)\log q(z) + \sum_z q(z)\log\frac{q(z)}{p(z)}.
+\end{aligned} \tag{130}$$
+
+第一項 $H(q)$ 只取決于教師。因此，當教師是固定的、且是训练数据的來源時，最小化交叉熵等價于最小化從教師到學生的前向 KL（forward KL），$D_{\text{KL}}(q\|p)$。这正是離線 KD 与 SFT 式训练所使用的 KL 方向。
+
+### 12.3.2 從離線到 on-policy 蒸馏（From Offline to On-Policy Distillation）
+
+这些*離線* KD 算法有一些侷限，促成了 on-policy 變體的出現。學習的離線本質意味着：學生模型在推断時自行生成的序列，与教師模型之間可能存在分布不匹配。例如，前向 KL 目標可能促使學生模型高估教師分布中的低機率區域。这些問題合起来，为 *on-policy* 蒸馏（on-policy distillation, OPD）打开了空間。
+
+这種训练—测试落差稱为**曝露偏差**（exposure bias）[284] [285]。離線 KD 取樣教師軌跡 $u \sim \pi_T(\cdot \mid s)$，并在所得的前綴上最小化逐 token 的 KL：
+
+$$\mathcal{L}_{\text{KD}}(\theta) = \mathbb{E}_{s\sim\mathcal{D},\, u\sim\pi_T(\cdot\mid s)} \sum_t D_{\text{KL}}\big(\pi_T(\cdot \mid s, u_{<t}) \,\|\, \pi_\theta(\cdot \mid s, u_{<t})\big). \tag{131}$$
+
+但在推断時，學生是依照自己的策略进行 rollout，因此真正重要的量是沿着*它自己的*軌跡的期望任務損失：
+
+$$\mathcal{L}_{\text{eval}}(\theta) = \mathbb{E}_{s\sim\mathcal{D}_{\text{test}},\, a\sim\pi_\theta(\cdot\mid s)}\, \ell_{\text{task}}(s, a) \tag{132}$$
+
+这裡 $\ell_{\text{task}}(s,a)$ 表示對完成後的學生回覆所計算的任何下游任務損失，例如答案錯誤、测试案例未通过，或評審／評分準則損失。曝露偏差是不等式 $\pi_T(\cdot \mid s) \neq \pi_\theta(\cdot \mid s)$ 的直接後果：训练期間造訪的前綴 $(s, u_{<t})$ 与测试時造訪的前綴 $(s, a_{<t})$ 來自不同的狀態造訪分布，因此學生被監督的狀態集合，与它實際行動所處的狀態集合并不相同。
+
+轉向 on-policy 蒸馏的核心變化在于：我們可以调整优化方式，改为從學生模型取樣、并衡量其与教師分布的距離，而不是從教師模型取樣。MiniLLM 指出需要轉向反向 KL（reverse KL）优化（我們在第 15 章會直觀地解釋为什么这个目標可能更好），并提出在線上策略梯度 RL 框架內使用 KD 損失函數 [286]。其他同期工作 [287] 展示了 on-policy KD 的潛力，并把「由學生生成、由教師評分」的迭代過程連結到 RL 文獻中的模仿學習（imitation learning）。要建立这个連結，可以看一種模仿學習算法 DAgger：它迭代地训练一個代理人，讓它以學到的策略在環境中行動，并由一個 oracle 策略給出「它當時应该採取什么動作」的反馈，这些反馈隨後可用來更新其策略 [288]。
+
+这種落差的代價，可以透過啟發 DAgger 的監督式模仿學習界（bound）來量化。在原始的離散動作设居中，假設學到的策略在教師誘導的训练分布上，以期望每步動作誤差 $\epsilon$ 匹配教師，其中 $\mathbb{I}[\cdot]$ 是條件为真時回傳 1、否则回傳 0 的指示函數，
+
+$$\mathbb{E}_{s_t \sim d_{\pi_T}}\big[\mathbb{I}(\pi_\theta(s_t) \neq \pi_T(s_t))\big] \leq \epsilon. \tag{133}$$
+
+監督式模仿學習的分析 [288] 显示，沿着從學生取樣、長度为 $L$ 的軌跡所累積的期望損失，可能隨 $L$ 呈平方級成長 [285]：
+
+$$\mathbb{E}_{a\sim\pi_\theta(\cdot\mid s)}\left[\sum_{t=1}^{L} \ell(s, a_{<t})\right] \leq O(\epsilon L^2). \tag{134}$$
+
+對 LLM 而言，这个離散動作的界應被視为一種類比，而非理論保證。实务上，LLM 是在長視野上預測完整的下一個 token 分布，因此式 (133) 中的 0-1 動作不一致假設并不能乾淨地套用。提示或前綴可以自然地對應到狀態、取樣到的 token 對應到動作，但 token 層級的蒸馏通常以 KL 或交叉熵等分布式損失來衡量，所以經典的 DAgger 數學并不能完全轉移。
+
+这種 $O(\epsilon L^2)$ 的誤差累積在現代 LLM 上尤其明顯，因为它們動輒生成橫跨數千 token 的序列。單一個次佳的 token 會讓前綴稍微偏離分布，而模型從未見過这个被擾動的前綴，因此更可能再次出錯，導致文本品質劣化或出現幻覺。On-policy 蒸馏的解法是*迭代地*從當前學生模型取樣完成，并在其造訪的狀態上以教師进行監督。學生面對自己的錯誤、在它實際造訪的分布外狀態上獲得教師反馈，并學會恢復（recovery）行为。根據 DAgger 的互动式模仿學習分析，这種迭代程序可以把誤差累積從 $O(\epsilon L^2)$ 降到 $O(\epsilon L)$ [288]。對 LLM 而言，这解釋了 OPD 背後的動機：確切的界未必能乾淨地套用到每一種 token 層級的蒸馏设置，但 on-policy 方法在实务上的成功支持了这个底層直覺。
+
+在 on-policy 蒸馏中，令 $s$ 为提示，$a = (a_1, \ldots, a_L)$ 为從當前學生策略 $\pi_\theta(\cdot \mid s)$ 取樣的完成，并令 $s_t = (s, a_{<t})$ 为第 $t$ 步的 token 層級狀態。教師策略 $\pi_T$ 是固定的，因此这个目標是在由學生誘導出的狀態上，比較學生的下一個 token 分布与教師的分布。由于期望是從 $\pi_\theta$ 取樣、且學生分布位于 $D_{\text{KL}}(\pi_\theta\|\pi_T)$ 的左侧，这是一個反向 KL 目標：
+
+$$\mathcal{L}_{\text{OPD}}(\theta) = \mathbb{E}_{s,\, a\sim\pi_\theta(\cdot\mid s)} \sum_t D_{\text{KL}}\big(\pi_\theta(\cdot\mid s_t)\,\|\,\pi_T(\cdot\mid s_t)\big). \tag{135}$$
+
+这裡我們已改用期望記號，如第 6 章所大量使用的——該章涵蓋基礎的 RL 策略梯度算法——因为这个优化是透過取樣軌跡并以數值方式估計梯度來求解的。轉向这種取樣框架，自然銜接到現代以 RL 训练 LLM 的基礎設施，其设计正是为了在「以當前受訓策略生成 token」与「執行學習更新」之間快速交替。
+
+事實上，近期的 OPD 实现把 KD 与 RL 的这種整合又往前推了一步：直接把 KD 距離當作 RL 优化中的奖励訊號。一個典型的实现是把「對反向 KL 距離的逐 token 貢獻取負值」代入 RL 算法中的優勢（advantage）[289]。對在狀態 $s_t$ 取樣到的 token $a_t$，token 層級的對數機率差可以寫成一個類似優勢的訊號：
+
+$$A_t^{\text{OPD}} = \log \pi_T(a_t \mid s_t) - \log \pi_\theta(a_t \mid s_t). \tag{136}$$
+
+使用「逐 token KL 貢獻的負值」把最小化轉成了最大化訊號：教師評分高于學生的 token 得到正優勢，教師評分低于學生的 token 得到負優勢。教師的對數機率差就像稠密的 token 層級反馈，可能比稀疏的可验证奖励或奖励模型輸出提供更有用的學習訊號。
+
+### 12.3.3 現代 OPD 變體（Modern OPD Variants）
+
+这个设置還可以進一步扩充：使用多個教師模型來教導一個最終模型，或在生成中插入額外資訊以協助模型辨识錯誤。首先，我們介紹如何把多個教師整合到單一训练中。这些教師可以是特定的專家模型（例如針對數學或程式等領域），也可以是先前的中繼训练检查點。對每個教師，可以按训练批次中的提示或任務類型选择貢獻權重，構成多教師 on-policy 蒸馏（Multi-Teacher On-Policy Distillation, MOPD）[184]。對多個教師，令 $\pi_{T_k}$ 为第 $k$ 個教師、$w_k(s)$ 为其隨提示而變的混合權重（滿足 $\sum_k w_k(s) = 1$），置于反向 KL 損失中：
+
+$$\mathcal{L}_{\text{MOPD}}(\theta) = \mathbb{E}_{s,\, a\sim\pi_\theta(\cdot\mid s)} \sum_t \sum_k w_k(s)\, D_{\text{KL}}\big(\pi_\theta(\cdot\mid s_t)\,\|\,\pi_{T_k}(\cdot\mid s_t)\big). \tag{137}$$
+
+在大規模后训练中，这能讓配方在日益成長的組織中進一步扩展。多個團隊可以各自打造高品質的專家模型，作为後續最終學生模型的教師模型，如 [280] 与 [184] 的作法。
+
+OPD 有許多方式可以与本書探討的其他領域結合，例如把反向 KL 作为優勢，疊加在其他形式的優勢計算之上（如 GRPO 的群組層級正規化），從而实现更複雜的奖励塑形（reward shaping）。KD 方法在后训练方法中相當特別，因为它們通常要求學生与教師共用分詞器——監督訊號可以是來自另一個 LLM 的逐 token 反馈。
+
+延伸的作法，例如 on-policy 自我蒸馏（On-Policy Self-Distillation, OPSD），是讓语言模型自己（或藉助外部工具）验证一條完成，充當帶有特權資訊的教師，使模型無需一個明確更強的教師也能提升自身表現 [290]（OPSD 训练的概覽見圖 38）。例如，Cursor 就以「對 RL 軌跡施加針對性文字反馈」形式的自我蒸馏，训练其 Composer 2.5 程式模型 [291]，該模型由 Kimi K2.5 微调而來。以下是簡化後的直觀說明，实务上下述设置會与其他損失函數（如程式正確性）結合。在这个设居中，Cursor 讓模型以一個帶有常見錯誤清單的評判提示來審查 RL 軌跡。當發現錯誤時，評判模型會在 RL 過程中修改生成的序列——插入一個提示（hint），讓模型未來能從中學習——然后再进行蒸馏損失的計算。这形成一個迴圈：先在 RL 中以標準语言模型生成产生完成，接着執行評判模型并視情況插入 hint token，最后为新的完成生成 logprobs，用于部署知識蒸馏損失。在 token 空間中的 hint 足以幫助模型修正自己的輸出，即使是在效能的絕對前沿上持續進步（關于如何最妥善地建構与使用这些 hint，仍有許多进行中的研究，这類資訊常被稱为*特權資訊*（privileged information）[292]）。
+
+这使得 on-policy 蒸馏成为一種核心的后训练方法，既可用來把多種技能結合到一個通用模型中，也可用來在特定的部署場景中推進前沿。
+
+### 12.3.4 建議实验（Suggested Experiments）
+
+隨附程式碼 `code/distillation/` 实现了 SDPO [293]，即圖 38 所示的 on-policy 自我蒸馏设置（与同期的 OPSD 論文 [290] 密切相關）：同一個策略既扮演「以示範为條件」的教師，也扮演「只看到問題」的學生，并以逐 token 的反向 KL 训练。它在一個小型的字串反轉任務上執行，使整個 on-policy 蒸馏迴圈足夠便宜，可以在單一 GPU 上端到端觀察。
+
+1. **執行 SDPO 字串反轉范例。**
+
+   ```
+   cd code/
+   uv run python -m distillation.train --config distillation/configs/sdpo.yaml
+   ```
+
+   觀察 `reward`、`loss` 与 `skipped`，以及迴圈中印出的教師／學生 rollout 樣本。`skipped` 計數是「輪詢到的提示中，其取樣群組不含任何正確 rollout」的数量；隨着學生進步，被跳過的提示會愈來愈少，`reward` 也會朝 1 攀升。
+
+2. **调整 on-policy 相關旋鈕。** 复制 `distillation/configs/sdpo.yaml`，在任務固定的前提下掃描 `num_rollouts`、`kl_top_k` 与 `prompts_per_step`。每個提示的 rollout 數越多，越容易找到一條正確的同組示範（降低 `skipped`），但每步的生成成本更高；`kl_top_k` 則在「反向 KL 匹配多少教師分布」与計算量之間取捨。
+
+![圖](../webapp/assets/figures/fig-p151-1.png)
+*圖 37：三種蒸馏情境的比較——依 rollout 的來源与監督訊號的流向區分。**序列 KD**（左）：教師離線生成一份輸出，學生以交叉熵（CE）損失被训练去匹配它。**On-policy 蒸馏（OPD）**（中）：學生以 on-policy 方式生成 rollout（例如在 RL 框架內），由一個獨立的教師为每個造訪的 token 評分，以逐 token 的 KL 散度训练學生。**On-policy 自我蒸馏（OPSD）**（右）：同一個模型扮演兩種角色——在脈絡中加入特權資訊（hint）構成教師軌跡，無 hint 的生成再以 KL 損失朝它蒸馏，不需要獨立的教師模型。*
+
+![圖](../webapp/assets/figures/fig-p151-2.png)
+*圖 38：字串反轉任務上的 on-policy 自我蒸馏（OPSD）。同一個策略 $\pi_\theta$ 對同一條由學生取樣的完成 $y$ 前向計算兩次：一次是**教師**通道，以問題加上一條正確的同組示範为條件（黃色）；一次是**學生**通道，只以問題为條件（綠色）。兩次通道之間的逐 token 反向 KL（教師端停止梯度），把「只看到問題」的策略拉向「以示範为條件」的自己；反白的欄位是取樣錯誤的 token，也是兩個分布分歧最大之處。*
+
+## 12.4 AI 反馈（AI Feedback）
+
+在 RLHF 爆發式成長後不久，來自 AI 反馈的强化學習（RL from AI Feedback, RLAIF）作为一種替代方案出現：讓 AI 近似流程中的人類数据環節，加速实验与進展。廣義而言，AI 反馈是一大類技術的統稱：使用 AI 來扩增或生成「說明某個輸入品質」的数据（这些数据可用于不同的训练方法或評測），其起點是成對偏好（pairwise preferences）[294] [295] [296]。使用 RLAIF 完全取代或扩增人類反馈的動機有很多。在 RLHF 流程中，AI 反馈最为人所知的角色在偏好数据蒐集与相關的奖励模型训练階段（憲法式 AI 即是其中一種特定的实现）。在本章中，我們聚焦于一般性的 AI 反馈，以及它在 RLHF 训练流程中的这種特定用法；本書稍後還會涵蓋更多理解或使用合成数据的方式。
+
+隨着 AI 反馈日趨成熟，其應用已超越單純取代人類偏好標籤。促成低成本偏好数据蒐集的同一套 LLM 評審基礎設施，也促成了可規模化的評測（見第 16 章），以及更晚近的、把 RL 训练延伸到没有可验证答案領域的評分準則（rubrics）式奖励——本章稍後将探索这个前沿。
+
+### 12.4.1 平衡 AI 与人類反馈数据（Balancing AI and Human Feedback Data）
+
+在生成特定数量的反馈方面，AI 模型遠比人類便宜：截至 2026 年，一筆人類偏好数据的成本約在 1 美元以上（甚至每提示超過 10 美元），而使用前沿 AI 模型（如 GPT-4o）的 AI 反馈成本不到 0.01 美元。此外，人力成本大致維持不變，而領先模型在这些任務上的表現持續提升、性價比也不斷改善。这種成本差距讓过去被價格排除在外的一整個群體，得以進入 RLHF 方法的实验市場。
+
+除了價格之外，AI 反馈在效能上相对于人類反馈也引入了不同的*取捨*，这在更廣泛的文獻中仍在持續研究。AI 反馈更为普及的角色是在評測我們正在训练的语言模型，因为其低廉的價格使其能用于各種大規模任務——在那些場景中，人類数据的成本（或時間延遲）并不可行。这些議題彼此深度交織——AI 反馈数据永遠不會完全取代人類数据（即便在評測上），而用于評測的 AI 反馈数量将遠超過用于训练的数量，因为評測模型的人遠多于训练模型的人。
+
+AI 反馈数据究竟在哪些領域与應用（即聊天、安全、推理、數學等）優于人類数据，尚未完全確立。一些早期的 RLAIF 工作显示 AI 反馈可以完全取代人類数据，并宣稱它是有效的替代品 [294]，特別是僅以聊天任務評測時 [28] [297]。ChatGPT 之后研究 RLHF 的早期文獻，其評測套件較为狹窄，聚焦于「作为有用助理的模型」在各種領域的「对齐」（第 17 章将進一步討論）。後續工作則呈現出更細緻的圖像：在更廣的評測集（例如包含一些推理任務）上，最佳平衡點是把一部分具挑戰性的数据點路由給人類做精確標註，而大部分数据送交 AI 反馈 [298] [299]。虽然還没有研究聚焦于「跨更廣領域的 RLHF 中人類与 AI 反馈数据的配比」，但已有許多技術報告显示 RLHF 整體能改善这一大套評測：有些使用 DPO，如 Ai2 的 Tülu 3 [6] 与 Olmo 3 [18]，或 Hugging Face 的 SmolLM 3 [205]；也有些使用線上 RLHF 流程，如 NVIDIA 的工作混用了來自 Scale AI 的人類偏好数据与基于 LLM 的反馈（透過 HelpSteer 系列工作 [300] [108] [109] [257]）：Nemotron Nano 3 [183]、Nemotron-Cascade [301]，以及 Llama-Nemotron 推理模型 [169]。
+
+整體而言，儘管 AI 反馈与相關方法對这个領域顯然極为有用，但人類数据顯然尚未被这些更便宜的替代品完全取代。存在許多假說，但「人類数据是否能在真實產品情境中對模型提供更精細的控制」，或对于較新的训练方法——如性格训练（character training，一組讓你能精確控制模型個性的新興技術，見第 17 章）——是否更有利，都還没有被研究。對入門者而言，AI 反馈應是首選；但對正在扩展到更大規模營運的流程來說，最終轉向納入人類反馈是可能的。
+
+RLAIF 一詞由 Anthropic 的工作《Constitutional AI: Harmlessness from AI Feedback》[24] 引入，这在 AI 社群中一度造成對論文標題中兩種方法（憲法式 AI 与 AI 反馈）之間關係的混淆。自憲法式 AI（CAI）論文發表、RLAIF 被正式化以來，RLAIF 已成为后训练与 RLHF 文獻中的預設方法——例子多到難以枚舉。兩者的關係應理解为：CAI 是打开 RLAIF 这个更廣領域的起始范例。
+
+區分人類数据与 AI 反馈数据的經驗法則如下：
+
+1. 人類数据是高雜訊、低偏差。这意味着数据的蒐集与過濾可能比較困難，但整理妥當後能提供非常可靠的訊號。
+2. 合成偏好数据是低雜訊、高偏差。这意味着 AI 反馈数据比較容易上手，但可能對模型产生棘手、非預期的二階效應，而这些效應會系统性地存在于数据之中。
+
+本書列舉了許多學術结果，显示在 RLHF 工作流程中可以用 AI 偏好数据替代并獲得優異的評測分數 [298]；但更廣泛的業界趨勢显示，RLHF 的文獻与較不透明的業界最佳实务是分離的。在業界，人類数据通常被視为重要的護城河与重大的技術優勢。
+
+### 12.4.2 打造專門用于評判的 LLM（Building Specific LLMs for Judgment）
+
+隨着 RLAIF 方法日益普及，許多人開始思考：我們是否应该用同一批模型來生成回覆、又用它們來生成評語或評分？特別是，所使用的 LLM 評審的校準（calibration）受到質疑。多項研究显示，LLM 是不一致的評測者 [302]，而且偏好自己的回覆勝過其他模型的回覆（稱为自我偏好偏差（self-preference bias））[207]。
+
+由于这些偏差，許多人問：解決之道是否是專为这種標註任務训练一個獨立的模型？已有多個以「替代前沿模型作为数据標註工具」为目標的模型釋出，例如評語模型（critic model）Shepherd [303] 与 CriticLLM [304]，或類似 Auto-J [305]、Prometheus [85]、Prometheus 2 [306]、Prometheus-Vision [307] 的回覆表現评估模型，但它們并未被廣泛採納進有文獻記載的训练配方中。有些人發現，透過重複取樣來扩展推断 [156] [308] [309]、自我精煉（self-refinement）[310]，或錦標賽排名（tournament ranking）[311]，能對真實評判提供更好的估計，或产生更高品質的偏好對。其他校準技術則讓模型的生成与評判能力共同演化 [312]。目前普遍接受的看法是：偏差固然存在，但領先的语言模型已为这項任務接受了大量训练——因为它既是 AI 实验室内部運作所必需，也被客戶廣泛使用——所以一般不需要训练自己的評審模型，除非你的任務涉及大量未公開于網際網路的私有資訊。
+
+## 12.5 憲法式 AI（Constitutional AI）
+
+憲法式 AI（CAI）是 Anthropic 在其 Claude 模型中使用的方法，也是最早有文獻記載、大規模将合成数据用于 RLHF 训练的案例。憲法式 AI 以兩種方式生成合成数据：
+
+1. 依據一組原則——例如「这个答案是否鼓勵暴力？」或「这个答案是否誠實？」——對指令微调数据进行評語（critique）。當模型生成問題的答案後，它會根據憲法中的原則清單检查答案，逐步精煉答案。之后，模型再在这份最終数据集上微调。
+2. 透過语言模型判斷「在憲法中隨機抽出的一條原則作为脈絡下，哪個完成較佳」來生成成對偏好数据（類似原則引導奖励模型（principle-guided reward models）的研究 [313]）。之后，RLHF 照常以合成数据进行，因此得名 RLAIF。
+
+大體而言，CAI 以上述的後半部分（偏好数据）着稱，但它为指令数据引入的方法，如今在整個后训练中被廣泛用于一般性的数据過濾与合成数据生成方法。
+
+CAI 可以形式化如下。
+
+透過採用一組人類撰寫的原則——他們稱之为*憲法*（constitution）——Bai 等人（2022）使用另一個 LLM 生成用于微调的人工偏好与指令数据 [24]。憲法 $\mathcal{C}$ 是一組成文原則，指出評語階段應關注的特定面向。指令数据的策劃方式是：反覆抽樣原則 $c_i \in \mathcal{C}$，并要求模型修改其對提示 $x$ 的最新輸出 $y^i$，使之符合 $c_i$。这會從用于評語的原則 $\{c_0, c_1, \cdots, c_{n-1}\}$ 产生一系列指令變體 $\{y^0, y^1, \cdots, y^n\}$。最終的数据點是提示 $x$ 加上某個 $n$ 對應的最終完成 $y^n$。
+
+偏好数据的建構方式類似、但更簡單：以 $\mathcal{C}$ 中的一部分原則作为反馈模型的脈絡。反馈模型收到一個提示 $x$、一組原則 $\{c_0, \cdots, c_n\}$，以及來自先前 RLHF 数据集、標記为答案 (A) 与 (B) 的兩個完成 $y_0$ 与 $y_1$。新的数据點由语言模型選出「品質較高且更符合所述原則」的輸出 (A) 或 (B) 而生成。在較早期的模型中，可以用 `The answer is:` 提示模型，然后看哪個 token（A 或 B）機率較高；但如今这更常由一個會先解釋其推理、再選出答案的模型处理——这通常被稱为一種生成式奖励模型（generative reward model）[82]。
+
+### 12.5.1 CAI 延伸閱讀（Further Reading on CAI）
+
+憲法式 AI 有許多相關的研究方向与延伸，但很少有被記載为 RLHF 与后训练配方中的明確改進。
+
+- OpenAI 發布了模型規範（Model Spec）[269]——一份陳述其模型預期行为的文件——并表示他們正在探索讓模型直接參照該文件的对齐方法（可視为与 CAI 相近的作法）。OpenAI 持續更新其規範，并以名为審議式对齐（Deliberative Alignment）[314] 的方法训练其推理模型（如 o1），使模型在对齐時參照这些安全或行为政策。
+- Anthropic 持續在其模型训练中使用 CAI，更新 Claude 所使用的憲法 [315]，并实验研究群體集體如何對模型原則形成共識，以及當外部群體自行制定原則、再交給 Anthropic 用于训练模型時，模型行为會如何改變 [316]。
+- 開源社群探索了将 CAI 應用于開放数据集的復現 [317]，以及在语言模型之間創造對話数据的探索 [318]。
+- 其他工作以不同的优化方法使用原則驅動的偏好或反馈。Sun 等人（2023）[319] 把原則作为奖励模型的脈絡，用于训练 Dromedary 模型 [313]。Glaese 等人（2022）[42] 使用原則來提升 RLHF 過程中人類判斷的準確性。Liu 等人（2025）[157] 训练一個在推断時生成自身原則的奖励模型，并用这些原則給出最終分數。Franken 等人（2024）[320] 把原則遵循形式化为一個互資訊最大化問題，讓預训练模型無需標籤即可學習。
+
+## 12.6 評分準則：針對個別提示的 AI 反馈训练訊號（Rubrics: Prompt-Specific AI Feedback for Training）
+
+AI 反馈在训练中的角色于 2024 年底至 2025 年間持續成長，因为整個領域都在尋找扩展「可验证奖励强化學習」的途徑（見第 7 章）。評分準則（rubrics）的想法應運而生：为那些没有明確可验证答案的提示，取得近乎可验证的評判標準。这讓模型可以嘗試對一個問題生成多個答案，并（以 RL）朝最佳答案更新。这个想法与本章討論的其他方法密切相關，而且很可能是隨着 LLM 評審与合成数据实务在整個業界的成熟，才開始真正運作起来的。如今，以評分準則作为奖励的 RL 已被證實能在科學推理或事實性（factuality）等技能上帶來有意義的改進 [321], [322], [323], [324]。
+
+以下是一個范例評分準則及其對應的提示 [324]：
+
+```
+**Prompt**: As a museum curator, can you suggest five obscure artifacts that would be
+perfect for a "Mysteries of the Ancient World" exhibit? Each artifact should come from a
+different culture and time period, with a brief description of their historical
+significance and mysterious origins. These artifacts should leave visitors wondering
+about the secrets and lost knowledge of our past. Thank you for your expertise in
+bringing this exhibit to life.
+```
+
+> 中譯：**提示**：作为一位博物館策展人，你能否推薦五件冷門的文物，非常適合「古代世界之謎」特展？每件文物應來自不同的文化与時代，并附上其歷史意義与神秘起源的簡短描述。这些文物應讓參觀者對我們過往的秘密与失落知識产生好奇。感謝你以專業協助打造这檔展覽。
+
+```
+** Rubric**:
+1. The response includes exactly five distinct artifacts as requested. [Hard Rule]
+2. The response ensures each artifact originates from a different culture and time
+period. [Hard Rule]
+3. The response provides a brief description of each artifact's historical significance.
+[Hard Rule]
+4. The response provides a brief description of each artifact's mysterious origins or
+unexplained aspects. [Hard Rule]
+5. The response conveys a sense of intrigue and mystery that aligns with the theme of
+the exhibit. [Hard Rule]
+6. The response clearly and accurately communicates information in a well-organized and
+coherent manner. [Principle]
+7. The response demonstrates precision and clarity by avoiding unnecessary or irrelevant
+details. [Principle]
+8. The response uses informative and engaging language that stimulates curiosity and
+critical thinking. [Principle]
+9. The response shows thoughtful selection by ensuring each example contributes uniquely
+to the overall theme without redundancy. [Principle]
+10. The response maintains consistency in style and format to enhance readability and
+comprehension. [Principle]
+```
+
+> 中譯：**評分準則**：
+> 1. 回覆須依要求包含恰好五件不同的文物。[硬性規則]
+> 2. 回覆須確保每件文物來自不同的文化与時代。[硬性規則]
+> 3. 回覆須为每件文物的歷史意義提供簡短描述。[硬性規則]
+> 4. 回覆須为每件文物的神秘起源或未解之處提供簡短描述。[硬性規則]
+> 5. 回覆須傳達与展覽主题相符的懸疑与神秘感。[硬性規則]
+> 6. 回覆須以組織良好、條理連貫的方式，清楚且準確地傳達資訊。[原則]
+> 7. 回覆須避免不必要或無關的細節，展現精確与清晰。[原則]
+> 8. 回覆須使用有資訊量且引人入勝的語言，激發好奇心与批判性思考。[原則]
+> 9. 回覆須展現周全的选择，確保每個范例對整體主题有獨特貢獻、不重複。[原則]
+> 10. 回覆須維持風格与格式的一致性，以提升可讀性与理解度。[原則]
+
+其中 `[Hard Rule]` 与 `[Principle]` 是用來標示某項反馈優先程度的特定標籤。也可以使用其他標示重要性的方法，例如簡單的優先順序數字。
+
+評分準則的生成通常是對训练数据逐提示（per-prompt）进行的，这會在準備階段累積可觀的合成数据成本。为了緩解这一點，常見作法是以一份通用評分準則作为各領域的起點，再由一個負責監督的语言模型为每個提示指定細粒度的評分準則分數，以引導训练的反馈。以下是一個为科學任務生成評分準則的范例提示 [321]：
+
+```
+You are an expert rubric writer for science questions in the domains of Biology,
+Physics, and Chemistry.
+Your job is to generate a self-contained set of evaluation criteria ("rubrics") for
+judging how good a response is to a given question in one of these domains.
+Rubrics can cover aspects such as factual correctness, depth of reasoning, clarity,
+completeness, style, helpfulness, and common pitfalls.
+Each rubric item must be fully self-contained so that non-expert readers need not
+consult
+any external information.
+
+Inputs:
+- question: The full question text.
+- reference_answer: The ideal answer, including any key facts or explanations.
+
+Total items:
+- Choose 7-20 rubric items based on question complexity.
+
+Each rubric item must include exactly three keys:
+1. title (2-4 words)
+2. description: One sentence beginning with its category prefix, explicitly stating what
+to look for.
+
+For example:
+- Essential Criteria: States that in the described closed system, the total mechanical
+energy (kinetic plus potential)
+before the event equals the total mechanical energy after the event.
+- Important Criteria: Breaks down numerical energy values for each stage, demonstrating
+that initial kinetic
+energy plus initial potential energy equals final kinetic energy plus final potential
+energy.
+- Optional Criteria: Provides a concrete example, such as a pendulum converting between
+kinetic and potential
+energy, to illustrate how energy shifts within the system.
+- Pitfall Criteria: Does not mention that frictional or air-resistance losses are
+assumed negligible when applying
+conservation of mechanical energy.
+
+3. weight: For Essential/Important/Optional, use 1-5 (5 = most important); for Pitfall,
+use -1 or -2.
+
+Category guidance:
+- Essential: Critical facts or safety checks; omission invalidates the response.
+- Important: Key reasoning or completeness; strongly affects quality.
+- Optional: Nice-to-have style or extra depth.
+- Pitfall: Common mistakes or omissions; highlight things often missed.
+
+Format notes:
+- When referring to answer choices, explicitly say "Identifies (A)", "Identifies (B)",
+etc.
+- If a clear conclusion is required (e.g. "The final answer is (B)"), include an
+Essential Criteria for it.
+- If reasoning should precede the final answer, include an Important Criteria to that
+effect.
+- If brevity is valued, include an Optional Criteria about conciseness.
+
+Output: Provide a JSON array of rubric objects. Each object must contain exactly three
+keys-title, description, and weight.
+Do not copy large blocks of the question or reference_answer into the text. Each
+description must begin with its category
+prefix, and no extra keys are allowed.
+Now, given the question and reference_answer, generate the rubric as described.
+The reference answer is an ideal response but not necessarily exhaustive; use it only as
+guidance.
+```
+
+> 中譯：你是一位專精于生物、物理与化學領域科學問題的評分準則撰寫專家。你的工作是产生一組自足的评估準則（「rubrics」），用以評判一份回覆對这些領域中某個給定問題的好壞。評分準則可以涵蓋事實正確性、推理深度、清晰度、完整性、風格、有用性与常見陷阱等面向。每一條評分項目必須完全自足，讓非專家讀者無需查閱任何外部資訊。
+>
+> 輸入：
+> - question：完整的題目文字。
+> - reference_answer：理想答案，包含所有關鍵事實或解釋。
+>
+> 總項數：
+> - 依題目複雜度选择 7–20 條評分項目。
+>
+> 每條評分項目必須恰好包含三個鍵：
+> 1. title（2–4 個詞）
+> 2. description：一句話，以其類別前綴開頭，明確說明要检查的內容。
+>
+> 例如：
+> - Essential Criteria（必要準則）：指出在所述的封閉系统中，事件發生前的總力學能（動能加位能）等于事件發生後的總力學能。
+> - Important Criteria（重要準則）：逐階段拆解數值化的能量，展示初始動能加初始位能等于最終動能加最終位能。
+> - Optional Criteria（可選準則）：提供具體例子（例如單擺在動能与位能之間转换），說明能量如何在系统內移轉。
+> - Pitfall Criteria（陷阱準則）：未提及套用力學能守恆時，假設摩擦或空氣阻力損耗可忽略不計。
+>
+> 3. weight：Essential／Important／Optional 使用 1–5（5 为最重要）；Pitfall 使用 -1 或 -2。
+>
+> 類別指引：
+> - Essential：關鍵事實或安全检查；遺漏即使回覆無效。
+> - Important：關鍵推理或完整性；強烈影響品質。
+> - Optional：加分性的風格或額外深度。
+> - Pitfall：常見錯誤或遺漏；凸顯經常被忽略之處。
+>
+> 格式注意事項：
+> - 提及答案選項時，明確寫出「Identifies (A)」、「Identifies (B)」等。
+> - 若需要明確的結論（例如「最終答案是 (B)」），为此加入一條 Essential 準則。
+> - 若推理應先于最終答案，加入一條表達此點的 Important 準則。
+> - 若重視簡潔，加入一條關于簡潔性的 Optional 準則。
+>
+> 輸出：提供一個由評分準則物件組成的 JSON 陣列。每個物件必須恰好包含 title、description、weight 三個鍵。不要把題目或 reference_answer 的大段文字复制進來。每條 description 必須以其類別前綴開頭，且不允許額外的鍵。現在，根據給定的 question 与 reference_answer，依上述說明生成評分準則。reference answer 是一份理想回覆，但不必然詳盡；僅作为指引使用。
+
+另一個更簡單的范例如下 [323]：
+
+```
+SYSTEM:
+You generate evaluation rubrics for grading an assistant's response to a user prompt.
+
+Rubric design rules:
+- Each criterion must be atomic (one thing), objective as possible, and written so a
+grader can apply it consistently.
+- Avoid redundant/overlapping criteria; prefer criteria that partition different failure
+modes.
+- Make criteria self-contained (don't rely on unstated context).
+- Include an importance weight for each criterion.
+
+Output format (JSON only):
+{
+  "initial_reasoning": "<brief rationale for what matters for this prompt>",
+  "rubrics": [
+    {
+      "reasoning": "<why this criterion matters>",
+      "criterion": "<clear, testable criterion>",
+      "weight": <integer 1-10>
+    },
+    ...
+  ]
+}
+
+USER:
+User prompt:
+{prompt}
+
+Generate the rubric JSON now.
+```
+
+> 中譯：
+> SYSTEM（系统）：你負責生成评估用的評分準則，用來为助理對使用者提示的回覆評分。
+>
+> 評分準則设计規則：
+> - 每條準則必須是原子式的（只检查一件事）、盡可能客觀，且寫得讓評分者能一致地套用。
+> - 避免重複或重疊的準則；優先选择能劃分不同失敗模式的準則。
+> - 準則必須自足（不可依賴未陳述的脈絡）。
+> - 为每條準則附上重要性權重。
+>
+> 輸出格式（僅限 JSON）：其中 `initial_reasoning` 为「針對此提示、什么才重要的簡短理由」；`rubrics` 为一個陣列，每個元素包含 `reasoning`（此準則为何重要）、`criterion`（清楚、可檢驗的準則），以及 `weight`（1–10 的整數）。
+>
+> USER（使用者）：使用者提示：{prompt}
+>
+> 現在生成評分準則 JSON。
+
+如你所見，这些提示可以非常詳細，并且會針對训练设置加以調校。
+
+結合 RL 训练的評分準則将持續演進，超越其早期應用，扩展到指令遵循 [325]、深度研究（deep research）[326]、评估深度研究代理 [327]，或長篇生成 [328]。
+
+</script>
+<script src="../assets/marked.min.js"></script>
+<script src="../assets/katex/katex.min.js"></script>
+<script src="../assets/katex/auto-render.min.js"></script>
+<script src="../assets/widgets/ch12.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/gh-star.js"></script>
+</body>
+</html>

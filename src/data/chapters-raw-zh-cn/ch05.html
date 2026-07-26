@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 5 章　奖励模型 — RLHF 中文版</title>
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="../index.html">RLHF 中文版<span>从人类反馈中强化学习</span></a>
+  <nav class="chapnav"><a href="ch04.html">← 第 4 章</a><span class="chapnav-current">第 5 章　奖励模型</span><a href="ch06.html">第 6 章 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav id="toc" class="toc"><h2>本章目录</h2></nav></aside>
+  <main class="main">
+    <div id="lab-banner"></div>
+    <article id="content" class="prose"></article>
+    <section id="lab" class="lab" hidden>
+      <h2 class="lab-title">🧪 互动实验室</h2>
+      <div id="lab-intro"></div>
+      <div id="lab-root"></div>
+    </section>
+    <nav class="pager"><a class="prev" href="ch04.html"><span class="dir">← 上一章</span><div class="ttl">第 4 章　指令微调</div></a><a class="next" href="ch06.html"><span class="dir">下一章 →</span><div class="ttl">第 6 章　强化學習</div></a></nav>
+    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（）的<strong>非官方社群翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
+  </main>
+</div>
+<script type="text/markdown" id="chapter-md">
+# 第 5 章　奖励模型（Reward Modeling）
+
+> 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 37–52 頁。
+
+奖励模型（reward model）是現代 RLHF 方法的核心，因为複雜的人類偏好正是在这裡被學習的。它們讓我們的模型得以從難以明確定义的訊號中學習。它們把数据中的複雜特徵压缩成一種可供下游训练使用的表示——这是一種再次展現現代深度學習強大能力的魔法。这些模型在後續章节所研究的核心优化中扮演代理目標（proxy objectives）的角色。如圖 11 所示，奖励模型扮演着類似標準 RL 環境的角色，为代理人（agent）提供學習訊號；但与固定不變的環境不同，我們得以從人類偏好中學習它。
+
+奖励模型在强化學習研究中歷來被廣泛用作環境奖励的代理 [54]。其現代形式的奖励模型，最初是作为研究價值对齐問題（value alignment problem）的工具而被提出 [38]。这類模型通常接收某種形式的輸入，并輸出單一純量的奖励值。这个奖励可以有多種形式——在傳統 RL 問題中，它試圖逼近該問題的精確環境奖励；但我們将在 RLHF 中看到，奖励模型實際上輸出的是某個輸入「品質很高」的機率（亦即在成對偏好關係中被选择的答案）。RLHF 的奖励建模实务与逆向强化學習（inverse reinforcement learning）密切相關——後者的問題是在給定行为軌跡的情況下逼近代理人的奖励函數 [71]——也与深度强化學習的其他領域相關。兩者高層次的問題陳述相同，但实现方式与研究重點完全不同，因此通常被視为完全獨立的研究領域。
+
+最常見的奖励模型通常稱为 Bradley-Terry 奖励模型，也是本章的主要焦點；它預測的是一段文字相对于训练比較数据中的另一段文字「較受偏好」的機率。本章稍後我們也會将它与结果奖励模型（Outcome Reward Models, ORMs）、過程奖励模型（Process Reward Models, PRMs）以及其他類型的奖励模型进行比較。
+
+*在本章中，我們用 $x$ 表示提示（prompt）、$y$ 表示補全（completion）。这種記號在语言模型文獻中很常見，因为这些方法是在完整的提示—補全對上運作，而不是在個別 token 上。*
+
+## 5.1 训练 Bradley-Terry 奖励模型（Training a Bradley-Terry Reward Model）
+
+奖励模型的標準实现源自 Bradley-Terry 偏好模型 [72]。训练 RLHF 標準奖励模型有兩種常見的表達方式——它們在數學上是等價的。首先，Bradley-Terry 偏好模型定义了在兩個項目 $i$ 与 $j$ 的成對比較中，評審偏好 $i$ 勝過 $j$ 的機率：
+
+$$P(i > j) = \frac{p_i}{p_i + p_j}. \tag{12}$$
+
+![圖](../webapp/assets/figures/fig-p038-1.png)
+*圖 11：RLHF 中的奖励模型扮演標準 RL 中回傳奖励的環境元件角色。關鍵差異在于：在 RLHF 中，我們得以控制这个奖励函數，并從人類偏好中學習它，而不是由環境固定給定。*
+
+Bradley-Terry 模型假設每個項目都有一個潛在強度（latent strength）$p_i > 0$，而觀察到的偏好是这些底層強度帶有雜訊的反映。常見做法是以無界分數重新參數化 Bradley-Terry 模型，令 $p_i = e^{r_i}$，得到以下形式：
+
+$$P(i > j) = \frac{e^{r_i}}{e^{r_i} + e^{r_j}} = \sigma(r_i - r_j). \tag{13}$$
+
+其中 $\sigma(z) = \frac{1}{1+e^{-z}}$ 是邏輯斯函數（logistic function，即 sigmoid 函數），因此偏好機率只取決于分數差 $r_i - r_j$。只有分數之間的差異才重要：對每個 $r_k$ 加上相同的常數 $c$，$P(i > j)$ 保持不變。这些形式是人類偏好的一種有用近似，在 RLHF 中通常效果很好。
+
+要训练奖励模型，我們必須構造一個滿足上述關係的損失函數。实务上，这是透過将语言模型转换为輸出純量分數的模型來完成，通常是加上一個小的線性頭（linear head），從模型的最終隐藏狀態（hidden state）产生單一奖励值。給定提示 $x$ 与兩個取樣得到的補全 $y_1$ 与 $y_2$，我們用奖励模型 $r_\theta$ 为兩者評分，并将條件分數寫作 $r_\theta(y_i \mid x)$。
+
+奖励模型認为 $y_1$ 比 $y_2$ 更受偏好的機率變为：
+
+$$P(y_1 > y_2 \mid x) = \frac{\exp\left(r_\theta(y_1 \mid x)\right)}{\exp\left(r_\theta(y_1 \mid x)\right) + \exp\left(r_\theta(y_2 \mid x)\right)}. \tag{14}$$
+
+我們将較受偏好的補全記为 $y_c$（chosen，被选择），将被拒絕的補全記为 $y_r$（rejected，被拒絕）。
+
+由此得到的損失會鼓勵奖励模型給人類偏好的補全比被拒絕的補全更高的分數，并利用 sigmoid 将分數差转换为機率。式 (14) 中的偏好似然是出發點。我們先把該似然改寫成 sigmoid 形式，方法是将分子与分母同除以 $\exp\left(r_\theta(y_c \mid x)\right)$：
+
+$$
+\begin{aligned}
+P(y_c > y_r \mid x) &= \frac{\exp\left(r_\theta(y_c \mid x)\right)}{\exp\left(r_\theta(y_c \mid x)\right) + \exp\left(r_\theta(y_r \mid x)\right)} \\
+&= \frac{\exp\left(r_\theta(y_c \mid x)\right)}{\exp\left(r_\theta(y_c \mid x)\right)\left(1 + \frac{\exp(r_\theta(y_r \mid x))}{\exp(r_\theta(y_c \mid x))}\right)} \\
+&= \frac{1}{1 + \frac{\exp(r_\theta(y_r \mid x))}{\exp(r_\theta(y_c \mid x))}} \\
+&= \frac{1}{1 + \exp\left(-(r_\theta(y_c \mid x) - r_\theta(y_r \mid x))\right)} \\
+&= \sigma\left(r_\theta(y_c \mid x) - r_\theta(y_r \mid x)\right).
+\end{aligned} \tag{15}
+$$
+
+接着，奖励模型是以最大似然（maximum likelihood）在偏好数据集 $D$ 上擬合的，即最大化觀察到的偏好之期望對數似然。由于對數是單調函數，这等價于最小化期望負對數似然（negative log-likelihood）：
+
+$$
+\begin{aligned}
+\theta^* &= \arg\max_\theta \mathbb{E}_{(x, y_c, y_r) \sim D}\left[\log P(y_c > y_r \mid x)\right] \\
+&= \arg\min_\theta \mathbb{E}_{(x, y_c, y_r) \sim D}\left[-\log \sigma\left(r_\theta(y_c \mid x) - r_\theta(y_r \mid x)\right)\right].
+\end{aligned} \tag{16}
+$$
+
+在對数据集取平均*之前*先取對數，正是負對數似然損失成为正確目標的關鍵：最大化期望機率 $\mathbb{E}[P]$ 与最大化期望對數機率 $\mathbb{E}[\log P]$ 并不相同。
+
+每筆樣本的損失就是上述期望值內的 log-sigmoid 表達式，如 [3] 与其他工作所示：
+
+$$\mathcal{L}(\theta) = -\log\left(\sigma\left(r_\theta(y_c \mid x) - r_\theta(y_r \mid x)\right)\right) \tag{17}$$
+
+第二種是數學上等價的形式，以 softplus 函數 $\log(1 + e^{x})$ 表達，如 [23] 与其他工作所示：
+
+$$\mathcal{L}(\theta) = \log\left(1 + e^{r_\theta(y_r \mid x) - r_\theta(y_c \mid x)}\right) \tag{18}$$
+
+兩者的等價性可透過令 $\Delta = r_\theta(y_c \mid x) - r_\theta(y_r \mid x)$ 并利用 $\sigma(\Delta) = \frac{1}{1+e^{-\Delta}}$ 得出，这意味着 $-\log \sigma(\Delta) = \log(1 + e^{-\Delta}) = \log\left(1 + e^{r_\theta(y_r \mid x) - r_\theta(y_c \mid x)}\right)$。这兩種形式都出現在 RLHF 文獻中。
+
+![圖](../webapp/assets/figures/fig-p040-1.png)
+*圖 12：训练偏好奖励模型需要成對的被选择与被拒絕補全。模型從序列層級的表示（通常是序列結束（end-of-sequence, EOS）token 的隐藏狀態）为每個補全計算一個純量分數，而對比損失只取決于兩者分數之差。*
+
+## 5.2 預設的奖励模型架构（The Default Reward Model Architecture）
+
+奖励模型最常見的实现方式，是透過類似 Transformers 函数庫 `AutoModelForSequenceClassification` 的抽象——它在语言模型上附加一個小的線性頭，于训练或推断時为提示—補全對产生一個純量奖励分數。在推断時，模型以模型輸出的單一 logit 表示*該段文字被选择的相對可能性*。
+
+也存在其他实现選項，例如直接從最終嵌入（embeddings）接一個線性層，但这些在開源工具中較不常見。
+
+## 5.3 实现范例（Implementation Example）
+
+实现奖励建模損失相當簡單。实现上的挑戰更多在于建立獨立的数据加载器（data loader）与推断管線。給定正確的数据加载器（含分詞後的被选择与被拒絕的提示与補全），損失的实现如下：
+
+```python
+import torch.nn as nn
+# inputs_chosen / inputs_rejected 包含提示 token x 以及各自的
+# 補全 token（y_c 或 y_r），奖励模型會對兩者一併評分。
+rewards_chosen = model(**inputs_chosen)
+rewards_rejected = model(**inputs_rejected)
+loss = -nn.functional.logsigmoid(rewards_chosen - rewards_rejected).mean()
+```
+
+就更大的圖景而言，这通常位于一個因果语言模型（causal language model，即由左至右生成 token、以所有先前 token 为條件預測每個 token 的模型）之內，該模型加上（并以上述損失學習）一個額外的頭，将最終隐藏狀態转换为輸入的分數。程式碼接收標準的 transformer 輸入——`input_ids`（分詞後的文字）与 `attention_mask`（標記哪些是真實 token、哪些是填充 token）——并在最后一個真實 token 處擷取隐藏狀態（模型對輸入的内部表示），再通过一個線性層产生純量奖励。这个模型的結構如下：
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class BradleyTerryRewardModel(nn.Module):
+    """
+    用于 Bradley-Terry 偏好學習的標準純量奖励模型。
+
+    用法（成對 BT 損失）：
+        rewards_chosen = model(**inputs_chosen)    # (batch,)
+        rewards_rejected = model(**inputs_rejected)  # (batch,)
+        loss = -F.logsigmoid(rewards_chosen - rewards_rejected).mean()
+    """
+    def __init__(self, base_lm):
+        super().__init__()
+        self.lm = base_lm  # 例如 AutoModelForCausalLM
+        self.head = nn.Linear(self.lm.config.hidden_size, 1)
+
+    def _sequence_rep(self, hidden, attention_mask):
+        """
+        为每個序列取得一個用于評分的向量。
+        預設：最后一個非填充 token（EOS token）；若無遮罩，則取最后一個 token。
+        hidden: (batch, seq_len, hidden_size)
+        attention_mask: (batch, seq_len)
+        """
+
+        # 每個序列中最后一個非填充 token 的索引
+        # attention_mask 對真實 token 为 1，對填充为 0
+        lengths = attention_mask.sum(dim=1) - 1  # (batch,)
+        batch_idx = torch.arange(hidden.size(0), device=hidden.device)
+        return hidden[batch_idx, lengths]  # (batch, hidden_size)
+
+    def forward(self, input_ids, attention_mask):
+        """
+        此前向傳遞旨在展示標準奖励模型的推断結構。
+        若要训练，需修改此函数以同时計算被选择与被拒絕輸入的奖励，
+        并套用上述損失。
+        """
+        outputs = self.lm(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            output_hidden_states=True,
+            return_dict=True,
+        )
+        # 最終隐藏狀態：(batch, seq_len, hidden_size)
+        hidden = outputs.hidden_states[-1]
+
+        # 每個序列一個純量奖励：(batch,)
+        seq_repr = self._sequence_rep(hidden, attention_mask)
+        rewards = self.head(seq_repr).squeeze(-1)
+
+        return rewards
+```
+
+在本節以及後續內容中，奖励模型（乃至大部分后训练）的实现複雜度多半集中在正確建構数据加载器与分散式學習系统。注意，训练奖励模型時，最常見的做法是只训练 1 個 epoch，以避免过度擬合（overfitting）。
+
+## 5.4 奖励模型變體（Reward Model Variants）
+
+奖励建模在 RLHF 中是一個相對較少被探索的領域。傳統的奖励建模損失在許多知名工作中被修改過，但这些修改尚未凝聚为單一的最佳实务。
+
+### 5.4.1 偏好邊際損失（Preference Margin Loss）
+
+當標註者提供的是李克特量表（Likert Scale，一種具有順序類別、能表示偏好強度的評分量表，例如 1–5）上的分數或排名時，这些相對量的大小可以用于训练。最常見的做法是沿着偏好方向将数据二值化，把相對評分或排名強度的混合資訊化約为只有被选择与被拒絕的補全。額外的資訊——例如偏好的強度——曾被用來改進模型训练，但尚未成为標準做法。Llama 2 提出使用兩個数据點之間的邊際（margin）$m(y_c, y_r)$ 來區分偏好的強度：
+
+$$\mathcal{L}(\theta) = -\log\left(\sigma\left(r_\theta(y_c \mid x) - r_\theta(y_r \mid x) - m(y_c, y_r)\right)\right) \tag{19}$$
+
+舉例來說，每個補全通常會依品質得到 1 到 5 的排名。若被选择的樣本得分为 5、被拒絕的樣本得分为 2，則邊際 $m(y_c, y_r) = 5 - 2 = 3$。也可以探索其他計算邊際的函數。
+
+注意，在 Llama 3 中这个邊際項被移除了，因为團隊觀察到在規模扩大後改進遞減。
+
+### 5.4.2 平衡每個提示的多重比較（Balancing Multiple Comparisons Per Prompt）
+
+InstructGPT 研究了對每個提示使用 $K = 4$ 到 9 個補全进行排名的影響，從每個提示产生 $\binom{K}{2}$ 個成對比較 [3]。由于这些比較高度相關（它們共享相同的提示），天真地将它們洗牌混入数据集會使奖励模型过度擬合。为了解決这个問題，他們對每個提示的每個比較加權其損失更新——若不重新加權，補全較多的提示只因产生更多配對就會貢獻更多總損失。实务上，來自單一提示的所有 $\binom{K}{2}$ 個比較通常會被放進同一個训练批次并一起平均，如此每個提示貢獻一次分組更新，而不是分散在許多獨立批次中。这減少了對個別提示的过度擬合，并防止取樣補全較多的提示主導損失。損失函數變为：
+
+$$\mathcal{L}(\theta) = -\frac{1}{\binom{K}{2}} \mathbb{E}_{(x, y_c, y_r) \sim D} \log\left(\sigma\left(r_\theta(y_c \mid x) - r_\theta(y_r \mid x)\right)\right) \tag{20}$$
+
+### 5.4.3 K-wise 損失函數（K-Wise Loss Function）
+
+還有許多其他公式可以建立適用于 RLHF 的人類偏好模型。其中一個例子是基于 Plackett-Luce 模型 [74] 的 K-wise 損失函數，曾被用于知名的早期 RLHF 模型 Starling 7B 与 34B [73]。
+
+Zhu et al. 2023 [75] 将該设置形式化如下。給定一個提示（或狀態）$s^i$，從 $P(a_0, \cdots, a_{K-1} \mid s^i)$ 取樣 $K$ 個動作 $(a_0^i, a_1^i, \cdots, a_{K-1}^i)$。接着，標註者依偏好對这 $K$ 個動作排序，产生一個排列 $\sigma^i : [K] \mapsto [K]$，其中 $\sigma^i(0)$ 是最受偏好的動作。这产生了對所有 $K$ 個項目完整排名的 Plackett-Luce 機率：
+
+$$P(\sigma^i \mid s^i, a_0^i, a_1^i, \ldots, a_{K-1}^i) = \prod_{k=0}^{K-1} \frac{\exp\left(r_{\theta\star}(s^i, a_{\sigma^i(k)}^i)\right)}{\sum_{j=k}^{K-1} \exp\left(r_{\theta\star}(s^i, a_{\sigma^i(j)}^i)\right)} \tag{21}$$
+
+當 $K = 2$ 時，这退化为用于成對比較的 Bradley-Terry（BT）模型。無論如何，一旦训练完成，这些模型在 RLHF 训练期間的使用方式与其他奖励模型類似。
+
+## 5.5 结果奖励模型（Outcome Reward Models）
+
+语言模型与其他 AI 系统的大部分*偏好微调*（preference tuning）都是以上面討論的 Bradley-Terry 模型完成的。对于重推理的任務，可以使用结果奖励模型（Outcome Reward Model, ORM）。ORM 的训练数据以類似標準偏好微调的方式建構。这裡我們有一個問題陳述或提示 $x$，以及兩個補全 $y_1$ 与 $y_2$。此處使用的歸納偏置（inductive bias）是：其中一個補全應为該問題的正確解，另一個为錯誤解，形成 $(y_c, y_{ic})$。
+
+所使用的模型架构与標準奖励模型非常相似，都是在能輸出單一 logit 的模型上附加一個線性層（就 RM 而言）——而在 ORM 中，後續的训练目標略有不同 [76]：
+
+> [我們]以聯合目標训练验证器（verifier），模型除了原本的語言建模目標之外，還要學習将模型補全標記为正確或錯誤。在架构上，这意味着我們的验证器是语言模型，加上一個小的純量頭，以逐 token 的方式輸出預測。我們将这个純量頭实现为單一偏置參數与單一增益參數，作用于语言模型最終反嵌入層（unembedding layer）輸出的 logits 上。
+
+換句話說，这被实现为一個語言建模頭，能對每個 token 預測兩個類別（1 为正確、0 为錯誤），而不是傳統 RM 那種對整個序列輸出一個 logit 的分類頭。形式上，依循 [77]，这是一個逐 token 的二元交叉熵（binary cross-entropy）損失：
+
+$$\mathcal{L}_{\text{CE}}(\theta) = -\mathbb{E}_{(s, r) \sim \mathcal{D}}\left[r \log p_\theta(s) + (1 - r)\log\left(1 - p_\theta(s)\right)\right] \tag{22}$$
+
+其中 $r \in \{0, 1\}$ 是二元標籤，1 對應給定提示的正確答案、0 對應錯誤答案，而 $p_\theta(s)$ 是与被训练模型所預測的正確機率成比例的純量。在程式碼中，这个结果標籤會被复制到每個補全 token 上，而提示 token 以 `-100` 遮罩，因此不會對損失有所貢獻。
+
+实现结果奖励模型（以及其他類型，如我們稍後在過程奖励模型中會看到的）需要根據補全是否为正確樣本，以逐 token 的方式套用交叉熵損失。这遠比較接近語言建模損失——它不需要標準 Bradley-Terry 奖励模型那種結構化的 chosen-rejected 性質。在下面簡化的 ORM 训练设居中，我們不會取樣新的 token，也不會以下一個 token 預測來训练 LLM；我們将固定的提示—補全序列餵入骨幹網路（backbone），并训练 ORM 頭來預測正確性標籤。
+
+模型結構可以如下：
+
+```python
+import torch.nn as nn
+import torch.nn.functional as F
+
+class OutcomeRewardModel(nn.Module):
+    def __init__(self, base_lm):
+        super().__init__()
+        self.lm = base_lm  # 例如 AutoModelForCausalLM
+        self.head = nn.Linear(self.lm.config.hidden_size, 1)
+
+    def forward(self, input_ids, attention_mask=None, labels=None):
+        """
+        input_ids 包含完整的提示+補全序列。
+        labels 与 token 对齐：提示 token 为 -100，且每個補全
+         token 重複整個序列的结果標籤（1=正確，0=錯誤）。
+        若 labels=None，这是僅推断的前向傳遞，損失以 None
+         回傳。
+        """
+        outputs = self.lm(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            output_hidden_states=True,
+            return_dict=True,
+        )
+        # 最終隐藏狀態：(batch, seq_len, hidden_size)
+        hidden = outputs.hidden_states[-1]
+        # 每個 token 一個純量 logit：(batch, seq_len)
+        logits = self.head(hidden).squeeze(-1)
+
+        # 僅推断的前向傳遞：不計算損失。
+        if labels is None:
+            return None, logits
+        # 只在補全 token（標籤为 0 或 1）上計算損失
+        # 提示 token 的標籤为 -100
+        mask = labels != -100
+        loss = None
+        if mask.any():
+            loss = F.binary_cross_entropy_with_logits(
+                logits[mask], labels[mask].float()
+            )
+        else:
+            loss = logits.sum() * 0
+        return loss, logits
+```
+
+損失的簡化版本如下：
+
+```python
+# 将完整的提示+補全序列一次餵入；此處不进行任何 token 取樣。
+# 假設模型已具備：model.lm（骨幹網路）+ model.head
+hidden = model.lm(**inputs, output_hidden_states=True).hidden_states[-1]
+logits_per_token = model.head(hidden).squeeze(-1)  # (batch, seq_len)
+# 在其他实现中，这有時會被压缩为 model.forward()
+
+# 二元標籤：1=正確，0=錯誤（提示 token 以 -100 遮罩）
+mask = labels != -100
+loss = F.binary_cross_entropy_with_logits(
+    logits_per_token[mask], labels[mask].float()
+)
+```
+
+这裡的重要直覺是：ORM 會在序列的每個 token 上輸出一個正確性機率（僅以最終答案來評判——推理錯誤不會在 ORM 的训练過程中被捕捉到）。这可能是一個帶雜訊的過程，因为更新与損失會依结果与注意力映射（attention mappings）逐 token 傳播。
+
+![圖](../webapp/assets/figures/fig-p045-1.png)
+*圖 13：推断時，结果奖励模型會對補全 token 輸出逐 token 的正確性機率。提示 token 不參与評分，而補全機率可以彙總为回應層級的分數，用于验证、過濾或重新排序。*
+
+这些模型持續被使用，但在開源 RLHF 工具中的支持較少。舉例來說，開創性工作 *Let's Verify Step by Step* [50] 使用了同類型的 ORM，但去掉了損失中的語言建模預測部分。此時最終損失是對每個 token 的交叉熵損失，預測最終答案是否正確。
+
+由于缺乏支持，结果奖励模型（ORM）一詞被以多種方式使用。有些文獻（例如 [77]）繼續沿用 Cobbe et al. 2021 的原始定义；其他人則更廣義地用它來指任何被训练來預測補全是否正確的验证器。
+
+## 5.6 過程奖励模型（Process Reward Models）
+
+過程奖励模型（Process Reward Models, PRMs），最初稱为過程監督奖励模型（process-supervised reward models），是被训练來在思維鏈（chain-of-thought）推理過程的每個*步驟*輸出分數的奖励模型。这与只在 EOS token 輸出分數的標準 RM、或在每個 token 輸出分數的 ORM 不同。過程奖励模型需要在每個推理步驟結尾提供監督，然后以類似方式训练，其中步驟內的 token 會被训练到其相關目標——PRM 的目標是該步驟，而 ORM 的目標是整個回應。
+
+![圖](../webapp/assets/figures/fig-p046-1.png)
+*圖 14：训练结果奖励模型使用來自验证器或数据集的離線標籤（例如正確補全全为 1）。每個補全 token 以二元交叉熵針對结果標籤进行训练，逐 token 機率再彙總为最終分數，用于验证、過濾或重新排序。*
+
+依循 [50]，二元標籤的 PRM 通常以逐步驟的交叉熵損失优化：
+
+$$\mathcal{L}_{\text{PRM}}(\theta) = -\mathbb{E}_{(x, s) \sim \mathcal{D}}\left[\sum_{i=1}^{K} y_{s_i} \log r_\theta(s_i \mid x, s_{<i}) + (1 - y_{s_i})\log\left(1 - r_\theta(s_i \mid x, s_{<i})\right)\right] \tag{23}$$
+
+其中 $s$ 是含有 $K$ 個標註步驟的取樣思維鏈，$y_{s_i} \in \{0, 1\}$ 表示第 $i$ 個步驟是否正確，而 $r_\theta(s_i \mid x, s_{<i})$ 是 PRM 在給定原始提示 $x$ 与所有先前步驟 $s_{<i}$ 的條件下，預測步驟 $s_i$ 有效的機率。
+
+以下是这種逐步驟標籤如何在训练器中封裝的范例，來自 HuggingFace 的 TRL（Transformer Reinforcement Learning）[47]：
+
+```python
+# 取得分隔 token 的 ID 并将其加到補全的尾端
+separator_ids = tokenizer.encode(step_separator, add_special_tokens=False)
+completions_ids = [completion + separator_ids for completion in completions_ids]
+
+# 建立標籤
+labels = [[-100] * (len(completion) - 1) + [label] for completion, label in
+zip(completions_ids, labels)]
+```
+
+傳統上，PRM 以語言建模頭训练，只在推理步驟結尾的 token 产生輸出，例如對應雙換行或其他特殊 token 的位置。这些預測通常是 -1 代表錯誤、0 代表中性、1 代表正確。这些標籤不必然對應模型是否走在正確的路徑上，而是該步驟本身是否正確。
+
+下面展示 PRM 的一個建構范例。
+
+![圖](../webapp/assets/figures/fig-p047-1.png)
+*圖 15：過程奖励模型僅在步驟邊界（例如換行 token）提供監督。每個步驟會得到一個三類標籤：正確（+1）、中性（0）或錯誤（-1）。训练期間，其他所有 token 都會被遮罩。*
+
+```python
+import torch.nn as nn
+import torch.nn.functional as F
+
+class ProcessRewardModel(nn.Module):
+    def __init__(self, base_lm, num_classes=3):
+        super().__init__()
+        self.lm = base_lm  # 例如 AutoModelForCausalLM
+        self.head = nn.Linear(self.lm.config.hidden_size, num_classes)
+
+    def forward(self, input_ids, attention_mask=None, labels=None):
+        """
+        輸入是分詞後的提示与補全，其中「推理步驟」的結尾
+         由指定的分隔 token 標示，例如換行或其他特殊標記，
+         而非批次填充。
+        labels 是一組標籤：True、False 与 Neutral（3 種標籤），
+         由模型进行預測。
+        若 labels=None，这是僅推断的前向傳遞，損失以 None
+         回傳。
+        """
+        outputs = self.lm(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            output_hidden_states=True,
+            return_dict=True,
+        )
+        # 最終隐藏狀態：(batch, seq_len, hidden_size)
+        hidden = outputs.hidden_states[-1]
+        # 每個 token 一個 logit 向量：(batch, seq_len, num_classes)
+        logits = self.head(hidden)
+
+        # 僅推断的前向傳遞：不計算損失。
+        if labels is None:
+            return None, logits
+        # 只在步驟邊界（labels != -100 之處）計算損失
+        # 標籤映射：-1 -> 0，0 -> 1，1 -> 2（類別索引）
+        mask = labels != -100
+        loss = None
+        if mask.any():
+            loss = F.cross_entropy(
+                logits[mask], labels[mask]
+            )
+        else:
+            loss = logits.sum() * 0
+        return loss, logits
+```
+
+其核心損失函數看起来与结果奖励模型非常相似，只是標籤套用的間隔不同。
+
+```python
+# 假設模型對每個 token 輸出三類 logits
+hidden = model.lm(**inputs, output_hidden_states=True).hidden_states[-1]
+logits = model.head(hidden)  # (batch, seq_len, 3)
+
+# 僅在步驟邊界處的三類標籤：0=-1、1=0、2=1（其餘以 -100 遮罩）
+mask = labels != -100
+loss = F.cross_entropy(logits[mask], labels[mask])
+```
+
+## 5.7 各類奖励模型（与價值函數）之比較（Comparing Reward Model Types (and Value Functions)）
+
+前面涵蓋的各類奖励模型，展示了 RLHF 与其他后训练方法中「品質」可以被衡量的方式光譜。下面是这些模型預測什么以及如何训练的摘要。
+
+表 2：各類奖励模型之比較。
+
+| 模型類別 | 預測什么 | 如何训练 | LM 結構 |
+|---|---|---|---|
+| **奖励模型** | 序列層級的品質分數 $r_\theta(x, y)$ | 補全之間成對（或 N-wise）比較的對比損失 | 在 EOS／最后 token 隐藏狀態上的線性頭 |
+| **结果奖励模型** | 答案正確的逐 token 機率 | 帶標籤的结果對（例如可验证領域上的成功／失敗） | 逐 token 二元交叉熵頭；標籤重複结果標籤 |
+| **過程奖励模型** | 推理步驟結尾處對中间步驟的奖励或分數 | 使用中间反馈或逐步標註训练（對推理步驟中的每個 token 训练） | 預測步驟正確性（-1、0、1）的逐 token 頭 |
+| **價值函數** | 給定當前狀態的期望回報 | 透過對序列中每個點的回歸训练 | 具逐 token 輸出的純量回歸頭 |
+
+關于此表中區分方式的幾點注意事項，因为各模型類型之間的界線并不總是涇渭分明：
+
+- 無論在偏好微调或推理训练中，價值函數通常使用折扣因子（discount factor）1，这使得價值函數更接近结果奖励模型，但训练損失不同。
+- 過程奖励模型可以透過從某個中间狀態进行推演（rollout）并收集结果数据來提供監督。这混合了多種想法，但只要*損失*使用逐推理步驟的標籤，最好仍稱之为 PRM。
+
+**如果你用正確／錯誤配對來训练 Bradley-Terry 成對模型會怎樣？** 關于结果奖励模型的許多混淆，來自一小部分在源自答案正確性的成對数据上训练奖励模型的文獻。在这種情境下，你把被选择的回應設为某問題的正確答案，把被拒絕的回應設为*同一問題*的錯誤答案。这在技術上不是 ORM，且仍然直接以對比式、序列層級的損失训练。这在技術上仍是 Bradley-Terry 模型，會落在我們涵蓋的第一類模型中。
+
+**ORM vs. 價值函數。** ORM 与價值函數可能看起来相似，因为兩者都以相同的頭架构产生逐 token 輸出，但它們在*預測什么*与*目標從何而來*上有所不同：
+
+- **ORM** 預測即時的、token 局部的量：$p(\text{correct}_t)$ 或 $r_t$。目標來自*離線標籤*（将 token／序列標記为正確或錯誤的验证器或数据集）。
+- **價值函數**預測期望的*剩餘*回報：$V(s_t) = \mathbb{E}\left[\sum_{k \geq t} \gamma^{k-t} r_k \mid s_t\right]$。目標通常是*從當前策略 $\pi_\theta$ 的 on-policy 推演計算而來*，并隨策略改變而變化（技術上，價值函數也可以是 off-policy 的，但这在語言建模的工作中尚未確立）。
+
+如果你定义密集的 token 奖励 $r_t = \mathbb{1}[\text{token 正確}]$ 并使用 $\gamma = 1$，那麼 ORM 學習的是 $r_t$（或 $p(r_t = 1)$），而價值頭學習的是剩餘總和 $\sum_{k \geq t} r_k$。它們可以共享相同的基礎模型与頭的維度，但*語意与監督管線*不同：ORM 是從固定標籤離線训练的，而價值函數是 on-policy 训练的，并用于計算策略梯度（policy gradients）的優勢 $A_t = \hat{R}_t - V_t$。
+
+### 5.7.1 各類奖励模型的推断方式（Inference Across Reward Model Types）
+
+这些模型在推断時（即训练完成後）处理数据的方式不同，以應對 RM 所服务的一系列任務。
+
+**Bradley-Terry RM（偏好模型）：**
+
+- *輸入：* 提示 $x$ + 候選補全 $y$
+- *輸出：* 透過線性層從 EOS／最后 token 隐藏狀態得到的單一純量 $r_\theta(x, y)$
+- *用途：* 對 $k$ 個補全重新排序、選出第一名（best-of-N 取樣）；或为 RLHF 提供終端奖励
+- *彙總方式：* 純量輸出不需要彙總
+
+**结果 RM（Outcome RM）：**
+
+- *輸入：* 提示 $x$ + 補全 $y$
+- *輸出：* 補全 token 上的逐 token 機率 $p_t \approx P(\text{在 token } t \text{ 處正確})$
+- *用途：* 为完成的候選答案評分；透過平均、最小值（尾部風險）或乘積 $\prod_t p_t$（等價地，對數機率總和 $\sum_t \log p_t$）进行彙總
+- *彙總選項：* 平均正確性、最小 $p_t$、對最后 $m$ 個 token 取平均，或當任一 $p_t < \tau$ 時觸發門檻標記
+
+**過程 RM（Process RM）：**
+
+- *輸入：* 提示 $x$ + 帶有步驟邊界的推理軌跡
+- *輸出：* 步驟邊界處的分數（例如正確／中性／錯誤的類別 logits）
+- *用途：* 为完成的思維鏈評分；或透過修剪低分分支來引導搜索／解码
+- *彙總方式：* 在步驟層級（而非 token 層級）——平均步驟分數、最小值（快速失敗），或偏重後段步驟的加權總和
+
+**價值函數（Value Function）：**
+
+- *輸入：* 提示 $x$ + 當前前綴 $y_{\leq t}$（一個狀態）
+- *輸出：* 補全中每個 token 位置的 $V_t$（從狀態 $t$ 起的期望剩餘回報）
+- *用途：* 在 RL 训练期間計算逐 token 優勢 $A_t = \hat{R}_t - V_t$；每一步的價值作为基線（baseline）
+- *彙總方式：* 通常取最后生成 token 處的 $V$；其詮釋与「正確機率」不同
+
+總結來說，理解这些不同模型的方式是：
+
+- **RM：**「这整個答案有多好？」→ 純量值
+- **ORM：**「哪些部分看起来正確？」→ 逐 token 正確性
+- **PRM：**「推理步驟是否合理？」→ 逐步驟分數
+- **價值函數：**「從这裡開始還剩多少奖励？」→ RL 優勢的基線
+
+## 5.8 生成式奖励建模（Generative Reward Modeling，又稱 LLM-as-a-judge）
+
+由于偏好数据的成本高昂，一個龐大的研究領域應運而生：使用現有语言模型作为人類偏好的評審，或用于其他评估情境 [78]。其核心想法是以「如何評判」的說明、一個提示以及兩個補全來提示语言模型（就像人類標註者的做法一樣）。以下是一個范例提示，來自此領域的開創性工作之一——聊天评估 MT-Bench [78]：
+
+```
+[System]
+Please act as an impartial judge and evaluate the quality of the responses provided by
+two AI assistants to the user question displayed below.
+You should choose the assistant that follows the user's instructions and answers the
+user's question better.
+Your evaluation should consider factors such as the helpfulness, relevance, accuracy,
+depth, creativity, and level of detail of their responses.
+Begin your evaluation by comparing the two responses and provide a short explanation.
+Avoid any position biases and ensure that the order in which the responses were
+presented does not influence your decision.
+Do not allow the length of the responses to influence your evaluation.
+Do not favor certain names of the assistants.
+Be as objective as possible.
+After providing your explanation, output your final verdict by strictly following this
+format: "[[A]]" if assistant A is better, "[[B]]" if assistant B is better, and "[[C]]"
+for a tie.
+[User Question]
+{question}
+[The Start of Assistant A's Answer]
+{answer_a}
+[The End of Assistant A's Answer]
+[The Start of Assistant B's Answer]
+{answer_b}
+[The End of Assistant B's Answer]
+```
+
+鑑于 LLM-as-a-judge 在评估上的效力——它催生了許多其他评估，例如 AlpacaEval [79]、Arena-Hard [80] 与 WildBench [81]——許多人開始使用 LLM-as-a-judge 而非奖励模型來建立与使用偏好数据。
+
+一整個研究領域圍繞着如何使用所謂的「生成式奖励模型」（Generative Reward Models）而興起 [82] [83] [84]（包括*專門*被训练成有效評審的模型 [85]），但在 RM 评估上，它們往往落後于現有的奖励模型，这显示奖励建模對當前的 RLHF 而言仍是一項重要技術。
+
+提升 LLM-as-a-judge 工作流程穩健性的一個常見技巧，是使用取樣溫度 0 來降低評分的变异。
+
+## 5.9 延伸閱讀（Further Reading）
+
+奖励建模的學術文獻在 2024 年確立。早期進展大多集中在建立基準测试（benchmarks）与辨识行为模式。第一個 RM 基準测试 RewardBench 为测试奖励模型提供了共通的基礎設施 [86]。自那以後，RM 评估已扩展到与一般后训练模型可用的评估類型相似的范畴，其中一些评估测试在已知真實答案的領域上的預測準確度 [86]，另一些則更接近以 LLM-as-a-judge 进行的「感覺」（vibes）式评估或与其他基準测试的相關性 [87]。
+
+新基準测试的例子包括：
+
+- **純文字（一般聊天／偏好）：** RMB [88]、RewardBench2 [89]、Preference Proxy Evaluations [90]，或 RM-Bench [91]。
+- **專門的純文字（數學等）：** 多語言奖励基準（M-RewardBench）[92]、針對檢索增強生成（retrieval augmented generation, RAG）的 RAG-RewardBench [93]、針對錯字的 ReWordBench [94]、RewardMATH [95]，或 AceMath-RewardBench [96]。
+- **過程 RM：** PRM Bench [97] 或 ProcessBench [98]，以及視覺基準 VisualProcessBench [99] 或 ViLBench [100]。
+- **代理型 RM：** Agent-RewardBench [101] 或 CUARewardBench [102]。
+- **多模態：** MJ-Bench [103]、Multimodal RewardBench [104]、VL RewardBench [105]，或 VLRMBench [106]。
+
+要了解*训练*奖励模型的進展，可以參考新的奖励模型训练方法，包括面向條件化模型（aspect-conditioned models）[107]、高品質人類数据集 [108] [109]、扩展性实验 [30]、大規模实验 [49]，或数据去偏（debiasing data）[110]。
+
+## 5.10 建議实验（Suggested Experiments）
+
+配套程式碼保存庫的 `code/reward_models/` 中包含小型奖励模型训练腳本。这些是作为學習練習之用，而非調校完善的參考配方。請從乾淨的 `code/` 環境以 `uv sync` 開始，然后一次執行一個实验。
+
+1. **在 UltraFeedback 上训练 Bradley-Terry 偏好奖励模型。** 執行：
+
+   ```bash
+   cd code/
+   uv run python -m reward_models.train_preference_rm --samples 2000 --epochs 1
+   ```
+
+   觀察示範輸出与 W&B 記錄中，被选择与被拒絕回應之間的奖励邊際是否增長。接着改變 `--samples`、`--lr` 与 `--model-id`，觀察訊號何時變得嘈雜或不稳定。
+
+2. **比較结果監督与過程監督。** 執行 GSM8K 结果奖励模型与 PRM800K 過程奖励模型：
+
+   ```bash
+   cd code/
+   uv run python -m reward_models.train_orm --samples 400 --epochs 2
+   uv run python -m reward_models.train_prm --samples 500 --epochs 2
+   ```
+
+   比較训练後每個模型能評分的對象：ORM 應能區分正確与錯誤的最終答案，而 PRM 應能對中间推理步驟給出分數。这是序列層級、结果層級与過程層級監督之間區別的实务版本。
+
+3. **加入一個小型保留（held-out）奖励模型评估。** 一項有用的貢獻是为 `reward_models/` 建立 50 到 200 筆樣本的评估，回報準確度或偏好對排序，而不需要完整的训练流程。讓评估保持足夠小，以便在调整超參數時使用。
+
+</script>
+<script src="../assets/marked.min.js"></script>
+<script src="../assets/katex/katex.min.js"></script>
+<script src="../assets/katex/auto-render.min.js"></script>
+<script src="../assets/widgets/ch05.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/gh-star.js"></script>
+</body>
+</html>

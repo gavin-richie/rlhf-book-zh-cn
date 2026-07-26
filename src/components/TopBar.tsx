@@ -1,28 +1,39 @@
+"use client";
+
 import Link from "next/link";
+import type { Locale } from "@/i18n/locale-context";
+import LocaleSwitcher from "./LocaleSwitcher";
 
 interface TopBarProps {
+  locale: Locale;
   current?: string;
   prev?: { id: string; title: string };
   next?: { id: string; title: string };
-  brandLabel?: string;
 }
 
-export default function TopBar({ current, prev, next, brandLabel }: TopBarProps) {
+export default function TopBar({ locale, current, prev, next }: TopBarProps) {
+  const brand = locale === "zh-tw" ? "繁體中文全譯本 · 互動版" : "繁体中文全译本 · 互动版";
+  const githubRepo = locale === "zh-tw"
+    ? "https://github.com/ai-twinkle/rlhf-book-zh-tw"
+    : "https://github.com/ai-twinkle/rlhf-book-zh-cn";
+  const homeHref = locale === "zh-tw" ? "/zh-tw" : "/zh-cn";
+  const chaptersHref = locale === "zh-tw" ? "/zh-tw/chapters" : "/zh-cn/chapters";
+
   return (
     <nav className="sticky top-0 z-50 flex items-center justify-between gap-4 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_88%,transparent)] px-[1.2rem] py-[0.65rem] backdrop-blur-[10px]">
       <Link
-        href="/"
+        href={homeHref}
         className="font-serif text-[var(--fg)] text-[1.05rem] font-bold no-underline hover:text-[var(--accent)] whitespace-nowrap"
       >
         RLHF
         <span className="ml-[0.55rem] font-sans text-[0.8rem] font-normal text-[var(--fg-muted)]">
-          {brandLabel ?? "繁體中文全譯本 · 互動版"}
+          {brand}
         </span>
       </Link>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-[0.8rem] text-[0.85rem]">
           {prev && (
-            <Link href={`/chapters/${prev.id}`} className="text-[var(--fg-muted)] hover:text-[var(--accent)] no-underline">
+            <Link href={`${chaptersHref}/${prev.id}`} className="text-[var(--fg-muted)] hover:text-[var(--accent)] no-underline">
               ← {prev.title}
             </Link>
           )}
@@ -32,13 +43,14 @@ export default function TopBar({ current, prev, next, brandLabel }: TopBarProps)
             </span>
           )}
           {next && (
-            <Link href={`/chapters/${next.id}`} className="text-[var(--fg-muted)] hover:text-[var(--accent)] no-underline">
+            <Link href={`${chaptersHref}/${next.id}`} className="text-[var(--fg-muted)] hover:text-[var(--accent)] no-underline">
               {next.title} →
             </Link>
           )}
         </div>
+        <LocaleSwitcher />
         <Link
-          href="https://github.com/ai-twinkle/rlhf-book-zh-tw"
+          href={githubRepo}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-[0.45rem] border border-[var(--border)] rounded-full bg-[var(--panel)] text-[var(--fg)] text-[0.8rem] font-semibold whitespace-nowrap px-[0.8rem] py-[0.3rem] hover:border-[var(--accent)] hover:text-[var(--accent)]"

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 3 章　训练总览 — RLHF 中文版</title>
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="../index.html">RLHF 中文版<span>从人类反馈中强化学习</span></a>
+  <nav class="chapnav"><a href="ch02.html">← 第 2 章</a><span class="chapnav-current">第 3 章　训练总览</span><a href="ch04.html">第 4 章 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav id="toc" class="toc"><h2>本章目录</h2></nav></aside>
+  <main class="main">
+    <div id="lab-banner"></div>
+    <article id="content" class="prose"></article>
+    <section id="lab" class="lab" hidden>
+      <h2 class="lab-title">🧪 互动实验室</h2>
+      <div id="lab-intro"></div>
+      <div id="lab-root"></div>
+    </section>
+    <nav class="pager"><a class="prev" href="ch02.html"><span class="dir">← 上一章</span><div class="ttl">第 2 章　RLHF 简史</div></a><a class="next" href="ch04.html"><span class="dir">下一章 →</span><div class="ttl">第 4 章　指令微调</div></a></nav>
+    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（）的<strong>非官方社群翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
+  </main>
+</div>
+<script type="text/markdown" id="chapter-md">
+# 第 3 章　训练总览（Training Overview）
+
+> 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 21–30 頁。
+
+本章先對 RLHF 训练提供一個概略的总览，本書稍後才會進入各項細節。RLHF 虽然优化的是一個簡單的損失函數（loss function），卻需要依序训练多個不同的 AI 模型，再将它們串連成一個複雜的線上（online）优化流程。
+
+在这裡，我們會介紹 RLHF 的核心目標：在以距離为基礎的正则化項（distance-based regularizer）約束下，优化一個代表人類偏好的代理奖励（proxy reward）（同时說明它与古典 RL 問題的關聯）。接着我們會展示幾個使用 RLHF 打造頂尖模型的經典训练配方（canonical recipes），說明 RLHF 如何与其餘的后训练（post-training）方法相互配合。这些范例配方将作为本書後續章节的參照——屆時我們會描述进行 RLHF 時可以做的各種优化选择，并回頭指出不同的關鍵模型在训练中如何採用了不同的步驟。
+
+## 3.1 問題形式化（Problem Formulation）
+
+基于人類反馈的强化學習（Reinforcement Learning from Human Feedback, RLHF）的优化建構在標準 RL 设置之上。在 RL 中，代理人（agent）根據環境狀態 $s_t$，從策略（policy）$\pi(a_t \mid s_t)$ 中采样動作 $a_t$，以最大化奖励 $r(s_t, a_t)$ [54]。策略是一個将每個狀態映射到動作機率分布的函數。演變为現代 RLHF 文獻的早期策略屬于所謂的深度强化學習（deep reinforcement learning）——即使用神經網路來學習上述函數。傳統上，環境依照轉移（transition，即動態 dynamics）$p(s_{t+1} \mid s_t, a_t)$ 演化，并具有初始狀態分布 $\rho_0(s_0)$。策略与動態共同誘導出一個軌跡分布（trajectory distribution）。一條軌跡的整體機率，是初始狀態機率、策略所做的每一次動作选择、以及環境所产生的每一次狀態轉移的乘積：
+
+$$p_\pi(\tau) = \rho_0(s_0) \prod_{t=0}^{T-1} \pi(a_t \mid s_t)\, p(s_{t+1} \mid s_t, a_t). \tag{1}$$
+
+在一個時間視野（horizon）为 $T$ 的有限回合（episode）中，RL 代理人的目標是求解下列优化問題，其中 $\gamma$ 是介于 0 到 1 之間的折扣因子（discount factor），用以權衡近期与未來奖励之間的相對重要性：
+
+$$\max_\pi \; \mathbb{E}_{\tau \sim p_\pi}\left[\sum_{t=0}^{T-1} \gamma^t\, r(s_t, a_t)\right]. \tag{2}$$
+
+給定策略的期望報酬（expected return）通常記为 $J(\pi)$，最佳值寫作 $J^\star = \max_\pi J(\pi)$。
+
+对于持續性任務（continuing tasks），通常令 $T \to \infty$，并依靠折扣（$\gamma < 1$）來確保目標函數是良好定义的。第 6 章将討論优化此式的多種方法。
+
+標準 RL 迴圈的示意如圖 4 所示（可与圖 7 的 RLHF 迴圈比較）。
+
+![圖](../webapp/assets/figures/fig-p022-1.png)
+
+*圖 4：標準 RL 迴圈*
+
+### 3.1.1 簡單范例：溫控器（A Simple Example: The Thermostat）
+
+为了對 RL 的運作建立基本直覺，請想像一個溫控器（thermostat），試圖将房間維持在華氏 70 度（70°F）的目標溫度。在 RL 中，代理人一開始對任務一無所知，必須透過試誤（trial and error）來找出好的策略。溫控器范例包含以下組成要素（各要素如何對應到式 (1) 的軌跡分布，請見圖 5）：
+
+- **狀態（State，$s_t$）**：目前的室溫，例如 65°F。
+- **動作（Action，$a_t$）**：将暖氣打开或关闭。
+- **奖励（Reward，$r$）**：當溫度落在目標的 2 度以內時为 +1，否则为 0。
+- **策略（Policy，$\pi$）**：根據目前溫度決定要打开或关闭暖氣的規則。以下是溫控器可能學到的一種策略；視環境確切的轉移動態而定，它不一定是最佳的：
+
+$$\pi(a_t = \text{on} \mid s_t) = \begin{cases} 1 & \text{if } s_t < 70^\circ\text{F} \\ 0 & \text{otherwise} \end{cases} \tag{3}$$
+
+- **轉移（Transition）**：暖氣打开時房間變暖，关闭時則變冷。代理人透過其動作影響这些動態，但底層的物理——房間升溫或降溫的速度——不在它的控制範圍內。
+
+![圖](../webapp/assets/figures/fig-p022-2.png)
+
+*圖 5：軌跡分布（式 (1)）中的每一項對應到溫控器 RL 范例。*
+
+一開始，溫控器的策略基本上是隨機的——它不管目前溫度如何，隨意地開開關關暖氣，室溫因此劇烈波動。經過許多回合的試誤之后，代理人發現「房間冷時開暖氣、暖時關暖氣」能帶來更多奖励，并逐漸收斂到一個合理的策略。这就是 RL 的核心迴圈：觀察狀態、选择動作、獲得奖励，并更新策略以隨時間取得更多奖励。
+
+### 3.1.2 經典 RL 范例：CartPole（Classic RL Example: CartPole）
+
+若要看一個具有連續動態、更豐富的例子，可以考慮經典的 *CartPole*（倒立擺，inverted pendulum）控制任務，它出現在許多 RL 教科書、課程、甚至研究論文之中。溫控器只有單一狀態變數与二元動作，而 CartPole 則涉及四個連續狀態變數以及基于物理的轉移——使其成为 RL 算法的標準基準测试（benchmark）。
+
+![圖](../webapp/assets/figures/fig-p023-1.png)
+
+*圖 6：CartPole 環境，显示狀態變數 $(x,\ \dot{x},\ \theta,\ \dot{\theta})$ 与動作 $(\pm F)$。*
+
+- **狀態（State，$s_t$）**：台車的位置／速度与擺桿的角度／角速度：
+
+$$s_t = (x_t,\ \dot{x}_t,\ \theta_t,\ \dot{\theta}_t). \tag{4}$$
+
+- **動作（Action，$a_t$）**：對台車施加向左或向右的水平力，例如 $a_t \in \{-F, +F\}$。
+- **奖励（Reward，$r$）**：一種簡單的奖励是：只要擺桿保持平衡且台車停留在軌道上（例如 $|x_t| \le 2.4$ 且 $|\theta_t| \le 12^\circ$），每一步 $r_t = 1$；一旦任一界限被違反，回合即終止。
+- **動態／轉移（Dynamics / transition，$p(s_{t+1} \mid s_t, a_t)$）**：在許多環境中，動態是確定性的（因此 $p$ 是一個點質量分布 point mass），可透過步長为 $\Delta t$ 的尤拉積分（Euler integration）寫成 $s_{t+1} = f(s_t, a_t)$。標準的簡化 CartPole 更新使用以下常數：台車質量 $m_c$、擺桿質量 $m_p$、擺桿半長 $l$、重力 $g$（$\alpha$ 是具有加速度單位、經質量正規化的中间量）：
+
+$$\alpha = \frac{a_t + m_p l\, \dot{\theta}_t^2 \sin\theta_t}{m_c + m_p} \tag{5}$$
+
+$$\ddot{\theta}_t = \frac{g\sin\theta_t - \cos\theta_t\, \alpha}{l\left(\frac{4}{3} - \frac{m_p \cos^2\theta_t}{m_c + m_p}\right)} \tag{6}$$
+
+$$\ddot{x}_t = \alpha - \frac{m_p l\, \ddot{\theta}_t \cos\theta_t}{m_c + m_p} \tag{7}$$
+
+$$x_{t+1} = x_t + \Delta t\, \dot{x}_t, \quad \dot{x}_{t+1} = \dot{x}_t + \Delta t\, \ddot{x}_t, \tag{8}$$
+
+$$\theta_{t+1} = \theta_t + \Delta t\, \dot{\theta}_t, \quad \dot{\theta}_{t+1} = \dot{\theta}_t + \Delta t\, \ddot{\theta}_t. \tag{9}$$
+
+这是上述一般设置的具體實例：策略选择 $a_t$，轉移函數推進狀態，而奖励則在整個回合中累積。
+
+### 3.1.3 调整標準 RL 设置（Manipulating the Standard RL Setup）
+
+RLHF 所用的 RL 形式化被視为一個較不開放的問題：其中 RL 的幾個關鍵組件被設为特定的定义，以配合语言模型。從標準 RL 设置到 RLHF 设置有多項核心變更：表 1 總結了標準 RL 与语言模型所用 RLHF 设置之間的这些差異。
+
+1. **從奖励函數換成奖励模型（Switching from a reward function to a reward model）。** 在 RLHF 中，使用的是一個學習而來的人類偏好模型（learned model of human preferences）$r_\theta(s_t, a_t)$（或任何其他分類模型），而不是環境的奖励函數。这讓设计者在方法的彈性与對最終结果的掌控上大幅提升，但代價是实现的複雜度。在標準 RL 中，奖励被視为環境的一個靜態組成部分，设计學習代理人的人無法更改或操縱它。
+2. **不存在狀態轉移（No state transitions exist）。** 在 RLHF 中，該領域的初始狀態是從训练数据集中采样的提示詞（prompt），而「動作」則是對該提示詞的補全（completion）（在標準 RLHF 设居中，提示詞是固定的，模型的補全并不會決定下一個提示詞）。一個提示詞加上一個補全便構成一個完整的回合（episode）或 rollout；而在古典 RL 問題中，这會是許多反覆的狀態—動作、狀態—動作鏈。
+3. **回應層級的奖励且不做折扣（Response-level rewards and no discounting）。** RLHF 的奖励歸因是針對整個動作序列——由多個生成的 token 組成——一次性完成，而不是以細粒度的方式进行（这種單步結構在 RL 文獻中有時稱为拉霸機問題（bandit problem））。为了讓 RLHF 的 RL 算法把每個 token 視为同一個動作的一部分，实现上通常使用 $\gamma = 1$ 的折扣因子（即不折扣）；这与標準 RL 不同——標準 RL 以 $\gamma < 1$ 在許多連續決策之間權衡短期与長期奖励。
+
+表 1：標準 RL 与语言模型 RLHF 的關鍵差異。
+
+| 面向 | 標準 RL | RLHF（语言模型） |
+|---|---|---|
+| 策略 | 從零開始學習（隨機初始化） | 從預训练语言模型微调而來 |
+| 奖励訊號 | 環境奖励函數 $r(s_t, a_t)$ | 學習而來的奖励／偏好模型 $r_\theta(x, y)$（提示詞 $x$、補全 $y$） |
+| 狀態轉移 | 有：動態 $p(s_{t+1} \mid s_t, a_t)$ | 通常没有：提示詞 $x$ 從数据集中采样；補全不會決定下一個提示詞 |
+| 動作 | 單一環境動作 $a_t$ | 從 $\pi_\theta(\cdot \mid x)$ 采样的一個補全 $y$（token 序列） |
+| 奖励粒度 | 通常逐步／細粒度 | 通常为針對整個補全的回應層級（拉霸機式），通常不折扣（$\gamma = 1$） |
+| 時間視野 | 多步回合（$T > 1$） | 通常为單步（$T = 1$），但多輪對話可建模为較長視野 |
+
+鑑于此問題的單輪（single-turn）性質，优化可以改寫为不含時間視野与折扣因子（并使用顯式的奖励模型）的形式：
+
+$$\max_\pi \; \mathbb{E}_{\tau \sim \pi}\left[r_\theta(s_t, a_t)\right]. \tag{10}$$
+
+就許多方面而言，结果是：儘管 RLHF 深受 RL 优化器与問題形式化的啟發，其實際实现与傳統 RL 卻大不相同。
+
+### 3.1.4 微调与正则化（Fine-Tuning and Regularization）
+
+在傳統 RL 問題中，代理人必須從隨機初始化的策略開始學習；但在 RLHF 中，我們是從一個具備許多初始能力的強大預训练基礎模型出發。RLHF 的这種強先驗（prior）帶來一項需求：必須防止优化偏離初始策略太遠。为了在微调（fine-tuning）情境中取得成功，RLHF 技術採用多種類型的正则化（regularization）來控制优化過程。目標是讓奖励最大化仍能發生，同时避免模型陷入过度优化（over-optimization），詳見第 14 章的討論。對优化函數最常見的修改，是在目前 RLHF 策略与优化起點之間的距離上，加入 KL 散度（KL divergence）懲罰項。训练模型時所设置的超參數 $\beta$ 控制此約束的強度——較大的 $\beta$ 讓模型更貼近其起點，而較小的 $\beta$ 則給予优化器更多追逐奖励的自由：
+
+![圖](../webapp/assets/figures/fig-p026-1.png)
+
+*圖 7：標準 RLHF 迴圈*
+
+$$\max_\pi \; \mathbb{E}_{\tau \sim \pi}\left[r_\theta(s_t, a_t)\right] - \beta\, \mathcal{D}_{\mathrm{KL}}\big(\pi(\cdot \mid s_t)\,\|\,\pi_{\mathrm{ref}}(\cdot \mid s_t)\big). \tag{11}$$
+
+在此形式化之下，許多針對 RLHF 训练的研究，都聚焦于理解如何運用一定的「KL 預算」（KL budget）——以与初始模型的距離來衡量。更多細節請見第 15 章〈正则化〉。
+
+### 3.1.5 优化工具（Optimization Tools）
+
+本書将詳細介紹許多用于求解此优化問題的常見技術。后训练的常用工具包括：
+
+- **奖励建模（Reward modeling，第 5 章）**：训练一個模型來捕捉所蒐集的偏好数据中的訊號，之后便能輸出一個純量奖励，用以指示未來文字的品質。
+- **指令微调（Instruction fine-tuning，第 4 章）**：RLHF 的先決條件。模型透過模仿預先挑選的范例，學會當今大多數语言模型互动所使用的問答格式。
+- **拒绝采样（Rejection sampling，第 9 章）**：最基本的 RLHF 技術。由一個模仿人類偏好的奖励模型，來篩選用于指令微调的候選補全。
+- **策略梯度（Policy gradients，第 6 章）**：RLHF 開創性研究范例中所使用的强化學習算法，用來根據奖励模型的訊號更新语言模型的參數。
+- **直接对齐算法（Direct alignment algorithms，第 8 章）**：直接從成對偏好数据优化策略的算法，而不是先學習一個中介的奖励模型、之后再對其进行优化。
+
+現代以 RLHF 训练的模型一律先採用指令微调，接着混合使用其他的优化選項。
+
+### 3.1.6 RL 在语言模型后训练中的微妙優勢（Subtle Advantages of RL in Post-Training Language Models）
+
+在接下来的章节中，我們會介紹許多后训练的优化工具。其中不少——例如拒绝采样（第 9 章）以及像 DPO 这類直接对齐算法（第 8 章）——遠比讓 RL 順利運作來得簡單。儘管替代方案如此簡單，基于 RL 的方法仍持續勝出。有些趨勢十分明顯，例如搭配可验证奖励的强化學習（reinforcement learning with verifiable rewards, RLVR）所帶來的推断時扩展（inference-time scaling）；但事實證明，RL 是非常適合语言模型的优化工具。相較于指令微调或 DPO 類算法，实现 RL 需要大得多的基礎設施投資；不過，容我用比較口語的說法：它所提供的梯度更新「通常對模型幫助很大」。这很難量化，但會反覆以下列幾種形式出現：
+
+- RL 階段可以「修補」模型的粗糙之處，讓模型更容易對話或更穩健（这可能來自于使用 vLLM 之類的推断工具进行训练，使其具備數值稳定性）。確切原因在文獻中尚未廣为人知，但其真實性反映在 RL 如今日益普及的事實上。
+- RL 可以「外科手術式」地进行——模型很擅長學習提示詞分布落在何處，而且 RL 傾向于不會「壓扁」模型的一般能力。一個好例子是 Tülu 3 僅在數學提示詞上以 RL 训练，卻能在廣泛的任務組合上維持能力 [6]。
+
+整體而言，语言模型上的 RL 損失函數穩健、可扩展、有效且靈活，打开了大片新的实验領域。而最初帶領我們走上这條路的方法，正是 RLHF 的研究工作。
+
+## 3.2 經典训练配方（Canonical Training Recipes）
+
+隨着時間推移，各種模型被視为 RLHF（或更廣義的后训练）的經典配方。这些配方反映了當時的数据实务与模型能力。隨着配方逐漸過時，训练出具有相同特性的模型會變得更容易、所需的数据也更少。整體趨勢是：后训练涉及愈來愈多的优化步驟、使用愈來愈多的训练算法，并涵蓋愈來愈多樣的训练数据集与评估。
+
+### 3.2.1 InstructGPT
+
+在 ChatGPT 剛問世前後，廣为接受的（「經典」）语言模型后训练方法有三大步驟，其中 RLHF 是核心 [55] [3] [5]。这三個步驟建立在「基礎」（base）语言模型（即在大規模網路文字上训练的下一個 token 預測模型）之上，總結如下并見圖 8：
+
+1. **在約 1 萬筆范例上进行指令微调（Instruction tuning on ~10K examples）**：这讓模型學會遵循問答格式，并主要從人工撰寫的数据中學到一些基本技能。
+2. **在約 10 萬筆成對提示詞上训练奖励模型（Training a reward model on ~100K pairwise prompts）**（論文使用 33K 筆提示詞）：此模型從指令微调後的检查點（checkpoint）训练而來，捕捉人們希望在最終训练中建模的多元價值。奖励模型是 RLHF 的优化目標。
+3. **在另外約 10 萬筆提示詞上，以 RLHF 训练指令微调後的模型（Training the instruction-tuned model with RLHF on a separate ~100K prompts）**（論文確切使用 31K 筆，且未記載提示詞是否重複使用自其他階段）：模型以奖励模型为目標进行优化，使用的很可能是另外一組提示詞；模型先對其生成回應，之后再獲得評分。
+
+RLHF 完成後，模型便準備好部署給使用者。这个配方是現代 RLHF 的基石，但如今的配方已大幅演進，包含更多階段与更多数据。
+
+![圖](../webapp/assets/figures/fig-p028-1.png)
+
+*圖 8：早期三階段 RLHF 流程的示意圖：SFT、奖励模型、然后进行优化。*
+
+### 3.2.2 Tülu 3
+
+現代版本的后训练涉及多得多的模型版本与训练階段（也就是遠超過 Llama 2 所記載的 5 個 RLHF 步驟 [49]）。下方圖 9 展示了一個例子：模型在收斂之前經歷多次训练迭代。
+
+![圖](../webapp/assets/figures/fig-p028-2.png)
+
+*圖 9：現代多輪后训练流程的示意圖。*
+
+这个時代及其後所训练的最複雜模型，并未公開其训练流程的完整細節。到了 2026 年，ChatGPT 或 Claude 等領先模型都涉及多輪迭代训练。这甚至可能包括先训练多個專門模型、再将權重合併（merge）在一起，以得到能勝任多種子任務的最終模型的技術 [56]（例如 Cohere 的 Command A [57]）。
+
+![圖](../webapp/assets/figures/fig-p029-1.png)
+
+*圖 10：Tülu 3 配方的摘要，包含目標技能与多步驟训练配方。Lambert et al. 2024，授权 CC-BY。*
+
+Tülu 3 是这種多階段后训练方法中一個完全開放、且 RLHF 扮演要角的例子。Tülu 3 配方由三個階段組成：
+
+1. **在約 100 萬筆范例上进行指令微调（Instruction tuning on ~1M examples）**：这个以合成数据为主的数据集，取自 GPT-4o 与 Llama 3.1 405B 等前沿模型的混合輸出，教導模型一般性的指令遵循，并作为數學与程式撰寫等能力的基礎。
+2. **在約 100 萬組偏好對上使用 on-policy 偏好数据（On-policy preference data on ~1M preference pairs）**：此階段大幅提升模型的對話能力（chattiness）（例如 Arena（前身为 ChatBotArena）或 AlpacaEval 2 的表現），同时也改善前述指令微调階段中提到的技能。
+3. **在約 1 萬筆提示詞上进行可验证奖励的强化學習（Reinforcement Learning with Verifiable Rewards on ~10K prompts）**：此階段是一次小規模的强化學習训练，用來提升數學等核心技能，同时維持整體效能（如今被視为 DeepSeek R1 等現代推理模型的先聲）。
+
+这个配方已成功應用于 Llama 3.1 [6]、OLMo 2 [58] 与 SmolLM 系列模型 [59]。
+
+### 3.2.3 DeepSeek R1
+
+隨着推理语言模型（reasoning language models）——例如 OpenAI 的 o1——的興起，后训练的最佳实务再次演進，重新排序并重新分配各训练階段之間的运算資源。推理模型后训练配方中記載最清楚的是 DeepSeek R1 [15]；阿里巴巴較大的 Qwen 3 模型（即僅 32B 与 225B MoE 模型）[60]，或小米的 MiMo 7B [61]，也仿效了此做法。DeepSeek 配方如下：
+
+1. **以 10 萬筆以上的 on-policy 推理樣本进行「冷启动」（"Cold-start" with 100K+ on-policy reasoning samples）**：这些数据采样自較早的 RL 检查點 R1-Zero，并經過大量過濾，用以在 DeepSeek-V3-Base 上灌注特定的推理過程。DeepSeek 使用「冷启动」一詞來描述 RL 如何從少量監督数据中學習。
+2. **大規模强化學習训练（Large-scale reinforcement learning training）**：此階段讓模型反覆处理推理問題，在多種基準测试上執行 RLVR「直到收斂」。
+3. **拒绝采样与 SFT（Rejection sampling and SFT）**：接近收斂時，他們對 RL 检查點套用拒绝采样，建立一個約 80 萬筆樣本的 SFT 数据集，然后在大約 3/4 推理問題与 1/4 一般查詢的過濾混合数据上微调模型，以产生一個通用模型。
+4. **混合式强化學習训练（Mixed reinforcement learning training）**：在推理問題（可验证奖励）上，搭配一般偏好調校的奖励模型，對模型做最后的打磨。
+
+如同前文，这个配方也存在各種演進，特別是在步驟 3 与 4——即在将模型開放給使用者之前完成最終定稿的階段。許多模型一開始就使用量身打造的指令数据集，其中包含從既有模型大量過濾与打磨而來的思維鏈（chain-of-thought）序列，讓模型只靠 SFT 就能快速達到強大的行为表現，之后才進入 RL 階段 [62]。
+
+</script>
+<script src="../assets/marked.min.js"></script>
+<script src="../assets/katex/katex.min.js"></script>
+<script src="../assets/katex/auto-render.min.js"></script>
+<script src="../assets/widgets/ch03.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/gh-star.js"></script>
+</body>
+</html>

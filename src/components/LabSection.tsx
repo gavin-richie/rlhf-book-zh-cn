@@ -2,14 +2,21 @@
 
 import { useEffect, useRef } from "react";
 
-export default function LabSection({ chapterId }: { chapterId: string }) {
+interface LabSectionProps {
+  chapterId: string;
+  locale?: string;
+}
+
+export default function LabSection({ chapterId, locale }: LabSectionProps) {
   const scriptRef = useRef<HTMLScriptElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      const scriptUrl = `/assets/widgets/${chapterId}.js`;
+      // Use zh-CN widget directory when locale is zh-cn, otherwise default to regular widgets
+      const widgetPrefix = locale === "zh-cn" ? "/assets/widgets-zh-cn" : "/assets/widgets";
+      const scriptUrl = `${widgetPrefix}/${chapterId}.js`;
 
       // Clear DOM content immediately to remove stale widget during navigation
       const labRoot = document.getElementById("lab-root");
@@ -18,7 +25,11 @@ export default function LabSection({ chapterId }: { chapterId: string }) {
       if (labIntro) labIntro.textContent = "";
 
       // Remove ALL widget scripts so they don't accumulate across navigations
-      document.querySelectorAll('script[src^="/assets/widgets/"]').forEach(s => s.remove());
+      const prefixRegex = new RegExp(`^${widgetPrefix}/`);
+      document.querySelectorAll('script[src]').forEach(el => {
+        const s = el as HTMLScriptElement;
+        if (s.src.startsWith(widgetPrefix)) s.remove();
+      });
       (window as typeof window & { ChapterWidget?: unknown }).ChapterWidget = undefined;
 
       // Ensure KaTeX JS is loaded before widget script (many widgets use tex()).
@@ -46,7 +57,7 @@ export default function LabSection({ chapterId }: { chapterId: string }) {
         // KaTeX script already exists — ensure it's loaded (page might have been refreshed).
         katexPromise = (window as typeof window & { __KatexLoaded?: boolean }).__KatexLoaded
           ? Promise.resolve()
-          : new Promise<void>((resolve) => { kt.onload = () => resolve(); if (kt.readyState === "complete") resolve(); });
+          : new Promise<void>((resolve) => { kt.onload = () => resolve(); if ((kt as any).readyState === "complete") resolve(); });
       }
 
       await katexPromise;
@@ -132,7 +143,7 @@ export default function LabSection({ chapterId }: { chapterId: string }) {
         lab.setAttribute("aria-hidden", "true");
       }
     };
-  }, [chapterId]);
+  }, [chapterId, locale]);
 
   return (
     <section

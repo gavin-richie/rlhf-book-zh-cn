@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 13 章　工具使用与函数呼叫 — RLHF 中文版</title>
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="../index.html">RLHF 中文版<span>从人类反馈中强化学习</span></a>
+  <nav class="chapnav"><a href="ch12.html">← 第 12 章</a><span class="chapnav-current">第 13 章　工具使用与函数呼叫</span><a href="ch14.html">第 14 章 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav id="toc" class="toc"><h2>本章目录</h2></nav></aside>
+  <main class="main">
+    <div id="lab-banner"></div>
+    <article id="content" class="prose"></article>
+    <section id="lab" class="lab" hidden>
+      <h2 class="lab-title">🧪 互动实验室</h2>
+      <div id="lab-intro"></div>
+      <div id="lab-root"></div>
+    </section>
+    <nav class="pager"><a class="prev" href="ch12.html"><span class="dir">← 上一章</span><div class="ttl">第 12 章　合成数据与蒸馏</div></a><a class="next" href="ch14.html"><span class="dir">下一章 →</span><div class="ttl">第 14 章　过度优化</div></a></nav>
+    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（）的<strong>非官方社群翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
+  </main>
+</div>
+<script type="text/markdown" id="chapter-md">
+# 第 13 章　工具使用与函数呼叫（Tool Use and Function Calling）
+
+> 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 159–167 頁。
+
+讓语言模型使用工具，是扩充其能力的自然途徑，特別是在資訊存在于外部工具中的高精度任務，或是需要与複雜網路系统互动的代理（agent）場景。工具使用（tool-use）是语言模型需要透過训练習得的技能，而 RLHF 以及本書介紹的所有其他方法都能加以精進。試想使用者提出这樣的問題：
+
+> **User**：今天的總統是誰？
+
+没有工具的语言模型會因为預训练数据的知識截止日期（knowledge cutoff）而難以回答这个問題，但只需一次搜索查詢就能輕易取得这項資訊。再看另一個例子：
+
+> **User**：把我下载数据夾裡所有的 arXiv 論文移到我的 ~/research/ 目錄，并以檔名標示論文的日期。
+
+这是一項單靠模型權重根本無從着手的任務——工具的使用讓语言模型得以处理範圍遠为廣泛的任務。
+
+在深入探討之前，先釐清幾個經常被混用的相關術語會很有幫助：
+
+- **工具使用（tool use）**：模型輸出一個結構化的請求（工具名稱与引數）；由編排器（orchestrator）執行該工具；结果被附加到上下文中；模型接着繼續生成。
+- **函数呼叫（function calling）**：一種工具使用的形式，其中引數必須符合一組函数的宣告式結構描述（schema，通常是 JSON Schema），使得剖析与验证得以可靠进行。
+- **程式碼執行（code execution）**：工具使用的一種特例，其中的「工具」是程式碼直譯器（例如 Python）；结果以工具輸出的形式回傳。
+
+## 13.1 工具使用概觀（Tool-Use Overview）
+
+AI 模型透過輸出特殊詞元（token）來觸發特定端點（endpoint），藉此使用任何外部工具。这些工具可以是高度特定的功能，例如回傳特定地點天氣的函数，也可以是作为複雜行为基礎建構元件的程式碼直譯器或搜索引擎。我們的第一個例子展示了语言模型需要更即時的資訊，來彌補其權重基于過往数据训练而固定不變的本質；但也有像程式碼執行这樣的工具，讓语言模型能夠繞過其機率式、生成式的天性，回傳精確的答案。想想这个任務：印出圓周率的近似值到小數點後 50 位（而不是憑記憶背誦并冒着幻覺的風險）。具備工具的语言模型可以这樣做：
+
+```
+<code>
+from decimal import Decimal, getcontext
+getcontext().prec = 60
+
+def compute_pi():
+    # Chudnovsky algorithm for computing pi
+    C = 426880 * Decimal(10005).sqrt()
+    K, M, X, L, S = 0, 1, 1, 13591409, Decimal(13591409)
+    for i in range(1, 100):
+        M = M * (K**3 - 16*K) // ((i)**3)
+        K += 12
+        L += 545140134
+        X *= -262537412640768000
+        S += Decimal(M * L) / X
+    return C / S
+
+print(str(compute_pi())[:52])
+</code>
+
+<output>
+3.14159265358979323846264338327950288419716939937510
+</output>
+```
+
+本章将概述現代语言模型中工具使用的起源、其基本原理与格式，以及當前領先模型在善用工具上的取捨。
+
+「工具使用」一詞的確切起源并不清楚，但这个概念的源頭遠早于 RLHF 蓬勃發展的後 ChatGPT 時代。早在 2015 年左右，就有人嘗試建構早于現代语言模型的系统，例如神經程式设计直譯器（Neural Programmer-Interpreters, NPI）[329]——「一種能學習表徵并執行程式的循環且具組合性的類神經網路」。隨着语言模型日益普及，許多子領域開始整合外部能力以提升效能。为了取得權重之外的資訊，許多研究採用檢索增強生成（retrieval augmented generation, RAG）[330] 或網頁浏览 [4]。不久之后，其他研究者也開始探索讓语言模型与程式 [331] 或工具 [332] 整合。
+
+隨着領域逐漸成熟，除了底層語言建模能力的大幅提升之外，这些模型也獲得了更複雜的能力。例如 Toolformer 可以使用「一個計算機、一個問答系统、兩個不同的搜索引擎、一個翻译系统与一個行事曆」[333]。不久後，Gorilla 被训练來使用 1645 個 API（來自 PyTorch Hub、TensorFlow Hub v2 与 Hugging Face），其評測基準 APIBench 成为知名的柏克萊函数呼叫排行榜（Berkeley Function Calling Leaderboard）的基礎 [334]。自这些早期模型以來，可呼叫動作的多樣性已大幅成長。
+
+如今，工具使用模型已与日常的语言模型互动深度交織。模型上下文協定（Model Context Protocol, MCP）作为一種将语言模型連接到外部数据來源（或工具）的通用格式應運而生 [335]。隨着模型更強、格式更佳，工具使用语言模型被應用于許多情境，包括 Microsoft Office 或 Google Workspace 等熱門應用程式內的生產力副駕（copilot）、科學領域 [336]、醫療領域 [337]、程式編寫代理（coding agent）[338]（如 Claude Code 或 Cursor）、与数据庫的整合，以及許多其他自主工作流程。
+
+评估工具使用模型涉及多個面向：工具名稱与引數正確性的精確匹配（exact-match）指標、結構描述有效性，以及在模擬環境中端到端的任務完成度。跨多次嘗試的可靠性也很重要——$\tau$-bench 提出了 $\text{pass}^k$ 指標（有別于 pass@k），用來衡量代理是否能「稳定地」成功，而非僅是「偶爾」成功 [339]。ToolLLM 及其 ToolBench 数据集提供了一個大規模框架，用于在超過 16,000 個真實世界 API 上训练与评估工具使用 [340]；而柏克萊函数呼叫排行榜（Berkeley Function Calling Leaderboard, BFCL）至今仍是比較各模型函数呼叫準確度的熱門基準 [334]。
+
+## 13.2 在生成過程中交織工具呼叫（Interweaving Tool Calls in Generation）
+
+函数呼叫的训练数据看起来与其他后训练（post-training）数据非常相似，只多了一項：一個告知模型有哪些工具可用的系统提示（system prompt）。以下是一個格式化後的范例数据點，包含系统提示与以 JSON 格式提供的可用工具：
+
+```
+<system>
+You are a function-calling AI model. You are provided with function signatures within
+<functions></functions> XML tags. You may call one or more functions to assist with the
+user query. Don't make assumptions about what values to plug into functions.
+</system>
+
+<functions>
+[
+  {
+    "name": "search_movies",
+    "description": "Search for movies by title and return matching results with IDs.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The search string for the movie title."
+        }
+      },
+      "required": ["query"]
+    }
+  },
+  {
+    "name": "get_movie_details",
+    "description": "Fetch detailed information about a movie including cast, runtime,
+and synopsis.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "movie_id": {
+          "type": "string",
+          "description": "The unique identifier for the movie."
+        }
+      },
+      "required": ["movie_id"]
+    }
+  },
+  {
+    "name": "get_showtimes",
+    "description": "Get movie showtimes for a given location and date.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "movie_id": {
+          "type": "string",
+          "description": "The unique identifier for the movie."
+        },
+        "zip_code": {
+          "type": "string",
+          "description": "ZIP code for theater location."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date for showtimes in YYYY-MM-DD format."
+        }
+      },
+      "required": ["movie_id", "zip_code"]
+    }
+  }
+]
+</functions>
+
+<user>
+...
+</user>
+```
+
+虽然语言模型正在生成一段補全（completion），但若它遵循此范例，它會生成 `search_movies("Star Wars")` 这些詞元來搜索《星際大戰》。这通常會被编码在特殊的格式化詞元之中，接着插入序列的下一批詞元将包含工具的輸出。藉此，模型能學會完成比許多單純的獨立模型更具挑戰性的任務。
+
+一種流行的工具使用形式是程式碼執行（code-execution），讓模型能夠對複雜的邏輯或數學問題取得精確答案。舉例來說，语言模型執行過程中的程式碼執行，可以發生在推理模型（reasoning model）的思考詞元（thinking tokens）之中。与函数呼叫一樣，先有標記要執行的程式碼的標籤（由模型生成），然后是另一個獨立的輸出標籤。
+
+```
+<|user|>
+What is the 50th Fibonacci number? (Use the standard F_0=0, F_1=1 indexing.)</s>
+<|assistant|>
+<think>
+Okay, I will compute the 50th Fibonacci number with a simple loop, then return the
+result.
+
+<code>
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+
+fib(50)
+</code>
+
+<output>
+12586269025
+</output>
+</think>
+<answer>
+The 50th Fibonacci number is 12 586 269 025.
+</answer>
+```
+
+底層實際發生的事情是：语言模型将工具的輸入与輸出，和標準的自迴歸（autoregressive）生成詞元交錯在一起。使这一切成为可能的編排迴圈（orchestration loop）看起来大致如下：
+
+```
+messages = [...]
+while True:
+    response = model(messages, tools=tools)
+    if not response.tool_calls:
+        return response.text
+
+    for call in response.tool_calls:
+        result = execute_tool(call.name, call.args)
+        messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
+```
+
+![圖](../webapp/assets/figures/fig-p163-1.png)
+
+*圖 39：工具使用将模型生成与外部執行交錯进行：模型持續生成詞元，直到它發出一個工具呼叫（橘色），外部系统執行該工具并将輸出（紫色）注入序列，然后模型繼續生成。模型可以在單次生成中發出多個工具呼叫。在训练時，工具呼叫与輸出的詞元通常會從損失函數中被遮蔽（masked）。*
+
+工具使用的训练，重點在于讓模型能在这種不同的詞元流之下表現得可預測——知道何時該發出工具呼叫、如何正確格式化引數，以及如何将结果納入其回應之中。開放模型必須被训练成能与使用者可能隨插即用的各式工具搭配運作。
+
+## 13.3 多步驟工具推理（Multistep Tool Reasoning）
+
+OpenAI 的 o3 模型代表了多步驟工具使用与语言模型整合方式的一次重大躍進。这種行为与社群中更早期的研究趨勢息息相關。例如，ReAct [341] 展示了如何将動作与推理交錯融入單一的模型生成之中：
+
+> 在本論文中，我們探索使用大型语言模型以交錯方式同时生成推理軌跡（reasoning traces）与任務特定的動作，使兩者之間产生更大的綜效：推理軌跡幫助模型歸納、追蹤与更新行動計畫并处理例外狀況，而動作則讓它得以介接外部來源（例如知識庫或環境）并蒐集額外資訊。
+
+隨着工具使用能力的定型与推理模型的起飛，多輪（multi-turn）工具使用已成長为一個令人興奮的研究領域 [185]。以 RL 训练这些多步驟行为，相較于逐樣本（per-sample）的 RLHF 迴圈，更像是傳統的强化學習：代理會与環境及其工具互动完整個軌跡（trajectory），之后才會獲得任何奖励，如圖 40 所示。
+
+![圖](../webapp/assets/figures/fig-p164-1.png)
+
+*圖 40：多步驟工具使用的强化學習。從训练数据中抽取一個提示，代理（策略 $\pi_\theta$）沿着一條軌跡与環境及其工具互动，交替執行動作 $a_t$ 与接收觀測 $o_t$。完成的軌跡在最后被評分或验证，产生單一的奖励 $r_T$，用以驅動策略更新。与逐樣本的 RLHF 迴圈不同，奖励僅在多步驟推演（rollout）結束後才出現——更接近傳統 RL。*
+
+## 13.4 模型上下文協定（Model Context Protocol, MCP）
+
+模型上下文協定（Model Context Protocol, MCP）是一個開放標準，用于将语言模型連接到外部数据來源与資訊系统 [335]。在数据層，MCP 使用 JSON-RPC 2.0，并为其基本元件（primitives）提供探索（discovery）与執行（execution）方法。MCP 不要求針對每個外部系统採用特定的工具呼叫格式，而是讓模型能透過一個標準化協定存取豐富的上下文資訊。
+
+MCP 是在本章工具使用內容之上的一個簡單延伸——它是應用程式以可預測的 JSON 結構描述，将上下文（数据 + 動作）傳遞給语言模型的方式。模型互动的 MCP 伺服器具有幾個核心基本元件：資源（resources，唯讀的数据區塊）、提示（prompts，模板化的訊息／工作流程），以及工具（tools，模型可呼叫的函数）。據此，MCP 架构可以概括为：
+
+- MCP 伺服器（server）包裝一個特定的数据來源或能力。
+- MCP 用戶端（client，例如 Claude Desktop、IDE 外掛）聚合一個或多個伺服器。
+- 主機（host，例如 Claude 或 ChatGPT 應用程式）提供使用者／LLM 介面；更換模型供應商或後端工具，只需要替換中间的用戶端。
+
+MCP 讓工具使用模型的开发者能夠使用同一套基礎設施，将他們的伺服器或用戶端接上不同的模型；同时，模型也擁有一個可預測的格式，可用來整合外部元件。这些因素加在一起，为真實世界領域中的工具使用模型打造出一個可預測得多的开发環境。
+
+MCP 伺服器透過一個標準化的 JSON 結構描述向用戶端公開工具：
+
+```
+{
+  "name": "get_weather",
+  "description": "Get current weather for a location",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "location": {
+        "type": "string",
+        "description": "City name or coordinates"
+      }
+    },
+    "required": ["location"]
+  }
+}
+```
+
+实现这个工具的一個最小 Python MCP 伺服器如下：
+
+```
+from mcp.server import Server
+from mcp.types import Tool, TextContent
+
+server = Server("weather-server")
+
+@server.list_tools()
+async def list_tools():
+    return [Tool(
+        name="get_weather",
+        description="Get current weather",
+        inputSchema={
+            "type": "object",
+            "properties": {"location": {"type": "string"}},
+            "required": ["location"]
+        }
+    )]
+
+@server.call_tool()
+async def call_tool(name: str, arguments: dict):
+    if name == "get_weather":
+        weather = fetch_weather(arguments["location"])
+        return [TextContent(type="text", text=weather)]
+```
+
+## 13.5 实现細節（Implementation Details）
+
+实现工具使用模型時，有多項關于格式化与遮蔽（masking）的決策：
+
+- **Python 与 JSON 格式之別（Python vs. JSON formatting）**：在本章中，我們同时收錄了以 JSON 数据結構与以 Python 程式碼格式化工具使用的范例。模型通常會傾向選定一種結構，而業界不同供應商則各自使用不同的格式。
+- **遮蔽工具輸出（Masking tool outputs）**：训练工具使用模型時的一個重要細節是，工具輸出中的詞元會從模型的训练損失中被遮蔽。这確保模型不會去學習預測「处理工具呼叫的系统」所产生的輸出（因为这些结果并不是模型生成的詞元）。
+- **工具呼叫的多輪格式化（Multi-turn formatting for tool invocations）**：实现工具呼叫模型時，常見的做法是为数据加载格式加入更多結構。后训练数据集的標準做法，是一個由使用者与助手（且通常還有一則系统訊息）交替組成的訊息列表。工具使用的整體結構相同，但模型的輪次（turn）會依照每次工具呼叫，被切分成多個內容子區段。范例如下。
+
+```
+messages = [
+{
+"content": "You are a function calling AI model. You are provided with function
+signatures within <functions></functions> XML tags. You may call one or more functions
+to assist with the user query. Don't make assumptions about what values to plug into
+functions.",
+"function_calls": null,
+"functions": "[{\"name\": \"live_giveaways_by_type\", \"description\": \"Retrieve live
+giveaways from the GamerPower API based on the specified type.\", \"parameters\":
+{\"type\": {\"description\": \"The type of giveaways to retrieve (e.g., game, loot,
+beta).\", \"type\": \"str\", \"default\": \"game\"}}}]",
+"role": "system"
+},
+{
+"content": "Where can I find live giveaways for beta access and games?",
+"function_calls": null,
+"functions": null,
+"role": "user"
+},
+{
+"content": null,
+"function_calls":
+"live_giveaways_by_type(type='beta')\nlive_giveaways_by_type(type='game')",
+"functions": null,
+"role": "assistant"
+}
+]
+```
+
+- **詞元化与訊息格式細節（Tokenization and message format details）**：OpenAI messages 格式中的工具呼叫，通常會經過聊天模板（chat template，即控制送入模型的訊息格式的程式碼）进行詞元化，将結構化的 JSON 表示转换为原始的詞元流。这个過程因模型架构而異——有些使用特殊詞元來標定工具呼叫的邊界，有些則在詞元流本身之中維持結構化的格式。聊天模板遊樂場（chat template playgrounds）提供了互动式環境，可用來探索不同模型如何将訊息格式转换成詞元流。
+- **推理詞元的連續性（Reasoning token continuity）**：隨着推理模型的興起——它們在給出答案前有一段獨立的「推理」詞元流——在迴圈中搭配工具使用時，这些詞元的处理方式存在不同的实现。有些模型會在單一輪次內的多次工具呼叫步驟之間保留推理詞元，在多次工具呼叫之間維持上下文。然而，这些詞元在輪次之間通常會被清除，以降低服务成本（但并非總是如此——这是一項设计決策）。
+- **各家供應商的 API 格式（API formatting across providers）**（截至 2026 年 5 月）：不同供應商使用概念上相似但技術上有所差異的格式。OpenAI 的 Chat Completions API 使用帶有唯一 ID 的 `tool_calls` 陣列，而較新的 Responses API 則以 `function_call` 項目表示呼叫，并以 `call_id` 为鍵、透過 `function_call_output` 項目回傳结果。Anthropic 以 `input_schema` 定义工具，并以 `tool_use` 与 `tool_result` 內容區塊（content blocks）表示呼叫与结果。Gemini 提供函数呼叫模式，例如 `AUTO`、`ANY`、`NONE`，以及在支持的 Gemini 与 Vertex AI 組態中的 `VALIDATED`。
+- **結構描述遵循与約束解码（Schema conformance and constrained decoding）**：生產系统通常使用約束解码（constrained decoding）或「嚴格模式」（strict mode）選項來強制輸出有效的 JSON 与正確的引數型別，減少因格式錯誤輸出而導致的重試。一些封閉模型供應商會額外进行專門的后训练，讓結構化 JSON 輸出更可靠；而對開放模型而言，这通常是在 vLLM 等系统中以推断階段的旗標（inference flag）來处理。
+- **工具輸出的上下文消耗（Tool output context consumption）**：工具輸出可能迅速消耗模型的上下文視窗（context window），特別是會回傳大量结果的搜索或檢索工具。系统必須決定如何對工具輸出进行截斷、摘要或分頁，以在保留模型後續所需資訊的同时，讓上下文維持在可控範圍內。
+
+把这些連回后训练：工具使用的训练数据從何而來？又採用什么目標函數？由人類撰寫的工具軌跡收集成本高昂，因此大多數現代工具使用語料都是合成或自舉（bootstrapped）而來——如 Toolformer 式的自我標註 [333]，或如 ToolBench 中的大規模生成 [340]。就训练目標而言，在工具軌跡上进行監督式微调（supervised fine-tuning, SFT）能教會模型基本的格式化与工具选择。这能自舉出該行为，通常也足以奠定这項技能的基礎。對軌跡进行偏好优化（preference optimization，例如 DPO）可以改善「何時該呼叫工具、何時該直接回答」的決策。对于具有多步驟工具使用的代理式（agentic）任務，帶有環境反馈（任務成功、約束滿足）的 RL 成为自然的目標函數——模型從「其工具增強的行動是否真正解決了問題」之中學習。
+
+</script>
+<script src="../assets/marked.min.js"></script>
+<script src="../assets/katex/katex.min.js"></script>
+<script src="../assets/katex/auto-render.min.js"></script>
+<script src="../assets/widgets/ch13.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/gh-star.js"></script>
+</body>
+</html>

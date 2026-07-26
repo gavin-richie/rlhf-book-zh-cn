@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>附录 C　实务議題 — RLHF 中文版</title>
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="../index.html">RLHF 中文版<span>从人类反馈中强化学习</span></a>
+  <nav class="chapnav"><a href="appb.html">← 附录 B</a><span class="chapnav-current">附录 C　实务議題</span><a href="bibliography.html">参考文献 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav id="toc" class="toc"><h2>本章目录</h2></nav></aside>
+  <main class="main">
+    <div id="lab-banner"></div>
+    <article id="content" class="prose"></article>
+    <section id="lab" class="lab" hidden>
+      <h2 class="lab-title">🧪 互动实验室</h2>
+      <div id="lab-intro"></div>
+      <div id="lab-root"></div>
+    </section>
+    <nav class="pager"><a class="prev" href="appb.html"><span class="dir">← 上一章</span><div class="ttl">附录 B　不只是「风格」</div></a><a class="next" href="bibliography.html"><span class="dir">下一章 →</span><div class="ttl">参考文献　参考文献</div></a></nav>
+    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（）的<strong>非官方社群翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
+  </main>
+</div>
+<script type="text/markdown" id="chapter-md">
+# 附录 C　实务議題（Practical Issues）
+
+> 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 236–238 頁。
+
+本附录涵蓋大規模執行后训练（post-training）实验時的实务考量。內容採取經驗教訓清單的形式，而非一篇連貫的敘事。
+
+## C.1 后训练的运算成本（Compute Costs of Post-Training）
+
+估算后训练執行成本有兩種不同的角度。最大的成本在于开发配方（recipe），其运算量很容易達到最終幾次训练執行的 10 倍到 100 倍。次要成本則較容易衡量，指的是徹底落實一套配方的成本，包括跑多組隨機種子（seed）、仔細的评估、可能遭遇的工程麻煩等等。
+
+就第一種成本而言，为了开发像 Tülu 3 [6] 这樣的后训练配方，團隊在得到最終模型之前，在 7B 規模上執行了數以千計的实验与评估。
+
+至于最終的训练執行，Olmo 3 的報告對训练最終 32B Think 模型所涉及的工作有詳細的記述 [18]：
+
+> 后训练遵循一種不同的作業模式：我們會将每個階段執行多次，掃描（sweep）學習率（learning rate）与其他超參數（hyperparameters）。后训练——尤其是强化學習（RL）——的理論尚不成熟，因此我們必須執行多次实验，才能为給定的基礎模型找出最佳超參數。我們希望在未來的工作中解決这个問題。
+>
+> 在后训练期間，检查點（checkpoint）评估消耗了較大比例的运算資源，部分原因是推理模型（reasoning models）在核心基準测试（benchmark）上會产生很長的生成內容。在監督式微调（SFT）方面，我們掃描了四個候選學習率，每個都使用 256 顆 GPU，平行執行 36 小時。接着大約花了 12 小時进行评估、合併与检查點確認，總計約兩天。直接偏好优化（DPO）训练每次執行所需時間較短（每項任務在 64 顆 GPU 上完成完整學習率掃描約需 18 小時），但实务上因叢集不稳定而延長到好幾天。初版 Olmo 3 Think 32B 的最終 RL 训练執行歷時約 5 天，其中至少有一天的训练時間因稳定性問題而損失。在 Olmo 3 首次發布之后，我們将表現最佳的 RL 训练在 224 顆 GPU 上又持續執行了 21 天，產出 Olmo 3.1 Think 32B。
+
+隨着扩展强化學習規模逐漸成为更標準的做法，这種情況将再次改變 [17]。延續上面的例子：原本 Olmo 3 32B Think 的后训练只花了幾週，但为了發布改進版的 Olmo 3.1 32B Think 模型，團隊需要以可验证奖励的强化學習（RLVR, Reinforcement Learning with Verifiable Rewards）額外训练 3.5 週。这在*時間*上是相當可觀的成本，更甚于總运算量。
+
+## C.2 评估变异數（Evaluation Variance）
+
+后训练中一項被低估的挑戰是评估变异數（evaluation variance），尤其隨着推理模型的興起——这類模型需要使用溫度（temperature）大于 0 的取樣才能取得最佳评估分數。只要對模型进行任何形式的取樣，輸出就會變得更不稳定。不同基準测试的稳定性特性差異極大，原因包括提示（prompt）難度的变异、评估集中提示的数量、受訓模型本身的脆弱程度等等。
+
+在 Olmo 3 的开发期間，團隊追蹤了用于评估推理模型的各項评估的变异數。下表列出各评估的標準差（standard deviation），計算方式为 14 個模型各執行 3 次的標準差平均值（先取每個模型的变异，再對每項评估取平均）：
+
+表 9：评估基準测试在多次推断執行之間的標準差，依稳定性分類（数据來自 Olmo 3）。
+
+| 類別 | 基準测试 | 標準差 |
+| --- | --- | --- |
+| 高变异（High Variance） | GPQA | 1.48 |
+| | AlpacaEval 3 | 1.24 |
+| | IFEval | 0.88 |
+| 稳定（Stable） | ZebraLogic | 0.56 |
+| | Omega | 0.56 |
+| | AIME 24（Avg@32） | 0.54 |
+| | HumanEvalPlus | 0.46 |
+| | AgiEval | 0.43 |
+| | BigBenchHard | 0.39 |
+| 非常稳定（Very Stable） | LiveCodeBench（Avg@10） | 0.29 |
+| | MBPPPlus | 0.27 |
+| | MATH | 0.25 |
+| | MMLU | 0.22 |
+| | PopQA | 0.16 |
+
+某些评估（例如 LiveCodeBench）既有雜訊又便宜（因为评估集中的提示数量不多），因此只要對每個模型重複執行該评估 10 次，就能讓它從高变异組別移到稳定的區間。这件事對每一項评估都可以做，但成本很容易迅速膨脹。
+
+我們也觀察到评估设居中的其他变异來源，例如批次大小（batch size）、vLLM 內的張量平行（tensor parallel）设置（例如基準線採用 TP=2），以及在不同基礎設施上取樣長篇生成內容時其他敏感的數值因素。對推理模型（reasoners）而言，变异無所不在。
+
+## C.3 管理训练效能变异（Managing Training Performance Variance）
+
+在本書討論過的所有后训练配方与工具中，最終模型的效能都存在不可忽視的变异。理解这種变异的分布、來源与影響，是打造強大模型的關鍵。训练最終模型的目標，是透過改變训练參數与隨機種子來取樣許多個點，以獲得可能範圍內最強的模型。請注意，这是在「模型*真的*變得更好」与「僅僅是靠评估雜訊重抽而占到便宜」之間取得平衡。
+
+前一節聚焦在*评估*雜訊，而更棘手的雜訊來源是训练的不確定性。评估雜訊可以透過對給定检查點執行更多测试來管理（一致地降低雜訊），但模型只會被训练一次，因此可以從正向的離群值（outlier）中*受益*。
+
+实务上，训练團隊會採取許多步驟，以便從训练配方中榨取最大可能的價值：
+
+1. 對每一次最終模型的训练執行，掃描學習率、批次大小等核心优化數值。例如，面對一個新的基礎模型，我會建議先在寬廣的區間內跑 10 個學習率，確定自己落在最佳範圍內，然后再于更窄的最佳視窗內重新執行。
+2. 在表現最好的幾組设置上跑多個隨機種子。隨機種子可能對最終模型产生實質影響，值得为此投入运算資源。
+3. 模型合併（model merging）已確立为打造強大模型的關鍵工具。合併有很多種做法，從合併同一份数据上训练的不同检查點，到合併針對特定領域的專門模型都有。整體而言，合併被視为最終配方中強大而簡單的工具，但对于如何在配方中預先準備一個模型以供後續合併，尚未建立明確的最佳实务 [409]。
+
+## C.4 辨识異常的训练任務（Identifying Bad Training Jobs）
+
+训练模型時，有一個重要且必須建立的簡單直覺：模型問題有不同的類型。你希望把大部分時間花在「目前的数据、算法或配方就是不夠好」这類問題上。另一方面，在建置新配方的過程中，也有很多時候某些方法根本就是壞掉的。
+
+理解这一點的最佳方式，是在一套大致固定的评估套件上评估許多模型。如此一來，你會逐漸培養出直覺，知道哪些测试很難被后训练介入手段撼動（通常是知識密集型的评估，例如 MMLU）。當后训练设居中有東西非常、*非常*嚴重地壞掉時，这些大致稳定的评估在一次训练任務中往往會掉 10 到 20 分。这是开发工具鏈時最有用的訊號之一！
+
+</script>
+<script src="../assets/marked.min.js"></script>
+<script src="../assets/katex/katex.min.js"></script>
+<script src="../assets/katex/auto-render.min.js"></script>
+<script src="../assets/widgets/appc.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/gh-star.js"></script>
+</body>
+</html>
