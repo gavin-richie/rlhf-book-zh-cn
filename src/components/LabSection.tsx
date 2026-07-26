@@ -6,91 +6,111 @@ export default function LabSection({ chapterId }: { chapterId: string }) {
   const scriptRef = useRef<HTMLScriptElement | null>(null);
 
   useEffect(() => {
-    const scriptUrl = `/assets/widgets/${chapterId}.js`;
+    let cancelled = false;
 
-    // Clear DOM content immediately to remove stale widget during navigation
-    const labRoot = document.getElementById("lab-root");
-    if (labRoot) labRoot.textContent = "";
-    const labIntro = document.getElementById("lab-intro");
-    if (labIntro) labIntro.textContent = "";
+    async function load() {
+      const scriptUrl = `/assets/widgets/${chapterId}.js`;
 
-    // Remove ALL widget scripts so they don't accumulate across navigations
-    document.querySelectorAll('script[src^="/assets/widgets/"]').forEach(s => s.remove());
-    (window as typeof window & { ChapterWidget?: unknown }).ChapterWidget = undefined;
+      // Clear DOM content immediately to remove stale widget during navigation
+      const labRoot = document.getElementById("lab-root");
+      if (labRoot) labRoot.textContent = "";
+      const labIntro = document.getElementById("lab-intro");
+      if (labIntro) labIntro.textContent = "";
 
-    // Ensure KaTeX JS is loaded before widget script (many widgets use tex()).
-    // Load the CSS <link> if not already present.
-    if (!document.getElementById("katex-css")) {
-      const cssLink = document.createElement("link");
-      cssLink.id = "katex-css";
-      cssLink.rel = "stylesheet";
-      cssLink.href = "/assets/katex/katex.min.css";
-      document.head.appendChild(cssLink);
-    }
-    if (!(window as typeof window & { __KatexLoaded?: boolean }).__KatexLoaded) {
-      const kt = document.createElement("script");
-      kt.src = "/assets/katex/katex.min.js";
-      kt.async = true;
-      kt.onload = () => { (window as typeof window & { __KatexLoaded?: boolean }).__KatexLoaded = true; };
-      document.head.appendChild(kt);
-    }
+      // Remove ALL widget scripts so they don't accumulate across navigations
+      document.querySelectorAll('script[src^="/assets/widgets/"]').forEach(s => s.remove());
+      (window as typeof window & { ChapterWidget?: unknown }).ChapterWidget = undefined;
 
-    const script = document.createElement("script");
-    script.src = scriptUrl;
-    script.async = true;
-    scriptRef.current = script;
-
-    // Append and let scripts load sequentially. When this script's onload
-    // fires, check if THIS script element is still in the DOM. If it was
-    // removed by cleanup (a newer widget loaded), bail — the newer widget
-    // already rendered.
-    script.onload = () => {
-      if (!document.head.contains(script)) return;
-
-      const w = (window as typeof window & { ChapterWidget?: {
-        render: (el: Element) => void;
-        title?: string;
-        intro?: string;
-      } | undefined }).ChapterWidget;
-      if (!w) return;
-
-      const root = document.getElementById("lab-root");
-      if (!root) return;
-      root.textContent = "";
-
-      const lab = document.getElementById("lab");
-      if (!lab) return;
-
-      lab.style.visibility = "visible";
-      lab.style.height = "auto";
-      lab.style.overflow = "visible";
-      lab.style.margin = "";
-      lab.style.padding = "";
-      lab.removeAttribute("aria-hidden");
-
-      if (w.title) {
-        const titleEl = lab.querySelector(".lab-title") as HTMLElement | null;
-        if (titleEl) titleEl.textContent = `🧪 互动实验室 · ${w.title}`;
+      // Ensure KaTeX JS is loaded before widget script (many widgets use tex()).
+      // Wait for the KaTeX script to be fully loaded before creating the widget
+      // script, so the browser guarantees window.katex exists when widgets run.
+      let katexPromise: Promise<void>;
+      const kt = document.getElementById("katex-js") as HTMLScriptElement | null;
+      if (!kt) {
+        katexPromise = new Promise<void>((resolve) => {
+          // Ensure KaTeX CSS is loaded if not already present.
+          if (!document.getElementById("katex-css")) {
+            const cssLink = document.createElement("link");
+            cssLink.id = "katex-css";
+            cssLink.rel = "stylesheet";
+            cssLink.href = "/assets/katex/katex.min.css";
+            document.head.appendChild(cssLink);
+          }
+          const ktScript = document.createElement("script");
+          ktScript.id = "katex-js";
+          ktScript.src = "/assets/katex/katex.min.js";
+          ktScript.onload = () => resolve();
+          document.head.appendChild(ktScript);
+        });
+      } else {
+        // KaTeX script already exists — ensure it's loaded (page might have been refreshed).
+        katexPromise = (window as typeof window & { __KatexLoaded?: boolean }).__KatexLoaded
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => { kt.onload = () => resolve(); if (kt.readyState === "complete") resolve(); });
       }
-      if (w.intro) {
-        const introEl = document.getElementById("lab-intro");
-        if (introEl) {
-          introEl.className = "lab-intro";
-          introEl.textContent = w.intro;
+
+      await katexPromise;
+      (window as typeof window & { __KatexLoaded?: boolean }).__KatexLoaded = true;
+
+      const script = document.createElement("script");
+      script.src = scriptUrl;
+      script.async = true;
+      scriptRef.current = script;
+
+      // Append and let scripts load sequentially. When this script's onload
+      // fires, check if THIS script element is still in the DOM. If it was
+      // removed by cleanup (a newer widget loaded), bail — the newer widget
+      // already rendered.
+      script.onload = () => {
+        if (!document.head.contains(script)) return;
+
+        const w = (window as typeof window & { ChapterWidget?: {
+          render: (el: Element) => void;
+          title?: string;
+          intro?: string;
+        } | undefined }).ChapterWidget;
+        if (!w) return;
+
+        const root = document.getElementById("lab-root");
+        if (!root) return;
+        root.textContent = "";
+
+        const lab = document.getElementById("lab");
+        if (!lab) return;
+
+        lab.style.visibility = "visible";
+        lab.style.height = "auto";
+        lab.style.overflow = "visible";
+        lab.style.margin = "";
+        lab.style.padding = "";
+        lab.removeAttribute("aria-hidden");
+
+        if (w.title) {
+          const titleEl = lab.querySelector(".lab-title") as HTMLElement | null;
+          if (titleEl) titleEl.textContent = `🧪 互动实验室 · ${w.title}`;
         }
-      }
-      try {
-        w.render(root);
-      } catch (err) {
-        console.error("widget render failed:", err);
-      }
-    };
+        if (w.intro) {
+          const introEl = document.getElementById("lab-intro");
+          if (introEl) {
+            introEl.className = "lab-intro";
+            introEl.textContent = w.intro;
+          }
+        }
+        try {
+          w.render(root);
+        } catch (err) {
+          console.error("widget render failed:", err);
+        }
+      };
 
-    script.onerror = () => {
-      console.error(`Failed to load widget: ${scriptUrl}`);
-    };
+      script.onerror = () => {
+        console.error(`Failed to load widget: ${scriptUrl}`);
+      };
 
-    document.head.appendChild(script);
+      document.head.appendChild(script);
+    }
+
+    load().catch(console.error);
 
     return () => {
       // Remove this script from DOM. Next time a script's onload fires,
