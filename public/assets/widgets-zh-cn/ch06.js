@@ -1,4 +1,4 @@
-/* 第 6 章互动元件：PPO / GRPO 互动遊樂場 */
+/* 第 6 章交互元件：PPO / GRPO 交互遊樂場 */
 (function () {
   'use strict';
 
@@ -40,7 +40,7 @@
     return { row: wrap, input: input, val: val };
   }
 
-  /* ---------- 分页 1：PPO 裁剪目標 ---------- */
+  /* ---------- 分页 1：PPO 裁剪目标 ---------- */
   function buildPPOTab() {
     var st = { eps: 0.2, A: 1, rho: 1.35 };
     var X_MAX = 2.5, W = 640, H = 300, PAD = { l: 48, r: 16, t: 16, b: 40 };
@@ -61,7 +61,7 @@
 
     // 图例
     var legend = el('div', 'display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin-top:.4rem;font-size:.8rem;color:var(--fg-muted);');
-    [['var(--accent)', 'solid', 'PPO 目標 J(ρ)'], ['var(--fg-muted)', 'dashed', '未裁剪的 ρA'], ['var(--accent-soft)', 'fill', '梯度歸零區（被裁剪）']].forEach(function (it) {
+    [['var(--accent)', 'solid', 'PPO 目标 J(ρ)'], ['var(--fg-muted)', 'dashed', '未裁剪的 ρA'], ['var(--accent-soft)', 'fill', '梯度歸零區（被裁剪）']].forEach(function (it) {
       var chip = el('span', 'display:inline-flex;align-items:center;gap:.35rem;');
       var mark = el('span', it[1] === 'fill'
         ? 'width:1rem;height:.75rem;background:' + it[0] + ';border:1px solid var(--border);border-radius:2px;'
@@ -111,7 +111,7 @@
       // 未裁剪的 ρA（虛线對照）
       svgEl('line', { x1: sx(0), y1: sy(0 * A), x2: sx(X_MAX), y2: sy(X_MAX * A), stroke: 'var(--fg-muted)', 'stroke-width': 1.5, 'stroke-dasharray': '6 4', opacity: 0.8 }, svg);
 
-      // PPO 目標：分段线性，只需在轉折點取值
+      // PPO 目标：分段线性，只需在轉折點取值
       var pts = [0, 1 - eps, 1 + eps, X_MAX].map(function (r) { return sx(r) + ',' + sy(objective(r)); }).join(' ');
       svgEl('polyline', { points: pts, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2.5 }, svg);
 
@@ -123,22 +123,22 @@
 
       // 軸名
       svgText(svg, PAD.l + plotW / 2, H - 5, 'ρ（策略比值 π_θ / π_θold）', { 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--fg)' });
-      svgText(svg, 13, PAD.t + plotH / 2, 'J（目標值）', { 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--fg)', transform: 'rotate(-90 13 ' + (PAD.t + plotH / 2) + ')' });
+      svgText(svg, 13, PAD.t + plotH / 2, 'J（目标值）', { 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--fg)', transform: 'rotate(-90 13 ' + (PAD.t + plotH / 2) + ')' });
 
       tex(formulaEl, 'J(\\theta)=\\min\\!\\big(\\rho A,\\ \\operatorname{clip}(\\rho,\\,' + fmt(1 - eps) + ',\\,' + fmt(1 + eps) + ')\\,A\\big),\\qquad A=' + fmt(A));
 
       readout.textContent = 'ρ = ' + fmt(st.rho) + '，J = ' + fmt(j) + ' — ' +
         (Math.abs(A) <= 0.005 ? '优勢为 0，處處无梯度。'
-          : clippedHere ? '此處梯度被裁剪歸零：目標为平坦區，这一步不做任何更新。'
-            : '此處未被裁剪：執行一般的策略梯度步（' + (A > 0 ? '提高' : '降低') + '該动作的机率）。');
+          : clippedHere ? '此處梯度被裁剪歸零：目标为平坦區，这一步不做任何更新。'
+            : '此處未被裁剪：执行一般的策略梯度步（' + (A > 0 ? '提高' : '降低') + '該动作的概率）。');
       readout.style.color = clippedHere ? 'var(--accent-2)' : 'var(--fg)';
 
       if (Math.abs(A) <= 0.005) {
-        interp.textContent = 'A ≈ 0：目標處處为 0，沒有任何學習訊號——优勢的正負號与大小，決定了整條曲线的形狀。';
+        interp.textContent = 'A ≈ 0：目标處處为 0，沒有任何學習訊號——优勢的正負號与大小，決定了整條曲线的形狀。';
       } else if (A > 0) {
-        interp.textContent = '正优勢（A > 0）：想提高此动作的机率。在 ρ ≤ ' + fmt(1 + eps) + '（含整个信賴區域与左侧）目標就是 ρA，照常做策略梯度步；但一旦 ρ > 1+ε = ' + fmt(1 + eps) + '，目標在 (1+ε)A = ' + fmt((1 + eps) * A) + ' 處飽和、梯度为 0——避免过度强化一个已經被充分表達的动作。';
+        interp.textContent = '正优勢（A > 0）：想提高此动作的概率。在 ρ ≤ ' + fmt(1 + eps) + '（含整个信賴區域与左侧）目标就是 ρA，照常做策略梯度步；但一旦 ρ > 1+ε = ' + fmt(1 + eps) + '，目标在 (1+ε)A = ' + fmt((1 + eps) * A) + ' 處飽和、梯度为 0——避免过度強化一个已經被充分表達的动作。';
       } else {
-        interp.textContent = '負优勢（A < 0）：想降低此动作的机率。在 ρ ≥ ' + fmt(1 - eps) + ' 时目標为 ρA，照常做策略梯度步（往左壓低机率）；但一旦 ρ < 1−ε = ' + fmt(1 - eps) + '，目標在 (1−ε)A = ' + fmt((1 - eps) * A) + ' 處飽和、梯度为 0——避免过度壓制一个已經被抑制的动作。';
+        interp.textContent = '負优勢（A < 0）：想降低此动作的概率。在 ρ ≥ ' + fmt(1 - eps) + ' 时目标为 ρA，照常做策略梯度步（往左壓低概率）；但一旦 ρ < 1−ε = ' + fmt(1 - eps) + '，目标在 (1−ε)A = ' + fmt((1 - eps) * A) + ' 處飽和、梯度为 0——避免过度壓制一个已經被抑制的动作。';
       }
     }
 
@@ -175,7 +175,7 @@
 
     // 預設按鈕
     var btnRow = el('div'); btnRow.className = 'widget-row';
-    btnRow.appendChild(el('span', 'font-size:.88rem;', '一組 G = 8 个 rollout 的奖励 r：'));
+    btnRow.appendChild(el('span', 'font-size:.88rem;', '一組 G = 8 个 rollout 的獎勵 r：'));
     [['隨机', function () { return Math.round(Math.random() * 20) / 20; }],
      ['全對', function () { return 1; }],
      ['全錯', function () { return 0; }]].forEach(function (p) {
@@ -188,7 +188,7 @@
     });
     panel.appendChild(btnRow);
 
-    // 8 支奖励滑桿
+    // 8 支獎勵滑桿
     var grid = el('div', 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.25rem .9rem;margin-top:.5rem;');
     var sliders = [];
     for (var i = 0; i < G; i++) {
@@ -253,7 +253,7 @@
       } else {
         interp.style.borderColor = 'var(--border)';
         interp.style.color = 'var(--fg-muted)';
-        interp.textContent = '群組内有對比訊號：高于群組平均的样本得到正优勢（被强化），低于平均者得到負优勢（被壓制）。以 std 正規化讓不同題目间的优勢尺度可比；也請注意——接近全對／全錯时 std 变小，少数「异類」样本的 |Â| 会被放得很大（这正是 Dr. GRPO 討论的偏差来源）。';
+        interp.textContent = '群組内有對比訊號：高于群組平均的样本得到正优勢（被強化），低于平均者得到負优勢（被壓制）。以 std 正規化讓不同題目间的优勢尺度可比；也請注意——接近全對／全錯时 std 变小，少数「异類」样本的 |Â| 会被放得很大（这正是 Dr. GRPO 討论的偏差来源）。';
       }
     }
 
@@ -265,7 +265,7 @@
   function render(rootEl) {
     var tabBar = el('div', 'display:flex;gap:.5rem;margin-bottom:.8rem;flex-wrap:wrap;');
     var tabs = [
-      { label: '① PPO 裁剪目標', build: buildPPOTab },
+      { label: '① PPO 裁剪目标', build: buildPPOTab },
       { label: '② GRPO 群組优勢', build: buildGRPOTab }
     ];
     var buttons = [], panes = [];
@@ -294,8 +294,8 @@
   }
 
   window.ChapterWidget = {
-    title: 'PPO / GRPO 互动遊樂場',
-    intro: '分页一：调整裁剪係数 ε 与优勢 A，拖动 ρ 游標，觀察 PPO 裁剪目標如何在信賴區域外把梯度歸零；分页二：拖动一組 G=8 个 rollout 的奖励，看 GRPO 群組正規化优勢如何产生對比訊號——以及全對／全錯时为何學不到东西。',
+    title: 'PPO / GRPO 交互遊樂場',
+    intro: '分页一：调整裁剪係数 ε 与优勢 A，拖动 ρ 游標，觀察 PPO 裁剪目标如何在信賴區域外把梯度歸零；分页二：拖动一組 G=8 个 rollout 的獎勵，看 GRPO 群組正規化优勢如何产生對比訊號——以及全對／全錯时为何學不到东西。',
     render: render
   };
 })();

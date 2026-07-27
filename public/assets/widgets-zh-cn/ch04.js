@@ -1,4 +1,4 @@
-/* 第 4 章互动元件：聊天模板建構器（Chat Template Playground） */
+/* 第 4 章交互元件：聊天模板建構器（Chat Template Playground） */
 (function () {
   'use strict';
 
@@ -9,21 +9,21 @@
   var TEMPLATES = {
     chatml: {
       label: 'ChatML',
-      note: 'ChatML（Chat Markup Language）源自 OpenAI，是早期標準化訊息格式的嘗試：每則訊息以 <|im_start|>role 开头、<|im_end|> 收尾。',
+      note: 'ChatML（Chat Markup Language）源自 OpenAI，是早期標準化消息格式的嘗試：每則消息以 <|im_start|>role 开头、<|im_end|> 收尾。',
       head: function (role) { return [sp('<|im_start|>'), pl(role + '\n')]; },
       tail: function () { return [sp('<|im_end|>'), pl('\n')]; },
       gen: function () { return [sp('<|im_start|>'), pl('assistant\n')]; }
     },
     zephyr: {
       label: 'Zephyr',
-      note: 'Zephyr 模板出自 Hugging Face H4 團队的 Zephyr 模型：以 <|system|>、<|user|>、<|assistant|> 標記角色，每則訊息以 </s> 收尾。',
+      note: 'Zephyr 模板出自 Hugging Face H4 團队的 Zephyr 模型：以 <|system|>、<|user|>、<|assistant|> 標記角色，每則消息以 </s> 收尾。',
       head: function (role) { return [sp('<|' + role + '|>'), pl('\n')]; },
       tail: function () { return [sp('</s>'), pl('\n')]; },
       gen: function () { return [sp('<|assistant|>'), pl('\n')]; }
     },
     tulu: {
       label: 'Tülu',
-      note: 'Tülu 模板出自 AI2（Allen Institute for AI）的 Tülu 系列：格式極简，角色標籤后換行直接接内容，僅 assistant 回覆以 <|endoftext|> 收尾。',
+      note: 'Tülu 模板出自 AI2（Allen Institute for AI）的 Tülu 系列：格式極简，角色標籤后換行直接接内容，僅 assistant 回复以 <|endoftext|> 收尾。',
       head: function (role) { return [sp('<|' + role + '|>'), pl('\n')]; },
       tail: function (role) { return role === 'assistant' ? [sp('<|endoftext|>'), pl('\n')] : [pl('\n')]; },
       gen: function () { return [sp('<|assistant|>'), pl('\n')]; }
@@ -41,7 +41,7 @@
     ]
   };
 
-  // 把目前對話狀態序列化成带標記的片段串列
+  // 把目前对话状态序列化成带標記的片段串列
   function serialize() {
     var tpl = TEMPLATES[state.template];
     var msgs = [];
@@ -54,9 +54,9 @@
     msgs.forEach(function (m) {
       // 角色开头標籤屬于提示結構，一律遮罩
       tpl.head(m.role).forEach(function (s) { s.loss = false; out.push(s); });
-      // 訊息内容：只有 assistant 回覆計算損失
+      // 消息内容：只有 assistant 回复計算损失
       out.push({ t: m.content, special: false, loss: m.role === 'assistant' });
-      // 結尾詞元跟隨所屬訊息：assistant 的 EOS 也要學（模型才知道何时停）
+      // 結尾token跟隨所屬消息：assistant 的 EOS 也要學（模型才知道何时停）
       tpl.tail(m.role).forEach(function (s) { s.loss = m.role === 'assistant'; out.push(s); });
     });
     if (state.genPrompt) tpl.gen().forEach(function (s) { s.loss = false; out.push(s); });
@@ -70,7 +70,7 @@
     return n;
   }
 
-  var refs = {}; // 持有需要更新的 DOM 節點
+  var refs = {}; // 持有需要更新的 DOM 节点
 
   function renderOutput() {
     var pre = refs.pre;
@@ -103,7 +103,7 @@
     return el('div', 'font-size:.78rem;font-weight:600;color:var(--fg-muted);margin:.4rem 0 .2rem;', text);
   }
 
-  // 重建對話编辑區（新增／删除輪次时呼叫）
+  // 重建对话编辑區（新增／删除輪次时呼叫）
   function renderEditor() {
     var box = refs.editor;
     box.textContent = '';
@@ -132,7 +132,7 @@
 
     var add = el('button', 'margin-top:.8rem;', '＋ 新增一輪');
     add.addEventListener('click', function () {
-      state.rounds.push({ user: '（輸入新的使用者訊息）', assistant: '（輸入新的助理回覆）' });
+      state.rounds.push({ user: '（输入新的使用者消息）', assistant: '（输入新的助理回复）' });
       renderEditor();
       renderOutput();
     });
@@ -147,9 +147,9 @@
   }
 
   function render(rootEl) {
-    // 面板一：對話编辑
+    // 面板一：对话编辑
     var panel1 = el('div', null); panel1.className = 'widget-panel';
-    panel1.appendChild(el('h4', 'margin:.1rem 0 .5rem;font-size:.95rem;', '① 编辑對話'));
+    panel1.appendChild(el('h4', 'margin:.1rem 0 .5rem;font-size:.95rem;', '① 编辑对话'));
     refs.editor = el('div', null);
     panel1.appendChild(refs.editor);
     rootEl.appendChild(panel1);
@@ -172,7 +172,7 @@
     selLabel.appendChild(sel);
     row.appendChild(selLabel);
 
-    [['showMask', '显示損失遮罩'], ['genPrompt', '附加生成提示（add_generation_prompt）']].forEach(function (pair) {
+    [['showMask', '显示损失遮罩'], ['genPrompt', '附加生成提示（add_generation_prompt）']].forEach(function (pair) {
       var lab = el('label', 'display:inline-flex;align-items:center;gap:.35rem;font-size:.88rem;cursor:pointer;');
       var cb = document.createElement('input');
       cb.type = 'checkbox';
@@ -184,7 +184,7 @@
     });
     panel2.appendChild(row);
 
-    // 模板出處的一句話解讀
+    // 模板出處的一句話解读
     refs.note = el('p', 'margin:.6rem 0 0;font-size:.85rem;color:var(--fg-muted);');
     panel2.appendChild(refs.note);
 
@@ -193,12 +193,12 @@
       'font-family:var(--mono,monospace);font-size:.84rem;line-height:1.85;white-space:pre-wrap;word-break:break-word;overflow-x:auto;color:var(--fg);');
     panel2.appendChild(refs.pre);
 
-    // 图例：損失遮罩说明
+    // 图例：损失遮罩说明
     refs.legend = el('div', 'display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;margin-top:.6rem;');
-    refs.legend.appendChild(legendChip('var(--border)', 'prompt／user 部分（遮罩，不計損失）'));
-    refs.legend.appendChild(legendChip('var(--accent-soft)', 'assistant 回覆（計算損失）'));
+    refs.legend.appendChild(legendChip('var(--border)', 'prompt／user 部分（遮罩，不計损失）'));
+    refs.legend.appendChild(legendChip('var(--accent-soft)', 'assistant 回复（計算损失）'));
     refs.legend.appendChild(el('span', 'font-size:.8rem;color:var(--fg-muted);flex-basis:100%;',
-      'SFT 只對助理 token 計算損失（prompt masking）：模型不學着預測使用者查詢，只學習生成回應与結尾詞元。'));
+      'SFT 只對助理 token 計算损失（prompt masking）：模型不學着預測使用者查詢，只學習生成响应与結尾token。'));
     panel2.appendChild(refs.legend);
 
     rootEl.appendChild(panel2);
@@ -208,7 +208,7 @@
 
   window.ChapterWidget = {
     title: '聊天模板建構器',
-    intro: '编辑多輪對話并切換 ChatML／Zephyr／Tülu 模板，即时觀察訊息如何被序列化成詞元序列；打开損失遮罩，看看 SFT 为什么「只學回應、不學提示」。',
+    intro: '编辑多輪对话并切換 ChatML／Zephyr／Tülu 模板，即时觀察消息如何被序列化成token序列；打开损失遮罩，看看 SFT 为什么「只學响应、不學提示」。',
     render: render
   };
 })();

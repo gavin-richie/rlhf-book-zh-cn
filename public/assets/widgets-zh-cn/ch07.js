@@ -1,19 +1,19 @@
-/* 第 7 章互动元件：推断时扩展模擬器（pass@k 与多数決） */
+/* 第 7 章交互元件：推理时擴展模擬器（pass@k 与多数決） */
 (function () {
   'use strict';
 
   // ---------- 数學工具 ----------
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const fmtPct = (v) => (v * 100).toFixed(1) + '%';
-  // 對数阶乘表（k 最大 256），用于数值稳定的二项分布計算
+  // 對数阶乘表（k 最大 256），用于数值穩定的二项分布計算
   const LOG_FACT = [0];
   for (let i = 1; i <= 256; i++) LOG_FACT[i] = LOG_FACT[i - 1] + Math.log(i);
   const logC = (n, k) => LOG_FACT[n] - LOG_FACT[k] - LOG_FACT[n - k];
 
   // pass@k = 1 − (1−p)^k：k 次取样中「至少一次正確」（需要验证器挑出對的那次）
   const passAt = (k, p) => 1 - Math.pow(1 - p, k);
-  // maj@k：多数決答對的机率。X ~ Bin(k, p)，P(X > k/2) + ½·P(X = k/2)（平手擲硬幣）
-  // 保守假設：每次作答獨立，且所有錯誤答案彼此相同（錯誤票不分散）
+  // maj@k：多数決答對的概率。X ~ Bin(k, p)，P(X > k/2) + ½·P(X = k/2)（平手擲硬幣）
+  // 保守假设：每次作答獨立，且所有错误答案彼此相同（错误票不分散）
   function majAt(k, p) {
     const lp = Math.log(p), lq = Math.log(1 - p);
     let s = 0;
@@ -53,8 +53,8 @@
 
   // ---------- 元件本体 ----------
   window.ChapterWidget = {
-    title: '推断时扩展模擬器：pass@k 与多数決',
-    intro: '拖动單次作答正確率 p 与样本数上限 K，比較「有验证器」的 pass@k 与「沒有验证器、靠自我一致性」的多数決 maj@k 如何隨取样次数 k 扩展。在曲线上拖动或點击，可讀出任一 k 的数值。',
+    title: '推理时擴展模擬器：pass@k 与多数決',
+    intro: '拖动單次作答正確率 p 与样本数上限 K，比較「有验证器」的 pass@k 与「沒有验证器、靠自我一致性」的多数決 maj@k 如何隨取样次数 k 擴展。在曲线上拖动或点击，可讀出任一 k 的数值。',
     render(root) {
       const state = { p: 0.3, expK: 6, k: 16 }; // K = 2^expK
       const K = () => Math.pow(2, state.expK);
@@ -66,7 +66,7 @@
         '\\text{pass@}k = 1 - (1-p)^k,\\qquad ' +
         '\\text{maj@}k = \\Pr\\!\\big[X > \\tfrac{k}{2}\\big] + \\tfrac{1}{2}\\Pr\\!\\big[X = \\tfrac{k}{2}\\big],\\quad X \\sim \\mathrm{Bin}(k,\\,p)');
       const eqNote = el('div', { style: 'font-size:.82rem; color:var(--fg-muted); margin-top:.3rem;',
-        text: '假設：每次作答獨立、正確率皆为 p，且所有錯誤答案彼此相同（多数決的保守下界；平手时擲硬幣）。' });
+        text: '假设：每次作答獨立、正確率皆为 p，且所有错误答案彼此相同（多数決的保守下界；平手时擲硬幣）。' });
       const eqPanel = el('div', { class: 'widget-panel', style: 'overflow-x:auto;' }, [eqMain, eqNote]);
 
       // --- 滑桿列 ---
@@ -111,7 +111,7 @@
         t.textContent = (y * 100).toFixed(0) + '%'; svg.appendChild(t);
       }
       const yLab = svgEl('text', { x: 13, y: sy(0.5), 'font-size': 12, fill: 'var(--fg)', transform: 'rotate(-90 13 ' + sy(0.5) + ')', 'text-anchor': 'middle' });
-      yLab.textContent = '答對机率'; svg.appendChild(yLab);
+      yLab.textContent = '答對概率'; svg.appendChild(yLab);
       const xLab = svgEl('text', { x: PAD.l + IW / 2, y: H - 4, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--fg)' });
       xLab.textContent = 'k（取样次数，log₂ 刻度）'; svg.appendChild(xLab);
       const gX = svgEl('g'); svg.appendChild(gX);                    // x 軸刻度（隨 K 重建）
@@ -138,7 +138,7 @@
         return pts.join(' ');
       }
 
-      // 游標拖动／點击 → 选取 k（貼齊最近的整数 k）
+      // 游標拖动／点击 → 选取 k（貼齊最近的整数 k）
       function pickK(ev) {
         const r = svg.getBoundingClientRect();
         const px = (ev.clientX - r.left) * (W / r.width);
@@ -164,7 +164,7 @@
       ]);
       const chartPanel = el('div', { class: 'widget-panel' }, [svg, legend]);
 
-      // --- 动態解讀与對照卡 ---
+      // --- 动態解读与对照卡 ---
       const interp = el('div', { class: 'widget-panel', style: 'font-size:.92rem; line-height:1.7;' });
       function card(title, body) {
         return el('div', { style: 'flex:1 1 240px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:.65rem .85rem;' }, [
@@ -173,10 +173,10 @@
         ]);
       }
       const compare = el('div', { class: 'widget-panel' }, [
-        el('div', { text: 'RL 训练 vs 推断时扩展（§7.2.2）', style: 'font-weight:700; margin-bottom:.5rem;' }),
+        el('div', { text: 'RL 训练 vs 推理时擴展（§7.2.2）', style: 'font-weight:700; margin-bottom:.5rem;' }),
         el('div', { class: 'widget-row' }, [
-          card('RL 训练（RLVR）', '把「偶爾才對」的行为强化成穩健能力、内化进模型權重——直接抬高單次正確率 p，等于整條曲线的起點被墊高。'),
-          card('推断时扩展', '在生成时花更多运算（更长推理鏈、取样 k 次）換取表現——沿着曲线往右走，能力不变、只是用計算把它变現。'),
+          card('RL 训练（RLVR）', '把「偶爾才對」的行为強化成穩健能力、内化进模型权重——直接抬高單次正確率 p，等于整條曲线的起點被墊高。'),
+          card('推理时擴展', '在生成时花更多计算（更长推理鏈、取样 k 次）換取表現——沿着曲线往右走，能力不变、只是用計算把它变現。'),
         ]),
       ]);
 
@@ -200,25 +200,25 @@
         stK.v.textContent = 'k = ' + k;
         stPass.v.textContent = fmtPct(pk); stMaj.v.textContent = fmtPct(mk); stP.v.textContent = fmtPct(p);
         gapLine.textContent = '在 k = ' + k + ' 时，pass@k − maj@k = ' + fmtPct(pk - mk) + '——这段差距就是「有沒有验证器」的價值。';
-        // 动態解讀（核心教學）
+        // 动態解读（核心教學）
         const passK = passAt(Kv, p), majK = majAt(Kv, p);
         let msg;
         if (p < 0.45) {
-          msg = '目前 p = ' + fmtPct(p) + ' < 50%：多数決<strong>不升反降</strong>——錯誤答案佔多数的机率隨 k 放大，maj@' + Kv + ' ≈ ' +
+          msg = '目前 p = ' + fmtPct(p) + ' < 50%：多数決<strong>不升反降</strong>——错误答案佔多数的概率隨 k 放大，maj@' + Kv + ' ≈ ' +
             fmtPct(majK) + '，一路趨向 0；pass@' + Kv + ' 卻仍升到 ' + fmtPct(passK) +
             '。沒有验证器时，「自我一致性」只会忠实放大模型最常见的答案——不夠常對，就是最常见地錯。此时取样再多也救不了多数決，' +
             '要嘛先用 RLVR 训练把 p 拉高，要嘛引入验证器（正確答案抽取、單元测试）把 pass@k 的上限变現。';
         } else if (p <= 0.55) {
           msg = '目前 p = ' + fmtPct(p) + ' ≈ 50%：多数決近似擲硬幣，maj@k 幾乎黏在 50% 附近不动（maj@' + Kv + ' ≈ ' + fmtPct(majK) +
-            '）；pass@k 依然稳定上升到 ' + fmtPct(passK) + '。这是分水嶺——自我一致性失效，但验证器仍然有效。';
+            '）；pass@k 依然穩定上升到 ' + fmtPct(passK) + '。这是分水嶺——自我一致性失效，但验证器仍然有效。';
         } else {
           msg = '目前 p = ' + fmtPct(p) + ' > 50%：兩條曲线都上升——模型「夠常對」，多数決靠自我一致性就能收斂（maj@' + Kv + ' ≈ ' +
             fmtPct(majK) + '），不需要验证器；pass@' + Kv + ' ≈ ' + fmtPct(passK) +
             ' 升得更快，兩者的差距就是验证器額外榨出的表現。';
         }
-        interp.innerHTML = '<strong>解讀：</strong>' + msg +
-          '<br><strong>为什么互補：</strong>推断时扩展只有在模型「夠常對」（p > 50%，多数決可用）或「有验证器」（pass@k 可变現）时才有效。' +
-          '这正是 RLVR 训练与推断扩展互補的原因：RLVR 抬高 p、讓每一次取样更值錢，推断扩展再沿着曲线用計算換表現。';
+        interp.innerHTML = '<strong>解读：</strong>' + msg +
+          '<br><strong>为什么互補：</strong>推理时擴展只有在模型「夠常對」（p > 50%，多数決可用）或「有验证器」（pass@k 可变現）时才有效。' +
+          '这正是 RLVR 训练与推理擴展互補的原因：RLVR 抬高 p、讓每一次取样更值錢，推理擴展再沿着曲线用計算換表現。';
       }
 
       root.appendChild(el('div', { style: 'display:flex; flex-direction:column; gap:1rem;' }, [eqPanel, controls, stats, chartPanel, interp, compare]));

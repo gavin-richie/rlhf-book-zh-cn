@@ -1,46 +1,46 @@
-/* 附录 A 互动元件：RLHF 词汇抽認卡 */
+/* 附录 A 交互元件：RLHF 词汇抽认卡 */
 (function () {
   'use strict';
 
   var TERMS = [
     { zh: 'KL 散度', en: 'Kullback-Leibler Divergence', cat: 'ML',
-      def: '衡量定义在同一机率空间上的兩个机率分布 $P$ 与 $Q$ 之间差异的度量：$\\mathcal{D}_{\\mathrm{KL}}(P\\|Q)=\\sum_{x}P(x)\\log\\left(\\frac{P(x)}{Q(x)}\\right)$。' },
-    { zh: '蒸馏', en: 'Distillation', cat: 'ML',
-      def: '以較強模型的輸出来训练另一个模型的通用做法，是一種已知能打造強大小型模型的合成数据類型。此詞如今用法已超載，与机器學習文獻中的特定技术定义有所出入。' },
-    { zh: '（師生式）知識蒸馏', en: 'Knowledge Distillation', cat: 'ML',
-      def: '蒸馏的特定型態，也是此术語的起源：透过修改損失函数，讓學生模型 $P_\\theta$ 從教師模型 $P_\\phi$ 在多个潛在詞元／對数机率上的分布中學習，而非直接學習單一选定的輸出。' },
+      def: '衡量定義在同一概率空间上的兩个概率分布 $P$ 与 $Q$ 之间差异的度量：$\\mathcal{D}_{\\mathrm{KL}}(P\\|Q)=\\sum_{x}P(x)\\log\\left(\\frac{P(x)}{Q(x)}\\right)$。' },
+    { zh: '蒸餾', en: 'Distillation', cat: 'ML',
+      def: '以較強模型的輸出来训练另一个模型的通用做法，是一種已知能打造強大小型模型的合成数据類型。此詞如今用法已超載，与机器學習文獻中的特定技术定義有所出入。' },
+    { zh: '（師生式）知識蒸餾', en: 'Knowledge Distillation', cat: 'ML',
+      def: '蒸餾的特定型態，也是此术語的起源：透过修改损失函数，讓學生模型 $P_\\theta$ 從教師模型 $P_\\phi$ 在多个潛在token／對数概率上的分布中學習，而非直接學習單一选定的輸出。' },
     { zh: '合成数据', en: 'Synthetic Data', cat: 'ML',
-      def: '任何由另一个 AI 系統的輸出所構成的训练数据，范围從模型針對开放式提示詞生成的文字，到模型對既有内容的改寫。' },
-    { zh: '提示詞', en: 'Prompt', cat: 'NLP',
-      def: '提供給语言模型、用以生成回應或補全的輸入文字，記作 $x$。' },
-    { zh: '補全', en: 'Completion', cat: 'NLP',
-      def: '语言模型針對某个提示詞所生成的輸出文字，常記作 $y \\mid x$；奖励值常以 $r(y \\mid x)$ 的形式計算。' },
-    { zh: '被选補全', en: 'Chosen Completion', cat: 'NLP',
-      def: '相較于其他候选项而被挑选或偏好的補全，記作 $y_c$，也常記作 $y_{chosen}$。' },
-    { zh: '被拒補全', en: 'Rejected Completion', cat: 'NLP',
-      def: '在成對比較（pairwise）情境中不受偏好的那个補全，記作 $y_r$。' },
+      def: '任何由另一个 AI 系統的輸出所構成的训练数据，范围從模型針對开放式提示生成的文本，到模型對既有内容的改寫。' },
+    { zh: '提示', en: 'Prompt', cat: 'NLP',
+      def: '提供給语言模型、用以生成响应或补全的输入文本，記作 $x$。' },
+    { zh: '补全', en: 'Completion', cat: 'NLP',
+      def: '语言模型針對某个提示所生成的輸出文本，常記作 $y \\mid x$；獎勵值常以 $r(y \\mid x)$ 的形式計算。' },
+    { zh: '被选补全', en: 'Chosen Completion', cat: 'NLP',
+      def: '相較于其他候选项而被挑选或偏好的补全，記作 $y_c$，也常記作 $y_{chosen}$。' },
+    { zh: '被拒补全', en: 'Rejected Completion', cat: 'NLP',
+      def: '在成對比較（pairwise）情境中不受偏好的那个补全，記作 $y_r$。' },
     { zh: '偏好关係', en: 'Preference Relation', cat: 'NLP',
-      def: '表示某一補全优于另一補全的符號，例如 $y_{chosen} \\succ y_{rejected}$；奖励模型会預測此关係成立的机率 $P(y_c \\succ y_r \\mid x)$。' },
+      def: '表示某一补全优于另一补全的符號，例如 $y_{chosen} \\succ y_{rejected}$；獎勵模型会預測此关係成立的概率 $P(y_c \\succ y_r \\mid x)$。' },
     { zh: '思維鏈', en: 'Chain-of-Thought (CoT)', cat: 'NLP',
-      def: '语言模型的一種特定行为，指模型被引导以逐步拆解问題的形式作答，最初的版本透过提示詞「Let’s think step by step」实现。' },
+      def: '语言模型的一種特定行为，指模型被引导以逐步拆解问題的形式作答，最初的版本透过提示「Let’s think step by step」实现。' },
     { zh: '情境内學習', en: 'In-context Learning (ICL)', cat: 'NLP',
-      def: '利用语言模型上下文視窗内任何资訊（通常是加到提示詞中的内容）的學習方式；最简單的形式是在提示詞前加入形式相似的范例。' },
+      def: '利用语言模型上下文視窗内任何信息（通常是加到提示中的内容）的學習方式；最简單的形式是在提示前加入形式相似的示例。' },
     { zh: '策略', en: 'Policy', cat: 'RL',
-      def: '以 $\\theta$ 为參数、定义在所有可能補全上的机率分布 $\\pi_\\theta(y \\mid x)$；在强化學習中是代理人決定动作的規則 $\\pi(a \\mid s)$，RLHF 中也稱策略模型。' },
-    { zh: '奖励', en: 'Reward', cat: 'RL',
-      def: '表示某个动作或狀態之可取程度（desirability）的純量值，通常記作 $r$。' },
+      def: '以 $\\theta$ 为參数、定義在所有可能补全上的概率分布 $\\pi_\\theta(y \\mid x)$；在强化学习中是代理人決定动作的規則 $\\pi(a \\mid s)$，RLHF 中也稱策略模型。' },
+    { zh: '獎勵', en: 'Reward', cat: 'RL',
+      def: '表示某个动作或状态之可取程度（desirability）的純量值，通常記作 $r$。' },
     { zh: '优勢函数', en: 'Advantage Function', cat: 'RL',
-      def: '量化在狀態 $s$ 下採取动作 $a$ 相較于平均动作的相對效益：$A(s,a)=Q(s,a)-V(s)$，可依附于特定策略記作 $A^\\pi(s,a)$。' },
+      def: '量化在状态 $s$ 下採取动作 $a$ 相較于平均动作的相對效益：$A(s,a)=Q(s,a)-V(s)$，可依附于特定策略記作 $A^\\pi(s,a)$。' },
     { zh: '價值函数', en: 'Value Function', cat: 'RL',
-      def: '估計從給定狀態出发的期望累積奖励的函数：$V(s)=\\mathbb{E}\\left[\\sum_{t=0}^{\\infty}\\gamma^t r_t \\mid s_0=s\\right]$。' },
+      def: '估计從給定状态出发的期望累積獎勵的函数：$V(s)=\\mathbb{E}\\left[\\sum_{t=0}^{\\infty}\\gamma^t r_t \\mid s_0=s\\right]$。' },
     { zh: 'Q 函数', en: 'Q-Function', cat: 'RL',
-      def: '估計在給定狀態下採取特定动作后的期望累積奖励：$Q(s,a)=\\mathbb{E}\\left[\\sum_{t=0}^{\\infty}\\gamma^t r_t \\mid s_0=s, a_0=a\\right]$。' },
+      def: '估计在給定状态下採取特定动作后的期望累積獎勵：$Q(s,a)=\\mathbb{E}\\left[\\sum_{t=0}^{\\infty}\\gamma^t r_t \\mid s_0=s, a_0=a\\right]$。' },
     { zh: '軌跡', en: 'Trajectory', cat: 'RL',
-      def: '代理人所經歷的一連串狀態、动作与奖励：$\\tau=(s_0,a_0,r_0,s_1,a_1,r_1,\\ldots,s_T,a_T,r_T)$。' },
+      def: '代理人所經歷的一連串状态、动作与獎勵：$\\tau=(s_0,a_0,r_0,s_1,a_1,r_1,\\ldots,s_T,a_T,r_T)$。' },
     { zh: '折扣因子', en: 'Discount Factor', cat: 'RL',
-      def: '滿足 $0 \\le \\gamma < 1$ 的純量，用来在回報中對未来奖励进行指数式降權，在即时性与长期收益之间取得權衡，并保證无限时域加总的收斂性。' },
+      def: '滿足 $0 \\le \\gamma < 1$ 的純量，用来在回報中對未来獎勵进行指数式降權，在即时性与长期收益之间取得權衡，并保證无限时域加总的收斂性。' },
     { zh: '同策略', en: 'On-policy', cat: 'RL',
-      def: '强化學習中指数据恰好由代理人当前形式的模型所生成；在偏好微调文獻中意義被放寬为「由該版本模型生成」，例如偏好微调前的指令微调检查點。' },
+      def: '强化学习中指数据恰好由代理人当前形式的模型所生成；在偏好微调文獻中意義被放寬为「由該版本模型生成」，例如偏好微调前的指令微调检查點。' },
     { zh: '參考模型', en: 'Reference Model', cat: 'RLHF',
       def: 'RLHF 中使用的一組保存下来的參数 $\\pi_{\\mathrm{ref}}$，其輸出被用来對优化过程进行正则化（regularize）。' }
   ];
@@ -69,7 +69,7 @@
     '.appaw-nav{justify-content:center;margin-top:12px;}' +
     '.appaw-prog{color:var(--fg-muted);min-width:64px;text-align:center;}';
 
-  /* 將含 $...$ 行内式的字串渲染进元素 */
+  /* 將含 $...$ 行内式的字符串渲染进元素 */
   function renderRich(el, text) {
     el.textContent = '';
     var parts = text.split(/\$([^$]+)\$/g);
@@ -117,7 +117,7 @@
     function renderBrowse() {
       var bar = el('div', 'widget-row', body);
       var search = el('input', '', bar);
-      search.type = 'text'; search.placeholder = '搜索中英名稱或定义…'; search.value = state.query;
+      search.type = 'text'; search.placeholder = '搜索中英名稱或定義…'; search.value = state.query;
       search.style.flex = '1'; search.style.minWidth = '160px';
       var sel = el('select', '', bar);
       var optAll = el('option', '', sel); optAll.value = 'all'; optAll.textContent = '全部分類';
@@ -163,7 +163,7 @@
       var front = el('div', 'appaw-face appaw-front', inner);
       var back = el('div', 'appaw-face appaw-back', inner);
       var backDef = el('div', 'appaw-def', back);
-      el('div', 'appaw-hint', body).textContent = '點击卡片可翻面查看定义';
+      el('div', 'appaw-hint', body).textContent = '点击卡片可翻面查看定義';
       var nav = el('div', 'widget-row appaw-nav', body);
       var prev = el('button', '', nav); prev.type = 'button'; prev.textContent = '上一張';
       var prog = el('span', 'appaw-prog', nav);
@@ -178,7 +178,7 @@
         renderRich(backDef, t.def);
         flip.classList.toggle('is-flipped', state.flipped);
         prog.textContent = (state.idx + 1) + ' / ' + TERMS.length;
-        flip.setAttribute('aria-label', '抽認卡：' + t.zh + '（點击翻面）');
+        flip.setAttribute('aria-label', '抽認卡：' + t.zh + '（点击翻面）');
       }
       function go(delta) {
         state.idx = (state.idx + delta + TERMS.length) % TERMS.length;
@@ -205,8 +205,8 @@
   }
 
   window.ChapterWidget = {
-    title: 'RLHF 词汇抽認卡',
-    intro: '收錄附录 A 的 20 條核心词汇。可在「浏览」模式搜索与依分類篩选，或切換到「抽認卡」模式逐張翻面複習中英术語与定义。',
+    title: 'RLHF 词汇抽认卡',
+    intro: '收錄附录 A 的 20 條核心词汇。可在「浏览」模式搜索与依分類篩选，或切換到「抽認卡」模式逐張翻面複習中英术語与定義。',
     render: render
   };
 })();

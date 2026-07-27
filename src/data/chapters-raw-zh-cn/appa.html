@@ -9,7 +9,7 @@
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="../index.html">RLHF 中文版<span>从人类反馈中强化学习</span></a>
+  <a class="brand" href="../index.html">RLHF 中文版<span>从人类回馈中强化学习</span></a>
   <nav class="chapnav"><a href="ch17.html">← 第 17 章</a><span class="chapnav-current">附录 A　定义</span><a href="appb.html">附录 B →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
 </header>
 <div class="layout">
@@ -23,98 +23,98 @@
       <div id="lab-root"></div>
     </section>
     <nav class="pager"><a class="prev" href="ch17.html"><span class="dir">← 上一章</span><div class="ttl">第 17 章　打造模型性格与产品</div></a><a class="next" href="appb.html"><span class="dir">下一章 →</span><div class="ttl">附录 B　不只是「风格」</div></a></nav>
-    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（）的<strong>非官方社群翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
+    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（台湾）的<strong>非官方社区翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
   </main>
 </div>
 <script type="text/markdown" id="chapter-md">
 # 附录 A　定义（Definitions）
 
-> 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 227–230 頁。
+> 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 227–230 页。
 
-本附录收錄 RLHF 流程中經常使用的所有定义、符號与运算，并簡要概述语言模型——语言模型是貫穿本書的核心應用。
+本附录收录 RLHF 流程中经常使用的所有定义、符号与运算，并简要概述语言模型——语言模型是贯穿本书的核心应用。
 
-## A.1 語言建模总览（Language Modeling Overview）
+## A.1 语言建模总览（Language Modeling Overview）
 
-大多數現代语言模型的训练目標，是以自迴歸（autoregressive）方式學習詞元（token；可能是單詞、子詞或字元）序列的聯合機率分布。所謂自迴歸，就是指每一個下一步的預測都取決于序列中先前的元素。給定詞元序列 $x = (x_1, x_2, \ldots, x_T)$，模型會将整個序列的機率分解为一連串條件分布的乘積：
+大多数现代语言模型的训练目标，是以自回归（autoregressive）方式学习词元（token；可能是单词、子词或字符）序列的联合机率分布。所谓自回归，就是指每一个下一步的预测都取决于序列中先前的元素。给定词元序列 $x = (x_1, x_2, \ldots, x_T)$，模型会将整个序列的机率分解为一连串条件分布的乘积：
 
 $$
 P_\theta(x) = \prod_{t=1}^{T} P_\theta(x_t \mid x_1, \ldots, x_{t-1}). \tag{153}
 $$
 
-为了训练出能準確預測此分布的模型，目標通常是最大化當前模型對训练数据的預測似然（likelihood）。为此，我們可以最小化負對數似然（negative log-likelihood, NLL）損失：
+为了训练出能准确预测此分布的模型，目标通常是最大化当前模型对训练资料的预测似然（likelihood）。为此，我们可以最小化负对数似然（negative log-likelihood, NLL）损失：
 
 $$
 \mathcal{L}_{\mathrm{LM}}(\theta) = -\mathbb{E}_{x \sim \mathcal{D}} \left[ \sum_{t=1}^{T} \log P_\theta\left(x_t \mid x_{<t}\right) \right]. \tag{154}
 $$
 
-实务上，我們會對每一個下一詞元（next-token）預測使用交叉熵（cross-entropy）損失，計算方式是将序列中的真實詞元与模型的預測结果进行比較。
+实务上，我们会对每一个下一词元（next-token）预测使用交叉熵（cross-entropy）损失，计算方式是将序列中的真实词元与模型的预测结果进行比较。
 
-语言模型有許多不同架构，在知識、速度与其他效能特性上各有取捨。現代语言模型（包括 ChatGPT、Claude、Gemini 等）最常使用**僅解码器 Transformer（decoder-only Transformers）** [404]。Transformer 的核心創新在于大量運用**自注意力（self-attention）** [405] 機制，讓模型能直接關注（attend to）上下文中的概念并學習複雜的映射。在本書中，特別是第 5 章討論奖励模型時，我們會探討如何为 Transformer 加入新的頭（head），或修改其語言建模（language modeling, LM）頭。LM 頭是最后一層線性投影層，負責将模型的内部嵌入空間映射到分詞器空間（亦即词汇表，vocabulary）。本書會展示语言模型不同的「頭」可以用來将模型微调至不同用途——在 RLHF 中最常見的情境就是训练奖励模型，这在第 5 章有重點說明。
+语言模型有许多不同架构，在知识、速度与其他性能特性上各有取舍。现代语言模型（包括 ChatGPT、Claude、Gemini 等）最常使用**仅解码器 Transformer（decoder-only Transformers）** [404]。Transformer 的核心创新在于大量运用**自注意力（self-attention）** [405] 机制，让模型能直接关注（attend to）上下文中的概念并学习复杂的映射。在本书中，特别是第 5 章讨论奖励模型时，我们会探讨如何为 Transformer 加入新的头（head），或修改其语言建模（language modeling, LM）头。LM 头是最后一层线性投影层，负责将模型的内部嵌入空间映射到分词器空间（亦即词汇表，vocabulary）。本书会展示语言模型不同的「头」可以用来将模型微调至不同用途——在 RLHF 中最常见的情境就是训练奖励模型，这在第 5 章有重点说明。
 
-## A.2 機器學習（Machine Learning）
+## A.2 机器学习（Machine Learning）
 
-- **Kullback-Leibler 散度（Kullback-Leibler (KL) divergence，$\mathcal{D}_{\mathrm{KL}}(P\|Q)$）**：又稱 KL 散度（KL divergence），是衡量兩個機率分布之間差異的度量。对于定义在同一機率空間 $\mathcal{X}$ 上的離散機率分布 $P$ 与 $Q$，從 $Q$ 到 $P$ 的 KL 距離定义为：
+- **Kullback-Leibler 散度（Kullback-Leibler (KL) divergence，$\mathcal{D}_{\mathrm{KL}}(P\|Q)$）**：又称 KL 散度（KL divergence），是衡量两个机率分布之间差异的度量。对于定义在同一机率空间 $\mathcal{X}$ 上的离散机率分布 $P$ 与 $Q$，从 $Q$ 到 $P$ 的 KL 距离定义为：
 
 $$
 \mathcal{D}_{\mathrm{KL}}(P\|Q) = \sum_{x \in \mathcal{X}} P(x) \log \left( \frac{P(x)}{Q(x)} \right) \tag{155}
 $$
 
-## A.3 自然語言处理（Natural Language Processing）
+## A.3 自然语言处理（Natural Language Processing）
 
-- **被選補全（Chosen Completion，$y_c$）**：相較于其他候選項而被挑選或偏好的補全，也常記作 $y_{chosen}$。
-- **補全（Completion，$y$）**：语言模型針對某個提示詞所生成的輸出文字。補全常記作 $y \mid x$。奖励值与其他數值常以 $r(y \mid x)$ 或 $P(y \mid x)$ 的形式計算。
-- **策略（Policy，$\pi$）**：以 $\theta$ 为參數、定义在所有可能補全上的機率分布：$\pi_\theta(y \mid x)$。
-- **偏好關係（Preference Relation，$\succ$）**：表示某一補全優于另一補全的符號，例如 $y_{chosen} \succ y_{rejected}$。舉例來說，奖励模型會預測偏好關係成立的機率 $P(y_c \succ y_r \mid x)$。
-- **提示詞（Prompt，$x$）**：提供給语言模型、用以生成回應或補全的輸入文字。
-- **被拒補全（Rejected Completion，$y_r$）**：在成對比較（pairwise）情境中不受偏好的那個補全。
+- **被选补全（Chosen Completion，$y_c$）**：相较于其他候选项而被挑选或偏好的补全，也常记作 $y_{chosen}$。
+- **补全（Completion，$y$）**：语言模型针对某个提示词所生成的输出文本。补全常记作 $y \mid x$。奖励值与其他数值常以 $r(y \mid x)$ 或 $P(y \mid x)$ 的形式计算。
+- **策略（Policy，$\pi$）**：以 $\theta$ 为参数、定义在所有可能补全上的机率分布：$\pi_\theta(y \mid x)$。
+- **偏好关系（Preference Relation，$\succ$）**：表示某一补全优于另一补全的符号，例如 $y_{chosen} \succ y_{rejected}$。举例来说，奖励模型会预测偏好关系成立的机率 $P(y_c \succ y_r \mid x)$。
+- **提示词（Prompt，$x$）**：提供给语言模型、用以生成回应或补全的输入文本。
+- **被拒补全（Rejected Completion，$y_r$）**：在成对比较（pairwise）情境中不受偏好的那个补全。
 
-## A.4 强化學習（Reinforcement Learning）
+## A.4 强化学习（Reinforcement Learning）
 
-- **動作（Action，$a$）**：代理人（agent）在環境中做出的決策或行動，常記作 $a \in A$，其中 $A$ 是所有可能動作的集合。
-- **優勢函數（Advantage Function，$A$）**：優勢函數 $A(s, a)$ 量化在狀態 $s$ 下採取動作 $a$，相較于平均動作所帶來的相對效益。其定义为 $A(s, a) = Q(s, a) - V(s)$。優勢函數（以及價值函數）可以依附于特定策略，記作 $A^\pi(s, a)$。
-- **折扣因子（Discount Factor，$\gamma$）**：一個滿足 $0 \le \gamma < 1$ 的純量，用來在回報（return）中對未來奖励进行指數式降權，在「即時性」与「長期收益」之間取得權衡，并保證無限時域（infinite-horizon）加總的收斂性。有時也會不使用折扣，等價于 $\gamma = 1$。
-- **奖励优化的期望值（Expectation of Reward Optimization）**：强化學習的首要目標，即最大化期望累積奖励：
+- **动作（Action，$a$）**：代理人（agent）在环境中做出的决策或行动，常记作 $a \in A$，其中 $A$ 是所有可能动作的集合。
+- **优势函数（Advantage Function，$A$）**：优势函数 $A(s, a)$ 量化在状态 $s$ 下采取动作 $a$，相较于平均动作所带来的相对效益。其定义为 $A(s, a) = Q(s, a) - V(s)$。优势函数（以及价值函数）可以依附于特定策略，记作 $A^\pi(s, a)$。
+- **折扣因子（Discount Factor，$\gamma$）**：一个满足 $0 \le \gamma < 1$ 的纯量，用来在回报（return）中对未来奖励进行指数式降权，在「即时性」与「长期收益」之间取得权衡，并保证无限时域（infinite-horizon）加总的收敛性。有时也会不使用折扣，等价于 $\gamma = 1$。
+- **奖励优化的期望值（Expectation of Reward Optimization）**：强化学习的首要目标，即最大化期望累积奖励：
 
 $$
 \max_\theta \, \mathbb{E}_{s \sim \rho_\pi,\, a \sim \pi_\theta} \left[ \sum_{t=0}^{\infty} \gamma^t r_t \right] \tag{156}
 $$
 
-  其中 $\rho_\pi$ 是策略 $\pi$ 之下的狀態分布，$\gamma$ 是折扣因子。
+  其中 $\rho_\pi$ 是策略 $\pi$ 之下的状态分布，$\gamma$ 是折扣因子。
 
-- **有限時域奖励（Finite Horizon Reward，$J(\pi_\theta)$）**：以 $\theta$ 为參數的策略 $\pi_\theta$ 的期望有限時域折扣回報，定义为：
+- **有限时域奖励（Finite Horizon Reward，$J(\pi_\theta)$）**：以 $\theta$ 为参数的策略 $\pi_\theta$ 的期望有限时域折扣回报，定义为：
 
 $$
 J(\pi_\theta) = \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{T} \gamma^t r_t \right] \tag{157}
 $$
 
-  其中 $\tau \sim \pi_\theta$ 表示依循策略 $\pi_\theta$ 取樣得到的軌跡，$T$ 是有限時域（finite horizon）。
+  其中 $\tau \sim \pi_\theta$ 表示依循策略 $\pi_\theta$ 取样得到的轨迹，$T$ 是有限时域（finite horizon）。
 
-- **同策略（On-policy）**：在 RLHF 中，特別是在强化學習与直接对齐算法（Direct Alignment Algorithms）的論辯裡，經常討論**同策略（on-policy）**数据。在强化學習文獻中，on-policy 指数据*恰好*由代理人當前形式的模型所生成；但在一般的偏好微调（preference-tuning）文獻中，on-policy 的意義被扩大为「由該版本模型生成」——例如在进行任何偏好微调之前的指令微调检查點（instruction-tuned checkpoint）。在此脈絡下，off-policy 可以指由后训练（post-training）過程中所使用的任何其他语言模型生成的数据。
-- **策略（Policy，$\pi$）**：在 RLHF 中也稱为**策略模型（policy model）**。在强化學習中，策略是代理人用來決定在給定狀態下採取何種動作的策略或規則：$\pi(a \mid s)$。
-- **依策略而定的數值（Policy-conditioned Values，$[]^{\pi(\cdot)}$）**：在各種强化學習的推导与实现中，一個關鍵環節是收集依附于（conditioned on）特定策略的数据或數值。本書中我們會在較簡潔的價值函數記號（$V, A, Q, G$）与其對應的策略條件版本（$V^\pi, A^\pi, Q^\pi$）之間切換。此外，在計算期望值時，另一個關鍵是從依附于特定策略的数据 $d$ 中取樣，記作 $d_\pi$（例如在估計 $\mathbb{E}_{s \sim d_\pi,\, a \sim \pi(\cdot \mid s)}[A^\pi(s, a)]$ 時，$s \sim d_\pi$ 且 $a \sim \pi(\cdot \mid s)$）。
-- **Q 函數（Q-Function，$Q$）**：估計在給定狀態下採取特定動作後，期望累積奖励的函數：$Q(s, a) = \mathbb{E}\left[\sum_{t=0}^{\infty} \gamma^t r_t \mid s_0 = s, a_0 = a\right]$。
-- **奖励（Reward，$r$）**：表示某個動作或狀態之可取程度（desirability）的純量值，通常記作 $r$。
-- **狀態（State，$s$）**：環境當前的組態或情境，通常記作 $s \in S$，其中 $S$ 是狀態空間。
-- **軌跡（Trajectory，$\tau$）**：軌跡 $\tau$ 是代理人所經歷的一連串狀態、動作与奖励：$\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots, s_T, a_T, r_T)$。
-- **軌跡分布（Trajectory Distribution，$(\tau \mid \pi)$）**：在策略 $\pi$ 之下某條軌跡出現的機率为 $P(\tau \mid \pi) = p(s_0) \prod_{t=0}^{T} \pi(a_t \mid s_t)\, p(s_{t+1} \mid s_t, a_t)$，其中 $p(s_0)$ 是初始狀態分布（prior state distribution），$p(s_{t+1} \mid s_t, a_t)$ 是狀態轉移機率。
-- **價值函數（Value Function，$V$）**：估計從給定狀態出發的期望累積奖励的函數：$V(s) = \mathbb{E}\left[\sum_{t=0}^{\infty} \gamma^t r_t \mid s_0 = s\right]$。
+- **同策略（On-policy）**：在 RLHF 中，特别是在强化学习与直接对齐算法（Direct Alignment Algorithms）的论辩里，经常讨论**同策略（on-policy）**资料。在强化学习文献中，on-policy 指资料*恰好*由代理人当前形式的模型所生成；但在一般的偏好微调（preference-tuning）文献中，on-policy 的意义被扩大为「由该版本模型生成」——例如在进行任何偏好微调之前的指令微调检查点（instruction-tuned checkpoint）。在此脉络下，off-policy 可以指由后训练（post-training）过程中所使用的任何其他语言模型生成的资料。
+- **策略（Policy，$\pi$）**：在 RLHF 中也称为**策略模型（policy model）**。在强化学习中，策略是代理人用来决定在给定状态下采取何种动作的策略或规则：$\pi(a \mid s)$。
+- **依策略而定的数值（Policy-conditioned Values，$[]^{\pi(\cdot)}$）**：在各种强化学习的推导与实作中，一个关键环节是收集依附于（conditioned on）特定策略的资料或数值。本书中我们会在较简洁的价值函数记号（$V, A, Q, G$）与其对应的策略条件版本（$V^\pi, A^\pi, Q^\pi$）之间切换。此外，在计算期望值时，另一个关键是从依附于特定策略的资料 $d$ 中取样，记作 $d_\pi$（例如在估计 $\mathbb{E}_{s \sim d_\pi,\, a \sim \pi(\cdot \mid s)}[A^\pi(s, a)]$ 时，$s \sim d_\pi$ 且 $a \sim \pi(\cdot \mid s)$）。
+- **Q 函数（Q-Function，$Q$）**：估计在给定状态下采取特定动作后，期望累积奖励的函数：$Q(s, a) = \mathbb{E}\left[\sum_{t=0}^{\infty} \gamma^t r_t \mid s_0 = s, a_0 = a\right]$。
+- **奖励（Reward，$r$）**：表示某个动作或状态之可取程度（desirability）的纯量值，通常记作 $r$。
+- **状态（State，$s$）**：环境当前的组态或情境，通常记作 $s \in S$，其中 $S$ 是状态空间。
+- **轨迹（Trajectory，$\tau$）**：轨迹 $\tau$ 是代理人所经历的一连串状态、动作与奖励：$\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots, s_T, a_T, r_T)$。
+- **轨迹分布（Trajectory Distribution，$(\tau \mid \pi)$）**：在策略 $\pi$ 之下某条轨迹出现的机率为 $P(\tau \mid \pi) = p(s_0) \prod_{t=0}^{T} \pi(a_t \mid s_t)\, p(s_{t+1} \mid s_t, a_t)$，其中 $p(s_0)$ 是初始状态分布（prior state distribution），$p(s_{t+1} \mid s_t, a_t)$ 是状态转移机率。
+- **价值函数（Value Function，$V$）**：估计从给定状态出发的期望累积奖励的函数：$V(s) = \mathbb{E}\left[\sum_{t=0}^{\infty} \gamma^t r_t \mid s_0 = s\right]$。
 
-## A.5 RLHF 專屬（RLHF-Only）
+## A.5 RLHF 专属（RLHF-Only）
 
-- **參考模型（Reference Model，$\pi_{\mathrm{ref}}$）**：RLHF 中使用的一組保存下来的參數，其輸出被用來對优化過程进行正则化（regularize）。
+- **参考模型（Reference Model，$\pi_{\mathrm{ref}}$）**：RLHF 中使用的一组保存下来的参数，其输出被用来对优化过程进行正则化（regularize）。
 
 ## A.6 延伸词汇表（Extended Glossary）
 
-- **思維鏈（Chain-of-Thought, CoT）**：思維鏈是语言模型的一種特定行为，指模型被引導以逐步拆解問題的形式作答。其最初的版本是透過提示詞「Let's think step by step」（讓我們一步一步思考）[374] 实现的。
-- **蒸馏（Distillation）**：蒸馏是训练 AI 模型的一類通用做法，指以較強模型的輸出来训练另一個模型。这是一種已知能打造強大小型模型的合成数据類型。大多數模型會明確規範蒸馏相關的規則：開放權重（open-weight）模型透過授权條款，僅能經由 API 存取的模型則透過服务條款。「蒸馏」一詞如今的用法已经超載（overloaded），与機器學習文獻中的特定技術定义有所出入。
-- **情境內學習（In-context Learning, ICL）**：这裡的「in-context」指语言模型上下文視窗（context window）內的任何資訊，通常是加到提示詞中的內容。情境內學習最簡單的形式是在提示詞前加入形式相似的范例；進階版本則能針對特定使用情境學習該納入哪些資訊。
-- **（師生式）知識蒸馏（(Teacher-student) Knowledge Distillation）**：從特定教師模型到學生模型的知識蒸馏是上述蒸馏的一種特定型態，也是此術語的起源。它是一種特定的深度學習方法，透過修改神經網路損失函數，讓學生模型從教師模型在多個潛在詞元／對數機率（logits）上的對數機率中學習，而不是直接從單一選定的輸出學習 [276]。以知識蒸馏训练的現代模型系列，例如 Gemma 2 [406] 或 Gemma 3。在語言建模的设置下，下一詞元損失函數可修改如下 [287]，其中學生模型 $P_\theta$ 向教師分布 $P_\phi$ 學習：
+- **思维链（Chain-of-Thought, CoT）**：思维链是语言模型的一种特定行为，指模型被引导以逐步拆解问题的形式作答。其最初的版本是透过提示词「Let's think step by step」（让我们一步一步思考）[374] 实现的。
+- **蒸馏（Distillation）**：蒸馏是训练 AI 模型的一类通用做法，指以较强模型的输出来训练另一个模型。这是一种已知能打造强大小型模型的合成资料类型。大多数模型会明确规范蒸馏相关的规则：开放权重（open-weight）模型透过授权条款，仅能经由 API 存取的模型则透过服务条款。「蒸馏」一词如今的用法已经超载（overloaded），与机器学习文献中的特定技术定义有所出入。
+- **情境内学习（In-context Learning, ICL）**：这里的「in-context」指语言模型上下文视窗（context window）内的任何资讯，通常是加到提示词中的内容。情境内学习最简单的形式是在提示词前加入形式相似的范例；进阶版本则能针对特定使用情境学习该纳入哪些资讯。
+- **（师生式）知识蒸馏（(Teacher-student) Knowledge Distillation）**：从特定教师模型到学生模型的知识蒸馏是上述蒸馏的一种特定型态，也是此术语的起源。它是一种特定的深度学习方法，透过修改神经网路损失函数，让学生模型从教师模型在多个潜在词元／对数机率（logits）上的对数机率中学习，而不是直接从单一选定的输出学习 [276]。以知识蒸馏训练的现代模型系列，例如 Gemma 2 [406] 或 Gemma 3。在语言建模的设定下，下一词元损失函数可修改如下 [287]，其中学生模型 $P_\theta$ 向教师分布 $P_\phi$ 学习：
 
 $$
 \mathcal{L}_{\mathrm{KD}}(\theta) = -\mathbb{E}_{x \sim \mathcal{D}} \left[ \sum_{t=1}^{T} P_\phi(x_t \mid x_{<t}) \log P_\theta(x_t \mid x_{<t}) \right]. \tag{158}
 $$
 
-- **合成数据（Synthetic Data）**：指任何由另一個 AI 系统的輸出所構成的 AI 模型训练数据。範圍很廣，從模型針對開放式提示詞生成的文字，到模型對既有內容的改寫，都屬于合成数据。
+- **合成资料（Synthetic Data）**：指任何由另一个 AI 系统的输出所构成的 AI 模型训练资料。范围很广，从模型针对开放式提示词生成的文本，到模型对既有内容的改写，都属于合成资料。
 
 </script>
 <script src="../assets/marked.min.js"></script>

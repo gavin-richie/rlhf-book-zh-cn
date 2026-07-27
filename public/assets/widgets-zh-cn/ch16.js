@@ -53,7 +53,7 @@
   window.ChapterWidget = {
     title: '这个分数差是真的吗？—— 评估雜訊模擬器',
     intro: '同一顆模型、同一个基準，重跑一次評測分数就会不一样。拖动兩个模型的真实能力与評測集題数，' +
-      '按「跑 50 次評測」看看：排行榜上的分数差，有多少其实只是抽样雜訊（呼應 16.2「为何許多外部评估比較不可靠」与附录 C）。',
+      '按「跑 50 次評測」看看：排行榜上的分数差，有多少其实只是采样雜訊（呼應 16.2「为何許多外部评估比較不可靠」与附录 C）。',
 
     render: function (root) {
       // ---------- 控制面板 ----------
@@ -74,7 +74,7 @@
         return wrap;
       }
       var presetRow = h('div', { style: 'display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.6rem;' });
-      presetRow.appendChild(h('span', { text: '預設基準規模：', style: 'font-size:.85rem;color:var(--fg-muted);' }));
+      presetRow.appendChild(h('span', { text: '預設基準规模：', style: 'font-size:.85rem;color:var(--fg-muted);' }));
       PRESETS.forEach(function (p) {
         var b = h('button', { className: 'secondary', text: p.name + '（' + p.n.toLocaleString() + ' 題）' });
         b.addEventListener('click', function () { state.n = p.n; nSlider.value = nToSlider(p.n); update(true); });
@@ -83,14 +83,14 @@
 
       var ctlPanel = h('div', { className: 'widget-panel' });
       var ctlRow = h('div', { className: 'widget-row' });
-      ctlRow.appendChild(mkCtl('模型 A 真实能力 p_A（每題答對机率）', pASlider, pALabel));
+      ctlRow.appendChild(mkCtl('模型 A 真实能力 p_A（每題答對概率）', pASlider, pALabel));
       ctlRow.appendChild(mkCtl('模型 B 真实能力 p_B', pBSlider, pBLabel));
       ctlRow.appendChild(mkCtl('評測集題数 n（對数刻度）', nSlider, nLabel));
       ctlPanel.appendChild(ctlRow);
       ctlPanel.appendChild(presetRow);
       ctlPanel.appendChild(h('div', { style: 'margin-top:.7rem;' }, runBtn));
 
-      // ---------- 图表与統計 ----------
+      // ---------- 图表与统计 ----------
       var chartPanel = h('div', { className: 'widget-panel', style: 'margin-top:1rem;' });
       var svgRoot = s('svg', { viewBox: '0 0 720 300', preserveAspectRatio: 'xMidYMid meet', style: 'width:100%;height:auto;display:block;' });
       chartPanel.appendChild(svgRoot);
@@ -105,13 +105,13 @@
       });
       chartPanel.appendChild(statRow);
 
-      // ---------- 动態解讀 ----------
+      // ---------- 动態解读 ----------
       var verdict = h('div', {
         className: 'widget-panel',
         style: 'margin-top:1rem;border-left:3px solid var(--accent);background:var(--accent-soft);'
       });
       var verdictText = h('div', { style: 'color:var(--fg);line-height:1.7;font-size:.92rem;' });
-      verdict.appendChild(h('div', { text: '📖 怎么解讀？', style: 'font-weight:700;margin-bottom:.3rem;color:var(--fg);' }));
+      verdict.appendChild(h('div', { text: '📖 怎么解读？', style: 'font-weight:700;margin-bottom:.3rem;color:var(--fg);' }));
       verdict.appendChild(verdictText);
 
       // ---------- 繪图 ----------
@@ -165,7 +165,7 @@
         return { cA: cA, cB: cB };
       }
 
-      // ---------- 統計＋解讀 ----------
+      // ---------- 统计＋解读 ----------
       function update(resample) {
         state.pA = parseFloat(pASlider.value);
         state.pB = parseFloat(pBSlider.value);
@@ -204,12 +204,12 @@
             '單跑一次經常翻盤（A 贏 ' + wins + '/' + RUNS + '）——需要多次重跑取平均，或換更大的評測集，結论才站得住。';
         } else {
           msg = '真实差距 ' + gap.toFixed(1) + ' 分已超过 2σ（σ_diff ≈ ' + seDiff.toFixed(1) + ' 分），' +
-            '單次評測大致可信：A 在 50 次中贏了 ' + wins + ' 次。題数夠多时，約 1 分的差距才开始有統計意義。';
+            '單次評測大致可信：A 在 50 次中贏了 ' + wins + ' 次。題数夠多时，約 1 分的差距才开始有统计意義。';
         }
         var rule = '經验法則：在 ' + name + ' 上，小于 ±' + (2 * seDiff).toFixed(1) + ' 分（2σ）的分数差應一律視为雜訊。';
         if (state.n <= 50) rule += ' AIME 只有 30 題——錯一題就是 3.3 分，±2 分内的差异完全是雜訊。';
         verdictText.innerHTML = msg + '<br>' + rule +
-          '<br><span style="color:var(--fg-muted);font-size:.85em;">这还只是「同一套評測流程」下的抽样变异；' +
+          '<br><span style="color:var(--fg-muted);font-size:.85em;">这还只是「同一套評測流程」下的采样变异；' +
           '各实验室未公开的客制提示、取样參数与可能的数据污染（contamination），会讓跨新聞稿的比較誤差更大（见 16.2、16.4；Olmo 3 实測多数后训练评估的標準差在 0.25～1.5 分之间）。</span>';
       }
 
@@ -217,13 +217,13 @@
       var FORMATS = {
         fewshot: {
           label: 'few-shot 對数似然（log-likelihood）評分',
-          prompt: '### Example 1\nQ: A right triangle has legs of lengths 3 and 4.\n   What is the length of its hypotenuse?\n(A) 5  (B) 6  (C) 7  (D) 8\nCorrect Answer: (A)\n\n### Now answer the new question in the same style:\nQ: Which theorem states that ... ?\n(A) ...  (B) ...  (C) ...  (D) ...\nCorrect Answer: ␣   ← 只比較下一个 token 是 (A)～(D) 的對数机率',
-          desc: '模型不生成回答：評測程式直接讀取下一个 token 的對数机率，看正確答案字母是否机率最高。结果是確定性的（忽略微小数值差异），常用于預训练评估——因为此时模型还缺乏精確匹配所需的问答格式（见 16.1.1）。'
+          prompt: '### Example 1\nQ: A right triangle has legs of lengths 3 and 4.\n   What is the length of its hypotenuse?\n(A) 5  (B) 6  (C) 7  (D) 8\nCorrect Answer: (A)\n\n### Now answer the new question in the same style:\nQ: Which theorem states that ... ?\n(A) ...  (B) ...  (C) ...  (D) ...\nCorrect Answer: ␣   ← 只比較下一个 token 是 (A)～(D) 的對数概率',
+          desc: '模型不生成回答：評測程式直接讀取下一个 token 的對数概率，看正確答案字母是否概率最高。结果是確定性的（忽略微小数值差异），常用于预训练评估——因为此时模型还缺乏精確匹配所需的问答格式（见 16.1.1）。'
         },
         cot: {
           label: 'CoT 生成＋精確匹配（exact match）',
           prompt: 'Answer the following multiple-choice question ...\nProvide CONCISE reasoning, and make sure to finish\nthe response with "Therefore, the answer is\n(ANSWER_LETTER)" where (ANSWER_LETTER) is one of\n(A), (B), (C), (D), (E), etc.\n\nQuestion: {question}\n(A) {choice_A}  (B) {choice_B}  ...',
-          desc: '模型先寫出思維鏈（CoT）推理，再由正規表示式從生成文字中抓出「Therefore, the answer is (X)」。为了最佳效能幾乎总是使用大于零的溫度——取样本身就引入隨机性，正是上方模擬器展示的雜訊来源之一（见 16.1.2、16.1.4，Tülu 3 的 MMLU 提示）。'
+          desc: '模型先寫出思維鏈（CoT）推理，再由正規表示式從生成文本中抓出「Therefore, the answer is (X)」。为了最佳性能幾乎总是使用大于零的溫度——取样本身就引入隨机性，正是上方模擬器展示的雜訊来源之一（见 16.1.2、16.1.4，Tülu 3 的 MMLU 提示）。'
         }
       };
       var fmtPanel = h('div', { className: 'widget-panel', style: 'margin-top:1rem;' });

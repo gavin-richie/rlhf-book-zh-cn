@@ -1,4 +1,4 @@
-/* 第 15 章互动元件：KL 散度探索器（前向 vs 反向） */
+/* 第 15 章交互元件：KL 散度探索器（前向 vs 反向） */
 (function () {
   'use strict';
 
@@ -109,7 +109,7 @@
 
     var wrap = el('div', 'c15-wrap');
 
-    /* KL 数值卡（含 KaTeX 定义式） */
+    /* KL 数值卡（含 KaTeX 定義式） */
     function klCard(headTxt, texSrc, fbTxt, tagTxt) {
       var card = el('div', 'widget-panel c15-klcard');
       card.appendChild(el('div', 'c15-klhead', headTxt));
@@ -124,7 +124,7 @@
     var fwdCard = klCard('前向 KL｜SFT ≈ 模式涵盖（mass-covering）',
       '\\mathrm{KL}(\\pi_{\\mathrm{ref}}\\,\\|\\,\\pi_\\theta)=\\mathbb{E}_{y\\sim\\pi_{\\mathrm{ref}}}\\!\\left[\\log\\pi_{\\mathrm{ref}}(y)-\\log\\pi_\\theta(y)\\right]',
       'KL(π_ref‖π_θ) = E_{y~π_ref}[log π_ref(y) − log π_θ(y)]',
-      '從目標 π_ref 取样：π_θ 漏掉 π_ref 的任何一峰都会被重罰。');
+      '從目标 π_ref 取样：π_θ 漏掉 π_ref 的任何一峰都会被重罰。');
     var revCard = klCard('反向 KL｜RL ≈ 模式尋求（mode-seeking）',
       '\\mathrm{KL}(\\pi_\\theta\\,\\|\\,\\pi_{\\mathrm{ref}})=\\mathbb{E}_{y\\sim\\pi_\\theta}\\!\\left[\\log\\pi_\\theta(y)-\\log\\pi_{\\mathrm{ref}}(y)\\right]',
       'KL(π_θ‖π_ref) = E_{y~π_θ}[log π_θ(y) − log π_ref(y)]',
@@ -134,7 +134,7 @@
     /* SVG 图 */
     var svgPanel = el('div', 'widget-panel c15-svgbox');
     var svg = svgEl('svg', { 'class': 'c15-svg', viewBox: '0 0 ' + W + ' ' + H,
-      role: 'img', 'aria-label': '參考模型与目前策略的机率密度曲线' });
+      role: 'img', 'aria-label': '參考模型与目前策略的概率密度曲线' });
     var axis = svgEl('g', {});
     axis.appendChild(svgEl('line', { x1: PL, y1: H - PB, x2: W - PR, y2: H - PB,
       stroke: 'var(--border)', 'stroke-width': 1 }));
@@ -153,7 +153,7 @@
       'stroke-width': 1, opacity: 0.65 });
     var modeLbls = svgEl('g', { 'font-size': 11.5, fill: 'var(--fg-muted)', 'text-anchor': 'middle' });
     var oldLbl = svgEl('text', {}); oldLbl.textContent = '「旧」模式（先验知識）';
-    var newLbl = svgEl('text', {}); newLbl.textContent = '「新」模式（目標任务）';
+    var newLbl = svgEl('text', {}); newLbl.textContent = '「新」模式（目标任务）';
     modeLbls.appendChild(oldLbl); modeLbls.appendChild(newLbl);
     var legend = svgEl('g', { 'font-size': 12 });
     legend.appendChild(svgEl('rect', { x: W - 190, y: 8, width: 14, height: 10,
@@ -193,9 +193,9 @@
     var btnReset = el('button', null, '重置');
     btnRow.appendChild(btnFwd); btnRow.appendChild(btnRev); btnRow.appendChild(btnReset);
 
-    /* 解讀面板 */
+    /* 解读面板 */
     var note = el('div', 'widget-panel c15-note');
-    var noteLead = el('span', 'c15-lead', '解讀');
+    var noteLead = el('span', 'c15-lead', '解读');
     var noteBody = el('span');
     note.appendChild(noteLead); note.appendChild(noteBody);
 
@@ -203,7 +203,7 @@
     wrap.appendChild(ctl); wrap.appendChild(btnRow); wrap.appendChild(note);
     rootEl.appendChild(wrap);
 
-    /* ---- 目標函数与梯度下降（数值微分） ---- */
+    /* ---- 目标函数与梯度下降（数值微分） ---- */
     function objective(mu, logSig, dir) {
       var q = normalize(gaussArr(mu, Math.exp(logSig)));
       return dir === 'fwd' ? klOf(refDens, q) : klOf(q, refDens);
@@ -229,14 +229,14 @@
       var hugNew = Math.abs(mu - 3) < 0.7 && sg < 1.2;
       if (hugOld || hugNew)
         return prefix + 'π_θ 貼住「' + (hugOld ? '旧' : '新') + '」模式（mode-seeking）：反向 KL 很低，前向 KL 卻爆高——因为另一峰完全沒被覆盖。这正是本章 15.2.2 的核心：RL 只在自己有质量的區域更新、不去拉扯另一峰；' +
-          '反向 KL 的 mode-seeking 是「RL 遺忘較少」的关鍵直覺（RL’s Razor）：在眾多高奖励解中，on-policy 方法天生偏向 KL 上離參考策略較近的解。';
+          '反向 KL 的 mode-seeking 是「RL 遺忘較少」的关鍵直覺（RL’s Razor）：在眾多高獎勵解中，on-policy 方法天生偏向 KL 上離參考策略較近的解。';
       if (sg > 2.2 && mu > -2.6 && mu < 0.8)
-        return prefix + 'π_θ 拉成一个涵盖兩峰的寬分布（mass-covering／mean-seeking）：前向 KL 低，但大量质量落在兩峰之间 π_ref 幾乎为零的谷地，反向 KL 因此偏高。这對應 SFT：为了涵盖目標的所有模式而拉伸策略、從「旧」模式抽走机率质量——造成遺忘。';
+        return prefix + 'π_θ 拉成一个涵盖兩峰的寬分布（mass-covering／mean-seeking）：前向 KL 低，但大量质量落在兩峰之间 π_ref 幾乎为零的谷地，反向 KL 因此偏高。这對應 SFT：为了涵盖目标的所有模式而拉伸策略、從「旧」模式抽走概率质量——造成遺忘。';
       if (sg < 1.0 && Math.abs(mu) < 1.6)
-        return prefix + 'π_θ 集中在兩峰之间的低机率谷地：兩个 KL 同时偏高——前向 KL 重罰「漏掉的峰」，反向 KL 重罰「放錯地方的质量」。試着按兩个按鈕，看兩種目標分別把它推向何方。';
+        return prefix + 'π_θ 集中在兩峰之间的低概率谷地：兩个 KL 同时偏高——前向 KL 重罰「漏掉的峰」，反向 KL 重罰「放錯地方的质量」。試着按兩个按鈕，看兩種目标分別把它推向何方。';
       return prefix + (klF > klR
-        ? '目前前向 KL 較大：π_ref 有可觀质量的區域沒被 π_θ 覆盖（SFT 目標会強拉 π_θ 去涵盖所有峰）。'
-        : '目前反向 KL 較大：π_θ 把质量放在 π_ref 机率極低的區域（RL 的 KL 懲罰会把它推回參考分布附近）。');
+        ? '目前前向 KL 較大：π_ref 有可觀质量的區域沒被 π_θ 覆盖（SFT 目标会強拉 π_θ 去涵盖所有峰）。'
+        : '目前反向 KL 較大：π_θ 把质量放在 π_ref 概率極低的區域（RL 的 KL 懲罰会把它推回參考分布附近）。');
     }
 
     function redraw(runningMsg) {

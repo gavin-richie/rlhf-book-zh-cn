@@ -1,12 +1,12 @@
-/* 第 14 章：奖励过度优化模擬器（Goodhart 定律） */
+/* 第 14 章：獎勵过度优化模擬器（Goodhart 定律） */
 (function () {
   'use strict';
 
   // ===== 模型（Gao et al. 过度优化缩放律的简化形式）=====
   const D_MAX = 3;                                   // 橫軸范围：d = √KL
-  const gold = (d, a, b) => d * (a - b * d);         // 真实奖励（金標）：先升后降
-  const proxy = (d, a) => d * a;                     // 代理奖励：近似單調上升
-  const peakD = (a, b) => a / (2 * b);               // 真实奖励峰值（最佳停止點）
+  const gold = (d, a, b) => d * (a - b * d);         // 真实獎勵（金標）：先升后降
+  const proxy = (d, a) => d * a;                     // 代理獎勵：近似單調上升
+  const peakD = (a, b) => a / (2 * b);               // 真实獎勵峰值（最佳停止點）
   // KL 懲罰下的收斂點：最大化 α·d − λ·d²（KL = d²）→ d_stop = α / 2λ
   const stopD = (a, lam) => Math.min(a / (2 * lam), D_MAX);
   const fmt = (v) => v.toFixed(2);
@@ -63,14 +63,14 @@
     legend.className = 'widget-row';
     legend.style.cssText = 'margin:.8rem 0 .3rem;font-size:.83rem;color:var(--fg-muted);gap:1.4rem';
     legend.innerHTML =
-      '<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--accent-2)" stroke-width="2" stroke-dasharray="5 4"/></svg> 代理奖励（奖励模型分数）</span>' +
-      '<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--accent)" stroke-width="2"/></svg> 真实奖励（金標）</span>';
+      '<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--accent-2)" stroke-width="2" stroke-dasharray="5 4"/></svg> 代理獎勵（獎勵模型分数）</span>' +
+      '<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--accent)" stroke-width="2"/></svg> 真实獎勵（金標）</span>';
     rootEl.appendChild(legend);
 
     // ---- 主图 ----
     const svg = el('svg', {
       viewBox: '0 0 ' + W + ' ' + H, width: '100%', role: 'img',
-      'aria-label': '代理奖励与真实奖励隨优化距離 d 变化的曲线图'
+      'aria-label': '代理獎勵与真实獎勵隨优化距離 d 变化的曲线图'
     });
     svg.style.cssText = 'display:block;background:var(--panel-2);border:1px solid var(--border);border-radius:10px';
     rootEl.appendChild(svg);
@@ -146,7 +146,7 @@
       const xl = el('text', { x: ML + PW / 2, y: H - 8, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--fg-muted)' }, gGrid);
       xl.textContent = 'd = √KL(π‖π₀)（优化距離）';
       const yl = el('text', { x: 14, y: MT + PH / 2, 'font-size': 12, fill: 'var(--fg-muted)', 'text-anchor': 'middle', transform: 'rotate(-90 14 ' + (MT + PH / 2) + ')' }, gGrid);
-      yl.textContent = '奖励';
+      yl.textContent = '獎勵';
 
       const path1 = curvePath((d) => gold(d, a, b));
       const path2 = curvePath((d) => proxy(d, a));
@@ -180,20 +180,20 @@
       dotProxy.setAttribute('cx', x); dotProxy.setAttribute('cy', Y(rp));
       stats.innerHTML =
         '<span>d = <strong style="color:var(--fg)">' + fmt(pos) + '</strong></span>' +
-        '<span>代理奖励 = <strong style="color:var(--fg)">' + fmt(rp) + '</strong></span>' +
-        '<span>真实奖励 = <strong style="color:var(--fg)">' + fmt(rg) + '</strong></span>' +
+        '<span>代理獎勵 = <strong style="color:var(--fg)">' + fmt(rp) + '</strong></span>' +
+        '<span>真实獎勵 = <strong style="color:var(--fg)">' + fmt(rg) + '</strong></span>' +
         '<span>峰值 d* = α/2β = <strong style="color:var(--fg)">' + fmt(peakD(a, b)) + '</strong></span>';
 
       const dp = peakD(a, b), rPeak = gold(Math.min(dp, D_MAX), a, b);
       let msg;
       if (pos < dp * 0.92) {
-        msg = '<strong style="color:var(--accent)">✅ 安全區</strong>：代理与真实奖励仍同向上升——繼續优化仍有真实收益，距最佳停止點还有 Δd = ' + fmt(dp - pos) + '。';
+        msg = '<strong style="color:var(--accent)">✅ 安全區</strong>：代理与真实獎勵仍同向上升——繼續优化仍有真实收益，距最佳停止點还有 Δd = ' + fmt(dp - pos) + '。';
       } else if (pos <= dp * 1.08) {
-        msg = '<strong style="color:var(--accent)">⏸ 接近最佳停止點</strong>：真实奖励正處峰值附近（R* ≈ ' + fmt(rPeak) + '）。此刻停止训练（early stopping）能拿到最好的模型。';
+        msg = '<strong style="color:var(--accent)">⏸ 接近最佳停止點</strong>：真实獎勵正處峰值附近（R* ≈ ' + fmt(rPeak) + '）。此刻停止训练（early stopping）能拿到最好的模型。';
       } else {
         const drop = rg <= 0 ? '甚至跌到負值' : '已自峰值下滑 ' + Math.round((1 - rg / rPeak) * 100) + '%';
-        msg = '<strong style="color:var(--accent-2)">⚠️ 已进入过度优化</strong>：代理奖励仍在上升（奖励模型分数看起来一切健康），但真实奖励' + drop +
-          '——这就是 Goodhart 定律：「当一个衡量指標成为目標，它就不再是个好指標。」';
+        msg = '<strong style="color:var(--accent-2)">⚠️ 已进入过度优化</strong>：代理獎勵仍在上升（獎勵模型分数看起来一切健康），但真实獎勵' + drop +
+          '——这就是 Goodhart 定律：「当一个衡量指標成为目标，它就不再是个好指標。」';
       }
       msg += '<br><span style="color:var(--fg-muted);font-size:.85em">提示：KL 懲罰讓训练收斂在 d = α/2λ；試着把 λ 調到等于 β（= ' + fmt(b) + '），標线会恰好停在最佳停止點。</span>';
       readout.innerHTML = msg;
@@ -226,8 +226,8 @@
   }
 
   window.ChapterWidget = {
-    title: '奖励过度优化模擬器（Goodhart 定律）',
-    intro: '對照本章图 41／42：橫軸是优化距離 d = √KL(π‖π₀)。代理奖励（奖励模型分数）一路上升，真实奖励（金標）卻先升后降。调整 α、β 觀察曲线形狀，调整 KL 懲罰係数 λ 看训练会停在哪裡，再按「播放训练」体验「分数还在漲、模型卻变差」的瞬间。',
+    title: '獎勵过度优化模擬器（Goodhart 定律）',
+    intro: '對照本章图 41／42：橫軸是优化距離 d = √KL(π‖π₀)。代理獎勵（獎勵模型分数）一路上升，真实獎勵（金標）卻先升后降。调整 α、β 觀察曲线形狀，调整 KL 懲罰係数 λ 看训练会停在哪裡，再按「播放训练」体验「分数还在漲、模型卻变差」的瞬间。',
     render: render
   };
 })();

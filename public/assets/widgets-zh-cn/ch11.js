@@ -1,21 +1,21 @@
-/* 第 11 章互动元件：当一次偏好標註員 */
+/* 第 11 章交互元件：当一次偏好标注員 */
 (function () {
   'use strict';
 
   var QUESTIONS = [
     {
-      bias: '陷阱一：长度与格式偏誤',
+      bias: '陷阱一：长度与格式偏差',
       prompt: '請简單介紹光合作用的基本过程。',
       a: '光合作用是植物將光能转换为化學能的重要生化反應，可整理为以下幾个重點：' +
          '<ul><li><strong>发生場所</strong>：植物細胞内的葉綠体</li>' +
          '<li><strong>反應原料</strong>：二氧化碳与水</li>' +
-         '<li><strong>主要產物</strong>：葡萄糖与<strong>氮气</strong></li>' +
+         '<li><strong>主要输出</strong>：葡萄糖与<strong>氮气</strong></li>' +
          '<li><strong>能量来源</strong>：太陽光</li></ul>' +
          '整体而言，光合作用是地球生態系能量流动的起點，重要性不言可喻。',
       b: '光合作用是植物利用陽光，在葉綠体中把二氧化碳和水轉化成葡萄糖、并釋放氧气的过程。',
       majority: 'A', pct: 64,
-      explain: 'A 排版精美、看起来更「专业」，卻把產物中的「氧气」寫成了「氮气」；B 雖然只有一句話，内容完全正確。' +
-        '研究显示，標註者会不成比例地偏愛較长、格式漂亮的回覆——这就是冗长偏誤（verbosity）与格式偏誤，也是模型愈训练愈囉嗦的原因之一。'
+      explain: 'A 排版精美、看起来更「专业」，卻把输出中的「氧气」寫成了「氮气」；B 雖然只有一句話，内容完全正確。' +
+        '研究显示，标注者会不成比例地偏愛較长、格式漂亮的回复——这就是冗长偏差（verbosity）与格式偏差，也是模型愈训练愈囉嗦的原因之一。'
     },
     {
       bias: '陷阱二：风格偏好，无標準答案',
@@ -23,26 +23,26 @@
       a: '一路順风啦！到了新公司要記得照顧好自己，有空常回来找我們喝一杯！',
       b: '祝您鵬程萬里，在新的職涯旅程中一帆风順、大展长才。',
       majority: 'A', pct: 52,
-      explain: '兩个回覆都正確完成了任务，差別只在語气：一个口語親切、一个正式得体。' +
+      explain: '兩个回复都正確完成了任务，差別只在語气：一个口語親切、一个正式得体。' +
         '这類題目沒有標準答案，52% 對 48% 的分布幾乎等于擲硬幣——你的选择反映的是个人风格偏好，这正是偏好数据中「合理雜訊」的主要来源。'
     },
     {
-      bias: '陷阱三：諂媚与自信偏誤',
+      bias: '陷阱三：諂媚与自信偏差',
       prompt: '維他命 C 可以預防感冒吗？',
-      a: '可以！維他命 C 已被證实能有效預防感冒，每天補充 1000 毫克就能大幅降低感冒机率，这是醫學界的共識。',
+      a: '可以！維他命 C 已被證实能有效預防感冒，每天補充 1000 毫克就能大幅降低感冒概率，这是醫學界的共識。',
       b: '就目前的研究来看，維他命 C 對一般人恐怕沒有預防感冒的效果；部分研究显示它或許能稍微縮短病程，但證據仍有限。建議再諮詢醫師等专业意见。',
       majority: 'A', pct: 58,
       explain: 'A 語气篤定、还宣稱「醫學界共識」，讓人覺得可靠，但内容与研究證據不符；B 坦承不確定，方向卻是對的。' +
-        '標註者傾向奖励自信、迎合的語气，这種諂媚（sycophancy）偏誤一旦被奖励模型學走，模型就会愈来愈敢「自信地胡说」。'
+        '标注者傾向獎勵自信、迎合的語气，这種諂媚（sycophancy）偏差一旦被獎勵模型學走，模型就会愈来愈敢「自信地胡说」。'
     },
     {
       bias: '對照組：品质差距明顯',
       prompt: '請用一句話解釋什么是 RLHF。',
-      a: 'RLHF（人類反馈强化學習）是先蒐集人類對模型回覆的偏好、训练出奖励模型，再用强化學習讓语言模型往人類偏好的方向调整的技术。',
+      a: 'RLHF（人類回饋强化学习）是先蒐集人類對模型回复的偏好、训练出獎勵模型，再用强化学习讓语言模型往人類偏好的方向调整的技术。',
       b: 'RLHF 就是一種 AI 技术，很多公司都在用，总之就是讓 AI 变得更好、更聰明的方法。',
       majority: 'A', pct: 93,
-      explain: '这題是對照組：A 準確交代了「偏好数据、奖励模型、强化學習」三个环節，B 空洞含糊。' +
-        '当品质差距明顯时，標註者一致率会很高；真正花錢又花力气的，是前三題那種灰色地带。'
+      explain: '这題是對照組：A 準確交代了「偏好数据、獎勵模型、强化学习」三个环節，B 空洞含糊。' +
+        '当品质差距明顯时，标注者一致率会很高；真正花錢又花力气的，是前三題那種灰色地带。'
     }
   ];
   var SCALE = ['1 非常差', '2 不佳', '3 尚可', '4 良好', '5 优异'];
@@ -62,7 +62,7 @@
   function promptPanel(text) {
     var p = el('div', 'border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;' +
       'background:var(--panel);padding:.6rem .9rem;margin:.75rem 0;');
-    p.appendChild(el('div', 'font-size:.78em;color:var(--fg-muted);margin-bottom:.2rem;', '提示詞'));
+    p.appendChild(el('div', 'font-size:.78em;color:var(--fg-muted);margin-bottom:.2rem;', '提示'));
     p.appendChild(el('div', 'font-weight:600;', text));
     return p;
   }
@@ -82,7 +82,7 @@
     head.appendChild(dots);
     root.appendChild(head);
     root.appendChild(el('p', 'color:var(--fg-muted);margin:.5rem 0 0;font-size:.9em;',
-      '請站在一般使用者的角度，點选你認为<strong>較好</strong>的回覆。'));
+      '請站在一般使用者的角度，點选你認为<strong>較好</strong>的回复。'));
     root.appendChild(promptPanel(q.prompt));
 
     var row = el('div', '');
@@ -95,9 +95,9 @@
         'background:var(--panel);padding:.7rem .9rem;cursor:pointer;');
       card.setAttribute('role', 'button');
       card.setAttribute('tabindex', '0');
-      card.setAttribute('aria-label', '选择回覆 ' + key);
+      card.setAttribute('aria-label', '选择回复 ' + key);
       var badgeRow = el('div', 'display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-bottom:.45rem;');
-      badgeRow.appendChild(el('strong', 'color:var(--accent);', '回覆 ' + key));
+      badgeRow.appendChild(el('strong', 'color:var(--accent);', '回复 ' + key));
       card.appendChild(badgeRow);
       card.appendChild(el('div', 'font-size:.92em;line-height:1.65;', key === 'A' ? q.a : q.b));
       card.addEventListener('click', function () { choose(key, q, cards, feedback); });
@@ -133,7 +133,7 @@
     var panel = el('div', 'border-left:3px solid var(--accent-2);');
     panel.className = 'widget-panel';
     panel.appendChild(el('div', 'margin-bottom:.35rem;',
-      '多数標註者（' + q.pct + '%）选了<strong>回覆 ' + q.majority + '</strong>，你与多数' +
+      '多数标注者（' + q.pct + '%）选了<strong>回复 ' + q.majority + '</strong>，你与多数' +
       (match ? '<strong>一致</strong>。' : '<strong>不一致</strong>。')));
     panel.appendChild(el('div', 'font-size:.9em;margin-bottom:.5rem;',
       '<strong>' + q.bias + '</strong>　' + q.explain));
@@ -152,11 +152,11 @@
     root.innerHTML = '';
     var hits = state.answers.filter(function (a) { return a.match; }).length;
 
-    root.appendChild(el('h4', 'margin:.2rem 0 .6rem;', '標註结果总結'));
+    root.appendChild(el('h4', 'margin:.2rem 0 .6rem;', '标注结果总結'));
     var panel = el('div', '');
     panel.className = 'widget-panel';
     panel.appendChild(el('div', 'font-size:1.05em;margin-bottom:.5rem;',
-      '你与「多数標註者」的一致率：<strong>' + hits + ' / ' + QUESTIONS.length +
+      '你与「多数标注者」的一致率：<strong>' + hits + ' / ' + QUESTIONS.length +
       '（' + Math.round(hits / QUESTIONS.length * 100) + '%）</strong>'));
     var list = el('ul', 'margin:.3rem 0 .6rem;padding-left:1.2em;font-size:.9em;');
     QUESTIONS.forEach(function (q, i) {
@@ -167,14 +167,14 @@
     });
     panel.appendChild(list);
     panel.appendChild(el('p', 'font-size:.9em;color:var(--fg-muted);margin:0;',
-      '注意：一致率高不代表判斷正確——第 1、3 題的「多数」其实都掉进了偏誤陷阱。一致率量測的是雜訊，不是真理。'));
+      '注意：一致率高不代表判斷正確——第 1、3 題的「多数」其实都掉进了偏差陷阱。一致率量測的是雜訊，不是真理。'));
     root.appendChild(panel);
 
     var key = el('div', 'border-left:3px solid var(--accent);margin-top:.9rem;');
     key.className = 'widget-panel';
-    key.appendChild(el('div', '', '<strong>書中重點</strong>：即使有詳盡的標註指引，標註者之间的一致率通常也只有 <strong>60～80%</strong>。' +
+    key.appendChild(el('div', '', '<strong>書中重點</strong>：即使有詳盡的标注指引，标注者之间的一致率通常也只有 <strong>60～80%</strong>。' +
       '偏好数据記錄的不是「正確答案」，而是「相對于另一个选项哪个較好」的主觀判斷，本质上就是有雜訊的。' +
-      '能否辨识并緩解冗长、格式、諂媚这些細微偏誤，正是「好的」与「卓越的」偏好数据——以及 RLHF 训练——之间的分野。'));
+      '能否辨识并緩解冗长、格式、諂媚这些細微偏差，正是「好的」与「卓越的」偏好数据——以及 RLHF 训练——之间的分野。'));
     root.appendChild(key);
 
     root.appendChild(renderLikert());
@@ -190,9 +190,9 @@
     var box = el('div', 'margin-top:1.2rem;');
     box.appendChild(el('h4', 'margin:.2rem 0 .4rem;', '附加對照：如果改用評分（Ratings）呢？'));
     box.appendChild(el('p', 'font-size:.9em;color:var(--fg-muted);margin:0 0 .5rem;',
-      '剛才你做的是<strong>排序（rankings）</strong>：在兩个回覆之间选出相對較好的一个。' +
-      '另一種蒐集方式是<strong>評分（ratings）</strong>：不做比較，而是替每段回覆各自打 1～5 分。' +
-      '試着替第 2 題（離職祝福）的兩个回覆評分：'));
+      '剛才你做的是<strong>排序（rankings）</strong>：在兩个回复之间选出相對較好的一个。' +
+      '另一種蒐集方式是<strong>評分（ratings）</strong>：不做比較，而是替每段回复各自打 1～5 分。' +
+      '試着替第 2 題（離職祝福）的兩个回复評分：'));
     box.appendChild(promptPanel(q.prompt));
 
     var scores = { A: 0, B: 0 };
@@ -201,7 +201,7 @@
       var line = el('div', 'border:1px solid var(--border);border-radius:8px;background:var(--panel);' +
         'padding:.55rem .8rem;margin-bottom:.5rem;');
       line.appendChild(el('div', 'font-size:.88em;margin-bottom:.4rem;',
-        '<strong style="color:var(--accent)">回覆 ' + key + '</strong>　' + (key === 'A' ? q.a : q.b)));
+        '<strong style="color:var(--accent)">回复 ' + key + '</strong>　' + (key === 'A' ? q.a : q.b)));
       var row = el('div', 'display:flex;gap:.35rem;flex-wrap:wrap;');
       var btns = SCALE.map(function (label, i) {
         var b = el('button', 'font-size:.82em;padding:.15em .5em;', label);
@@ -237,19 +237,19 @@
     } else {
       var hi = scores.A > scores.B ? 'A' : 'B', lo = hi === 'A' ? 'B' : 'A';
       msg = '換算成偏好数据：<strong>' + hi + '（' + scores[hi] + ' 分）为 chosen、' + lo + '（' + scores[lo] +
-        ' 分）为 rejected</strong>。UltraFeedback 等数据集正是这样把評分轉成偏好對：取最高分的回覆，搭配一个分数較低的。';
+        ' 分）为 rejected</strong>。UltraFeedback 等数据集正是这样把評分轉成偏好對：取最高分的回复，搭配一个分数較低的。';
     }
     panel.appendChild(el('div', 'font-size:.9em;margin-bottom:.4rem;', msg));
     panel.appendChild(el('div', 'font-size:.88em;color:var(--fg-muted);',
-      '兩種格式的結構差异：排序強迫你表態相對好坏，訊號明確，但丟失「差多少」；評分保留每段文字的絕對品质资訊，卻可能整批同分。' +
+      '兩種格式的結構差异：排序強迫你表態相對好坏，訊號明確，但丟失「差多少」；評分保留每段文本的絕對品质信息，卻可能整批同分。' +
       '实务上最常见的做法，仍是以排序（如 5 點 Likert 比較量表：A≫B、A>B、平手、B>A、B≫A）蒐集训练用偏好，評分則常作为中繼数据保留。'));
     result.appendChild(panel);
   }
 
   window.ChapterWidget = {
-    title: '当一次偏好標註員',
-    intro: '四題偏好比較任务，体验数据標註員的日常：讀完提示詞与兩个回覆，點选你認为較好的一个，' +
-      '再對照多数標註者的选择——看看其中藏了哪些偏誤陷阱，以及排序与評分兩種蒐集方式的差异。',
+    title: '当一次偏好标注員',
+    intro: '四題偏好比較任务，体验数据标注員的日常：讀完提示与兩个回复，點选你認为較好的一个，' +
+      '再對照多数标注者的选择——看看其中藏了哪些偏差陷阱，以及排序与評分兩種蒐集方式的差异。',
     render: function (rootEl) { state.root = rootEl; state.idx = 0; state.answers = []; renderQuestion(); }
   };
 })();

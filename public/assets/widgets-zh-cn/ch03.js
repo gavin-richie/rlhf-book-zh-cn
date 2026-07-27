@@ -1,4 +1,4 @@
-/* 第 3 章互动元件：溫控器 RL 模擬器（呼應 3.1.1 agent/environment/state/action/reward 形式化） */
+/* 第 3 章交互元件：溫控器 RL 模擬器（呼應 3.1.1 agent/environment/state/action/reward 形式化） */
 (function () {
   'use strict';
 
@@ -13,7 +13,7 @@
   var sim = null;       // 最近一次模擬结果 {T, A, R, G, switches, inBand}
   var rafId = 0;
 
-  // 需在多个函数间共用的 DOM 參照
+  // 需在多个函式间共用的 DOM 參照
   var ui = {};
 
   /* ---------- 环境与策略 ---------- */
@@ -59,12 +59,12 @@
 
   /* ---------- 图表 ---------- */
   var PL = 46, PR = 710, PT = 16, PB = 208; // 溫度图繪图區
-  var RZ = 272, RUNIT = 18;                 // 奖励條零线与單位高度
+  var RZ = 272, RUNIT = 18;                 // 獎勵條零线与單位高度
   var scaleY = null;
 
   function xOf(t) { return PL + (t / N) * (PR - PL); }
 
-  function drawStatic() { // 依当前模擬決定溫度軸范围，畫座標軸／容忍带／目標线
+  function drawStatic() { // 依当前模擬決定溫度軸范围，畫座標軸／容忍带／目标线
     var g = ui.gStatic;
     while (g.firstChild) g.removeChild(g.firstChild);
     var lo = Math.min(Math.min.apply(null, sim.T), params.outside, params.target - params.eps) - 1;
@@ -72,14 +72,14 @@
     if (hi - lo < 8) { var c = (hi + lo) / 2; lo = c - 4; hi = c + 4; }
     scaleY = function (v) { return PB - (v - lo) / (hi - lo) * (PB - PT); };
 
-    // ±ε 容忍带与目標线
+    // ±ε 容忍带与目标线
     svg('rect', { x: PL, y: scaleY(params.target + params.eps), width: PR - PL,
       height: scaleY(params.target - params.eps) - scaleY(params.target + params.eps),
       fill: 'var(--accent-soft)' }, g);
     svg('line', { x1: PL, x2: PR, y1: scaleY(params.target), y2: scaleY(params.target),
       stroke: 'var(--accent-2)', 'stroke-width': 1.5, 'stroke-dasharray': '6 4' }, g);
     svg('text', { x: PR - 4, y: scaleY(params.target) - 5, 'text-anchor': 'end',
-      'font-size': 11, fill: 'var(--accent-2)' }, g).textContent = '目標 T* ± ε';
+      'font-size': 11, fill: 'var(--accent-2)' }, g).textContent = '目标 T* ± ε';
 
     // 溫度軸刻度
     var span = hi - lo, step = span > 28 ? 10 : span > 14 ? 5 : 2;
@@ -96,13 +96,13 @@
     }
     svg('text', { x: PL, y: PT - 4, 'font-size': 11, fill: 'var(--fg-muted)' }, g)
       .textContent = '室溫（°C）　橘色細條＝暖气打开';
-    // 奖励區零线与標題
+    // 獎勵區零线与標題
     svg('line', { x1: PL, x2: PR, y1: RZ, y2: RZ, stroke: 'var(--border)', 'stroke-width': 1 }, g);
     svg('text', { x: PL, y: RZ - 24, 'font-size': 11, fill: 'var(--fg-muted)' }, g)
-      .textContent = '每步奖励 r（綠＝+1、橘＝懲罰）';
+      .textContent = '每步獎勵 r（綠＝+1、橘＝懲罰）';
   }
 
-  function drawFrame(upTo) { // 畫出前 upTo 步的軌跡、暖气狀態條与奖励條
+  function drawFrame(upTo) { // 畫出前 upTo 步的軌跡、暖气状态條与獎勵條
     var g = ui.gDyn;
     while (g.firstChild) g.removeChild(g.firstChild);
     var pts = [];
@@ -121,14 +121,14 @@
       fill: 'var(--accent)', stroke: 'var(--bg)', 'stroke-width': 1.5 }, g);
   }
 
-  /* ---------- 側欄（RL 迴圈即时狀態）与解讀 ---------- */
+  /* ---------- 側欄（RL 迴圈即时状态）与解读 ---------- */
   function updateLoopPanel(t) {
     var i = Math.max(0, Math.min(t, N - 1));
     var s = sim.T[i], a = sim.A[i], r = sim.R[i], G = 0;
     for (var k = 0; k <= i; k++) G += sim.R[k];
     ui.stepEl.textContent = '第 t = ' + i + ' 步（共 ' + N + ' 步）';
-    ui.sarEl.innerHTML = '狀態 s = <b>' + fmt(s) + '°C</b> → 动作 a = <b style="color:var(--accent-2)">' +
-      (a ? '打开暖气' : '关闭暖气') + '</b> → 奖励 r = <b style="color:var(--accent)">' +
+    ui.sarEl.innerHTML = '状态 s = <b>' + fmt(s) + '°C</b> → 动作 a = <b style="color:var(--accent-2)">' +
+      (a ? '打开暖气' : '关闭暖气') + '</b> → 獎勵 r = <b style="color:var(--accent)">' +
       (r > 0 ? '+1' : fmt(r, 2)) + '</b>';
     ui.retEl.textContent = fmt(G);
   }
@@ -138,21 +138,21 @@
     var pct = Math.round(sim.inBand * 100);
     var parts = [];
     if (maxT < params.target - 0.5) {
-      parts.push('暖气全开的平衡溫度只有約 ' + fmt(maxT) + '°C，低于目標 ' + fmt(params.target) +
+      parts.push('暖气全开的平衡溫度只有約 ' + fmt(maxT) + '°C，低于目标 ' + fmt(params.target) +
         '°C——环境的轉移动態不在代理人的控制范围内，再好的策略也拿不到高報酬。');
     } else {
       parts.push(pct >= 75
         ? '有 ' + pct + '% 的时间落在 ±ε 容忍带内，控制良好，累積回報 G = ' + fmt(sim.G) + '。'
         : '只有 ' + pct + '% 的时间落在容忍带内（含开头升溫的試誤成本），累積回報 G = ' + fmt(sim.G) + '。');
-      if (params.eps <= 1.0) parts.push('ε 調小后奖励函数更嚴格，同样的行为累積回報下降——奖励设计直接影响我們對行为的評價。');
-      else if (params.eps >= 2.8) parts.push('ε 很大时奖励过于寬鬆，幾乎每一步都得 +1，难以分辨策略好坏。');
-      if (params.dead <= 0.2) parts.push('死區很小：室溫緊貼目標，但暖气切換了 ' + sim.switches + ' 次——精準控制的代價是頻繁动作。');
+      if (params.eps <= 1.0) parts.push('ε 調小后獎勵函数更嚴格，同样的行为累積回報下降——獎勵设计直接影响我們對行为的評價。');
+      else if (params.eps >= 2.8) parts.push('ε 很大时獎勵过于寬鬆，幾乎每一步都得 +1，难以分辨策略好坏。');
+      if (params.dead <= 0.2) parts.push('死區很小：室溫緊貼目标，但暖气切換了 ' + sim.switches + ' 次——精準控制的代價是頻繁动作。');
       else if (params.dead >= 1.4) parts.push('死區較大：只切換 ' + sim.switches + ' 次，但溫度擺盪变大，可能盪出容忍带。');
     }
     ui.noteEl.textContent = parts.join(' ');
   }
 
-  /* ---------- 執行一次模擬（含播放动畫） ---------- */
+  /* ---------- 执行一次模擬（含播放动畫） ---------- */
   function run() {
     cancelAnimationFrame(rafId);
     simulate();
@@ -191,9 +191,9 @@
     ctrl.style.marginBottom = '1rem';
     var row = el('div');
     row.className = 'widget-row';
-    makeSlider(row, '目標溫度 T*', '°C', 16, 28, 0.5, 'target');
+    makeSlider(row, '目标溫度 T*', '°C', 16, 28, 0.5, 'target');
     makeSlider(row, '室外溫度', '°C', -5, 25, 1, 'outside');
-    makeSlider(row, '奖励容忍带 ε', '°C', 0.3, 3, 0.1, 'eps');
+    makeSlider(row, '獎勵容忍带 ε', '°C', 0.3, 3, 0.1, 'eps');
     makeSlider(row, '策略死區', '°C', 0, 2, 0.1, 'dead');
     ctrl.appendChild(row);
     var row2 = el('div', 'display:flex;flex-wrap:wrap;gap:1rem;align-items:center;margin-top:.8rem;');
@@ -216,7 +216,7 @@
     var chartPanel = el('div', 'flex:2 1 340px;min-width:0;');
     chartPanel.className = 'widget-panel';
     var s = svg('svg', { viewBox: '0 0 720 330', width: '100%',
-      role: 'img', 'aria-label': '室溫軌跡与每步奖励图' });
+      role: 'img', 'aria-label': '室溫軌跡与每步獎勵图' });
     s.style.display = 'block';
     ui.gStatic = svg('g', {}, s);
     ui.gDyn = svg('g', {}, s);
@@ -225,7 +225,7 @@
 
     var side = el('div', 'flex:1 1 200px;display:flex;flex-direction:column;gap:.55rem;font-size:.85rem;');
     side.className = 'widget-panel';
-    side.appendChild(el('div', 'font-weight:700;color:var(--accent);letter-spacing:.05em;', 'RL 迴圈即时狀態'));
+    side.appendChild(el('div', 'font-weight:700;color:var(--accent);letter-spacing:.05em;', 'RL 迴圈即时状态'));
     ui.stepEl = el('div', 'color:var(--fg-muted);');
     ui.sarEl = el('div', 'line-height:1.8;');
     side.appendChild(ui.stepEl);
@@ -245,7 +245,7 @@
 
   window.ChapterWidget = {
     title: '溫控器 RL 模擬器',
-    intro: '書中 3.1.1 節以溫控器说明 RL 的形式化：代理人觀察狀態（室溫 s）、依策略选动作（开／关暖气 a）、從环境获得奖励 r，并累積回報 G。拖动滑桿改变环境（室外溫度）、奖励设计（容忍带 ε）与策略（死區），觀察同一个迴圈如何产生不同的行为与報酬。',
+    intro: '書中 3.1.1 節以溫控器说明 RL 的形式化：代理人觀察状态（室溫 s）、依策略选动作（开／关暖气 a）、從环境获得獎勵 r，并累積回報 G。拖动滑桿改变环境（室外溫度）、獎勵设计（容忍带 ε）与策略（死區），觀察同一个迴圈如何产生不同的行为与報酬。',
     render: render
   };
 })();

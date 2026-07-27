@@ -9,33 +9,33 @@
 
   var EVENTS = [
     { t: 2008.3, year: '2008', era: 'origin', title: 'TAMER：人類評分训练代理人',
-      desc: '由人類反覆为代理人（agent）的行动評分，先學出一个奖励模型（reward model），再用它學習行动策略。这種「先建模人類反馈、再做优化」的兩段式设计，正是日后 RLHF 流程的雛形。' },
-    { t: 2017.05, year: '2017', era: 'origin', title: 'COACH：反馈调整优勢函数',
-      desc: '演員-評论家（actor-critic）算法 COACH 利用人類的正向与負向反馈来调整优勢函数。它说明除了「先學奖励模型」之外，人類訊號还有其他嵌入 RL 更新的方式。' },
+      desc: '由人類反覆为代理人（agent）的行动評分，先學出一个獎勵模型（reward model），再用它學習行动策略。这種「先建模人類回饋、再做优化」的兩段式设计，正是日后 RLHF 流程的雛形。' },
+    { t: 2017.05, year: '2017', era: 'origin', title: 'COACH：回饋调整优勢函数',
+      desc: '演員-評论家（actor-critic）算法 COACH 利用人類的正向与負向回饋来调整优勢函数。它说明除了「先學獎勵模型」之外，人類訊號还有其他嵌入 RL 更新的方式。' },
     { t: 2017.55, year: '2017', era: 'origin', title: 'Christiano et al.：引入 RLHF',
-      desc: '現代 RLHF 最主要的参考文献：讓人類在 Atari 代理人的軌跡（trajectories）之间表達偏好，非同步训练奖励預測器，代理人再最大化預測出的奖励。它證明在某些領域，讓人類比較軌跡比直接与环境互动更有效。' },
-    { t: 2018.4, year: '2018', era: 'origin', title: '奖励建模轉向对齐研究',
-      desc: 'TAMER 被扩展到神經網路（Deep TAMER），奖励建模研究进一步延伸 Christiano 的方法。更关鍵的轉变是：奖励模型开始被提出作为研究对齐（alignment）的一般性方法，而不再只是解決 RL 问題的工具。' },
+      desc: '現代 RLHF 最主要的参考文献：讓人類在 Atari 代理人的軌跡（trajectories）之间表達偏好，非同步训练獎勵預測器，代理人再最大化預測出的獎勵。它證明在某些領域，讓人類比較軌跡比直接与环境交互更有效。' },
+    { t: 2018.4, year: '2018', era: 'origin', title: '獎勵建模轉向对齐研究',
+      desc: 'TAMER 被擴展到神经网络（Deep TAMER），獎勵建模研究进一步延伸 Christiano 的方法。更关鍵的轉变是：獎勵模型开始被提出作为研究对齐（alignment）的一般性方法，而不再只是解決 RL 问題的工具。' },
     { t: 2019.5, year: '2019', era: 'lm', title: '微调语言模型：GPT-2 上的偏好 RL',
-      desc: '《Fine-Tuning Language Models from Human Preferences》首次把人類偏好 RL 搬上语言模型。學習奖励模型、KL 距離、反馈流程图等經典概念都在此正式確立，与現代 RLHF 有驚人的相似之處。' },
+      desc: '《Fine-Tuning Language Models from Human Preferences》首次把人類偏好 RL 搬上语言模型。學習獎勵模型、KL 距離、回饋流程图等經典概念都在此正式確立，与現代 RLHF 有驚人的相似之處。' },
     { t: 2020.6, year: '2020', era: 'lm', title: '學習摘要：RLHF 的首个殺手級任务',
       desc: '把 RLHF 應用于一般摘要，證明以人類偏好训练的模型能在真实語言任务上超越監督式基準，后續更延伸到書籍的遞迴式摘要。RLHF 從遊戲走进了自然語言处理。' },
     { t: 2021.65, year: '2021', era: 'lm', title: 'WebGPT 等：走向助理行为',
-      desc: 'RLHF 被應用到浏览器輔助问答（WebGPT）、附引用来源的回答（GopherCite）与一般對話（Sparrow）。RLHF 從單一任务优化，走向训练「有用且可查證」的助理行为。' },
+      desc: 'RLHF 被應用到浏览器輔助问答（WebGPT）、附引用来源的回答（GopherCite）与一般对话（Sparrow）。RLHF 從單一任务优化，走向训练「有用且可查證」的助理行为。' },
     { t: 2022.12, year: '2022', era: 'lm', title: 'InstructGPT：指令遵循三阶段',
-      desc: '把 RLHF 用于指令遵循，確立「監督微调 → 奖励模型 → RL 优化」的流程，是 ChatGPT 的直接前身。同期研究也定义了奖励模型过度优化与红队测试（red teaming）等关鍵議題。' },
+      desc: '把 RLHF 用于指令遵循，確立「監督微调 → 獎勵模型 → RL 优化」的流程，是 ChatGPT 的直接前身。同期研究也定義了獎勵模型过度优化与红队测试（red teaming）等关鍵議題。' },
     { t: 2022.5, year: '2022', era: 'lm', title: 'Anthropic 早期 Claude 大量採用 RLHF',
-      desc: 'Anthropic 在 Claude 的早期版本中持續大量使用 RLHF，训练有幫助且无害的對話助理；早期的 RLHF 开源工具也隨之出現。把 RLHF 精煉并應用于聊天模型的工作全面展开。' },
+      desc: 'Anthropic 在 Claude 的早期版本中持續大量使用 RLHF，训练有幫助且无害的对话助理；早期的 RLHF 开源工具也隨之出現。把 RLHF 精煉并應用于聊天模型的工作全面展开。' },
     { t: 2022.92, year: '2022', era: 'gpt', title: 'ChatGPT：RLHF 走入大眾視野',
-      desc: '发布公告明確说明：採用与 InstructGPT 相同的 RLHF 方法训练，僅数据蒐集设置略有差异。RLHF 一夕之间從研究技术变成家喻戶曉產品背后的关鍵配方，也是本書聚焦的时代轉折點。' },
+      desc: '发布公告明確说明：採用与 InstructGPT 相同的 RLHF 方法训练，僅数据收集设置略有差异。RLHF 一夕之间從研究技术变成家喻戶曉產品背后的关鍵配方，也是本書聚焦的时代轉折點。' },
     { t: 2023.35, year: '2023', era: 'gpt', title: '憲法式 AI 与 Claude',
-      desc: 'Anthropic 以一組「憲法」原則讓 AI 自己产生反馈来训练 Claude，減少對人工標註的依賴。它展示了人類反馈可以被 AI 反馈放大甚至部分取代，打开 RLAIF 一系列研究。' },
+      desc: 'Anthropic 以一組「憲法」原則讓 AI 自己产生回饋来训练 Claude，減少對人工标注的依賴。它展示了人類回饋可以被 AI 回饋放大甚至部分取代，打开 RLAIF 一系列研究。' },
     { t: 2023.8, year: '2023', era: 'gpt', title: 'DPO：直接偏好优化',
-      desc: '直接偏好优化（Direct Preference Optimization, DPO）跳过獨立的奖励模型与 RL 优化器，直接用偏好数据优化策略，催生出一整族直接对齐算法，大幅降低偏好微调的门檻。' },
+      desc: '直接偏好优化（Direct Preference Optimization, DPO）跳过獨立的獎勵模型与 RL 优化器，直接用偏好数据优化策略，催生出一整族直接对齐算法，大幅降低偏好微调的门檻。' },
     { t: 2024.55, year: '2024', era: 'gpt', title: 'Llama 3、Tülu 3：配方公开化',
-      desc: 'Meta 的 Llama 2/3、Nvidia 的 Nemotron、Ai2 的 Tülu 3 等公开權重模型都採用 RLHF 与偏好微调，完整训练配方逐漸透明。RLHF 成长为更廣泛的偏好微调（PreFT）領域。' },
+      desc: 'Meta 的 Llama 2/3、Nvidia 的 Nemotron、Ai2 的 Tülu 3 等公开权重模型都採用 RLHF 与偏好微调，完整训练配方逐漸透明。RLHF 成长为更廣泛的偏好微调（PreFT）領域。' },
     { t: 2025.2, year: '2025', era: 'gpt', title: 'DeepSeek R1 与推理模型',
-      desc: '受 OpenAI o1 啟发的线上推理方法興起：針對中间推理步驟的过程奖励、從程式码与数學的執行反馈中學習。RLHF 的技术棧被延伸到推理训练，領域仍在快速演进。' }
+      desc: '受 OpenAI o1 啟发的线上推理方法興起：針對中间推理步驟的过程獎勵、從代码与数學的执行回饋中學習。RLHF 的技术棧被延伸到推理训练，領域仍在快速演进。' }
   ];
 
   var DEFAULT_IDX = 9; // ChatGPT：时代轉折點
@@ -188,8 +188,8 @@
   }
 
   window.ChapterWidget = {
-    title: 'RLHF 发展互动时间軸',
-    intro: '點击时间軸上的圓點，或用「上一个／下一个」按鈕，走一遍 RLHF 從偏好 RL 起源到 ChatGPT 时代的 14 个里程碑；也可以用时代按鈕篩选。',
+    title: 'RLHF 发展交互时间軸',
+    intro: '点击时间軸上的圓點，或用「上一个／下一个」按鈕，走一遍 RLHF 從偏好 RL 起源到 ChatGPT 时代的 14 个里程碑；也可以用时代按鈕篩选。',
     render: render
   };
 })();

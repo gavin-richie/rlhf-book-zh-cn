@@ -24,7 +24,7 @@
   function fmt(v, d) { return v.toFixed(d == null ? 2 : d); }
   function mean(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return a.length ? s / a.length : 0; }
 
-  /* E[max of N 个標準常態样本]，以蒙地卡羅（前綴最大值）估計一次，之后查表 */
+  /* E[max of N 个標準常態样本]，以蒙地卡羅（前綴最大值）估计一次，之后查表 */
   var EMAX = (function () {
     var trials = 4000, tbl = new Float64Array(MAX_N + 1);
     for (var t = 0; t < trials; t++) {
@@ -48,7 +48,7 @@
     }
   }
 
-  /* 依当前 N、M、σ 取出奖励矩陣与选取结果 */
+  /* 依当前 N、M、σ 取出獎勵矩陣与选取结果 */
   function compute() {
     var R = [], flat = [];
     for (var i = 0; i < state.M; i++) {
@@ -99,7 +99,7 @@
       label(svg, L - 6, yy + 4, fmt(rv, 1), 'end', 10);
     }
     for (var i = 0; i < state.M; i++) label(svg, L + (i + 0.5) * (W - L - R0) / state.M, H - B + 16, '提示 ' + (i + 1), 'middle', 10);
-    label(svg, L + (W - L - R0) / 2, H - 2, '提示編號 i（每欄 N 个補全的 reward）', 'middle', 11);
+    label(svg, L + (W - L - R0) / 2, H - 2, '提示編號 i（每欄 N 个补全的 reward）', 'middle', 11);
     d.flat.forEach(function (c) {
       var x = sx(c.i, c.j), y = sy(c.r);
       if (d.chosen[c.i + ',' + c.j]) {
@@ -172,7 +172,7 @@
 
   window.ChapterWidget = {
     title: '拒绝采样模擬器',
-    intro: '模擬「生成 N 个補全、用奖励模型評分、只留最好的」流程：比較 9.1.2 節的兩種选取函数（每提示取最佳 vs 整体前 M 名），并觀察 Best-of-N 的報酬遞減。',
+    intro: '模擬「生成 N 个补全、用獎勵模型評分、只留最好的」流程：比較 9.1.2 節的兩種选取函数（每提示取最佳 vs 整体前 M 名），并觀察 Best-of-N 的報酬遞減。',
     render: function (root) {
       root.innerHTML = '';
       var panel = div('widget-panel', root);
@@ -190,7 +190,7 @@
       }
       slider('每提示样本数 N', 1, MAX_N, 1, 'N', function (v) { return v; });
       slider('提示数 M', 4, MAX_M, 1, 'M', function (v) { return v; });
-      slider('奖励標準差 σ', 0.2, 1.5, 0.05, 'sigma', function (v) { return fmt(v); });
+      slider('獎勵標準差 σ', 0.2, 1.5, 0.05, 'sigma', function (v) { return fmt(v); });
 
       var row2 = div('widget-row', panel);
       row2.style.marginTop = '.6rem';
@@ -200,7 +200,7 @@
       sel.addEventListener('change', function () { state.mode = sel.value; redraw(); });
       row2.appendChild(sel);
       var btn = document.createElement('button');
-      btn.textContent = '重新采样';
+      btn.textContent = '重新採样';
       btn.addEventListener('click', function () { resample(); redraw(); });
       row2.appendChild(btn);
       var formula = document.createElement('span');
@@ -238,9 +238,9 @@
         }
         if (state.mode === 'overall') {
           txt += ' 整体前 M 名模式下，' + state.M + ' 个提示只有 ' + nCov + ' 个被覆盖' +
-            (nCov < state.M ? '：高 μ 的提示壟斷名額，低 μ 的提示可能一个補全都选不上，训练数据会偏向「容易拿高奖励」的提示。' : '，本次恰好每个提示都有補全入选。');
+            (nCov < state.M ? '：高 μ 的提示壟斷名額，低 μ 的提示可能一个补全都选不上，训练数据会偏向「容易拿高獎勵」的提示。' : '，本次恰好每个提示都有补全入选。');
         } else {
-          txt += ' 每提示取最佳模式保證每个提示各留一个補全，数据覆盖均勻。';
+          txt += ' 每提示取最佳模式保證每个提示各留一个补全，数据覆盖均勻。';
         }
         note.textContent = txt;
       }

@@ -1,4 +1,4 @@
-/* 第 10 章「偏好的本质」互动元件：偏好彙总悖论实验（Condorcet 循环） */
+/* 第 10 章「偏好的本质」交互元件：偏好彙总悖论实验（Condorcet 循环） */
 (function () {
   'use strict';
 
@@ -31,7 +31,7 @@
   function key(p) { return p.join(''); }
   function label(p) { return p.join(' > '); }
 
-  /* 成對多数決：對每一組 (x, y) 統計偏好 x 的票数，回傳勝者与票数 */
+  /* 成對多数決：對每一組 (x, y) 统计偏好 x 的票数，返回勝者与票数 */
   function tally(rankings) {
     return PAIRS.map(function (pair) {
       var x = pair[0], y = pair[1], vx = 0;
@@ -48,7 +48,7 @@
     return wins.A === 1 && wins.B === 1 && wins.C === 1;
   }
   function randPerm() { return PERMS[Math.floor(Math.random() * PERMS.length)]; }
-  /* 产生会（或不会）循环、且与目前不同的標註組合 */
+  /* 产生会（或不会）循环、且与目前不同的标注組合 */
   function randomProfile(wantCycle, current) {
     var cur = current.map(key).join('|');
     for (var t = 0; t < 400; t++) {
@@ -70,10 +70,10 @@
     /* 預設为經典循环組合 */
     var state = [['A', 'B', 'C'], ['B', 'C', 'A'], ['C', 'A', 'B']];
 
-    /* --- 標註者卡片 --- */
+    /* --- 标注者卡片 --- */
     var selects = [];
     var cards = state.map(function (perm, i) {
-      var sel = el('select', { 'aria-label': '標註者 ' + (i + 1) + ' 的排序', style: 'width:100%;margin-top:6px;' });
+      var sel = el('select', { 'aria-label': '标注者 ' + (i + 1) + ' 的排序', style: 'width:100%;margin-top:6px;' });
       PERMS.forEach(function (p) { sel.appendChild(el('option', { value: key(p), text: label(p) })); });
       sel.value = key(perm);
       sel.addEventListener('change', function () {
@@ -82,7 +82,7 @@
       });
       selects.push(sel);
       return el('div', { class: 'widget-panel', style: 'flex:1 1 150px;min-width:150px;' }, [
-        el('div', { text: '標註者 ' + (i + 1), style: 'font-weight:600;' }),
+        el('div', { text: '标注者 ' + (i + 1), style: 'font-weight:600;' }),
         el('div', { text: '偏好排序（好 → 差）', style: 'font-size:.8em;color:var(--fg-muted);margin-top:2px;' }),
         sel
       ]);
@@ -105,14 +105,14 @@
     var gNodes = svgEl('g');
     ['A', 'B', 'C'].forEach(function (o) {
       gNodes.appendChild(svgEl('circle', { cx: POS[o].x, cy: POS[o].y, r: R, fill: 'var(--panel-2)', stroke: 'var(--border)', 'stroke-width': 1.5 }));
-      gNodes.appendChild(svgEl('text', { x: POS[o].x, y: POS[o].y + 1, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: 'var(--fg)', 'font-size': 15, 'font-weight': 600, text: '回覆 ' + o }));
+      gNodes.appendChild(svgEl('text', { x: POS[o].x, y: POS[o].y + 1, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: 'var(--fg)', 'font-size': 15, 'font-weight': 600, text: '回复 ' + o }));
     });
     svg.appendChild(defs); svg.appendChild(gEdges); svg.appendChild(gNodes);
 
-    var warn = el('div', { style: 'display:none;margin:10px auto 0;max-width:400px;border:1px solid var(--accent-2);color:var(--accent-2);border-radius:8px;padding:8px 12px;font-weight:600;text-align:center;', text: '偏好循环！不存在一致的「最佳回覆」' });
-    var legend = el('div', { text: '箭头 X → Y 表示多数標註者認为 X 优于 Y', style: 'text-align:center;font-size:.8em;color:var(--fg-muted);margin-top:8px;' });
+    var warn = el('div', { style: 'display:none;margin:10px auto 0;max-width:400px;border:1px solid var(--accent-2);color:var(--accent-2);border-radius:8px;padding:8px 12px;font-weight:600;text-align:center;', text: '偏好循环！不存在一致的「最佳回复」' });
+    var legend = el('div', { text: '箭头 X → Y 表示多数标注者認为 X 优于 Y', style: 'text-align:center;font-size:.8em;color:var(--fg-muted);margin-top:8px;' });
 
-    /* --- 按鈕与动態解讀 --- */
+    /* --- 按鈕与动態解读 --- */
     function preset(wantCycle) {
       state = randomProfile(wantCycle, state);
       selects.forEach(function (sel, i) { sel.value = key(state[i]); });
@@ -162,14 +162,14 @@
         var beats = {};
         results.forEach(function (r) { beats[r.winner] = r.loser; });
         var c0 = 'A', c1 = beats[c0], c2 = beats[c1];
-        interp.appendChild(el('p', { text: '三位標註者各自的排序都完全理性（具遞移性），但多数決彙总后卻得到 ' + c0 + ' 勝 ' + c1 + '、' + c1 + ' 勝 ' + c2 + '、' + c2 + ' 又回头勝 ' + c0 + '——群体偏好不具遞移性，选不出 Condorcet 贏家。' }));
-        interp.appendChild(el('p', { text: '若奖励模型必須为 A、B、C 各給一个純量分数，任何一組分数都至少違背其中一项多数意见。这正是社会选择理论中 Arrow 不可能定理的直觀展示：把多元的人類偏好压缩成單一效用（奖励）函数，必然有所損失——而 RLHF 的奖励模型，做的正是这種彙总。', style: 'margin-top:8px;' }));
+        interp.appendChild(el('p', { text: '三位标注者各自的排序都完全理性（具遞移性），但多数決彙总后卻得到 ' + c0 + ' 勝 ' + c1 + '、' + c1 + ' 勝 ' + c2 + '、' + c2 + ' 又回头勝 ' + c0 + '——群体偏好不具遞移性，选不出 Condorcet 贏家。' }));
+        interp.appendChild(el('p', { text: '若獎勵模型必須为 A、B、C 各給一个純量分数，任何一組分数都至少違背其中一项多数意见。这正是社会选择理论中 Arrow 不可能定理的直觀展示：把多元的人類偏好压缩成單一效用（獎勵）函数，必然有所损失——而 RLHF 的獎勵模型，做的正是这種彙总。', style: 'margin-top:8px;' }));
       } else {
         var wins = { A: 0, B: 0, C: 0 };
         results.forEach(function (r) { wins[r.winner]++; });
         var order = ['A', 'B', 'C'].sort(function (x, y) { return wins[y] - wins[x]; });
-        interp.appendChild(el('p', { text: '目前的組合存在 Condorcet 贏家：回覆 ' + order[0] + ' 在所有成對比較中勝出，群体排序 ' + order.join(' > ') + ' 是一致（具遞移性）的，可以用單一純量奖励函数忠实表示，例如 r(' + order[0] + ') > r(' + order[1] + ') > r(' + order[2] + ')。' }));
-        interp.appendChild(el('p', { text: '但这種一致性相当脆弱：往往只要一位標註者改变心意，循环就会出現。試着调整上方的下拉选單，或按「換一組会循环的例子」，看看單一奖励函数的假設如何失效。', style: 'margin-top:8px;' }));
+        interp.appendChild(el('p', { text: '目前的組合存在 Condorcet 贏家：回复 ' + order[0] + ' 在所有成對比較中勝出，群体排序 ' + order.join(' > ') + ' 是一致（具遞移性）的，可以用單一純量獎勵函数忠实表示，例如 r(' + order[0] + ') > r(' + order[1] + ') > r(' + order[2] + ')。' }));
+        interp.appendChild(el('p', { text: '但这種一致性相当脆弱：往往只要一位标注者改变心意，循环就会出現。試着调整上方的下拉菜单，或按「換一組会循环的例子」，看看單一獎勵函数的假设如何失效。', style: 'margin-top:8px;' }));
       }
     }
 
@@ -184,8 +184,8 @@
   }
 
   window.ChapterWidget = {
-    title: '偏好彙总悖论：三位標註者与 Condorcet 循环',
-    intro: '三位標註者對同一提示的三个回覆 A、B、C 給出完整排序，再以成對多数決彙总成「群体偏好」。即使每个人的偏好都完全理性（具遞移性），彙总结果仍可能形成循环、找不到一致的最佳回覆——这正是奖励模型把多元人類偏好壓成單一純量时面臨的根本困难。',
+    title: '偏好彙总悖论：三位标注者与 Condorcet 循环',
+    intro: '三位标注者對同一提示的三个回复 A、B、C 給出完整排序，再以成對多数決彙总成「群体偏好」。即使每个人的偏好都完全理性（具遞移性），彙总结果仍可能形成循环、找不到一致的最佳回复——这正是獎勵模型把多元人類偏好壓成單一純量时面臨的根本困难。',
     render: render
   };
 })();

@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>第 6 章　强化學習 — RLHF 中文版</title>
+<title>第 6 章　强化学习 — RLHF 中文版</title>
 <link rel="stylesheet" href="../assets/katex/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="../index.html">RLHF 中文版<span>从人类反馈中强化学习</span></a>
-  <nav class="chapnav"><a href="ch05.html">← 第 5 章</a><span class="chapnav-current">第 6 章　强化學習</span><a href="ch07.html">第 7 章 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
+  <a class="brand" href="../index.html">RLHF 中文版<span>从人类回馈中强化学习</span></a>
+  <nav class="chapnav"><a href="ch05.html">← 第 5 章</a><span class="chapnav-current">第 6 章　强化学习</span><a href="ch07.html">第 7 章 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
 </header>
 <div class="layout">
   <aside class="sidebar"><nav id="toc" class="toc"><h2>本章目录</h2></nav></aside>
@@ -22,132 +22,132 @@
       <div id="lab-intro"></div>
       <div id="lab-root"></div>
     </section>
-    <nav class="pager"><a class="prev" href="ch05.html"><span class="dir">← 上一章</span><div class="ttl">第 5 章　奖励模型</div></a><a class="next" href="ch07.html"><span class="dir">下一章 →</span><div class="ttl">第 7 章　推理与推理时扩展</div></a></nav>
-    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（）的<strong>非官方社群翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
+    <nav class="pager"><a class="prev" href="ch05.html"><span class="dir">← 上一章</span><div class="ttl">第 5 章　奖励模型</div></a><a class="next" href="ch07.html"><span class="dir">下一章 →</span><div class="ttl">第 7 章　推理与推论时扩展</div></a></nav>
+    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（台湾）的<strong>非官方社区翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
   </main>
 </div>
 <script type="text/markdown" id="chapter-md">
-# 第 6 章　强化學習（Reinforcement Learning）
+# 第 6 章　强化学习（Reinforcement Learning）
 
-> 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 53–93 頁。本檔为前半（6.1–6.2）。
+> 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 53–93 页。本档为前半（6.1–6.2）。
 
-在 RLHF 流程中，强化學習算法會根據奖励模型（reward model）的反馈，緩慢地更新模型的權重。策略（policy）——也就是正在被训练的模型——會針對训练集中的提示詞（prompt）生成補全（completion），接着由奖励模型为其評分，然后强化學習优化器再依據这些資訊執行梯度更新（整體概覽見圖 16）。本章将說明各種算法的數學原理与取捨，这些算法用來從奖励模型對 on-policy 数据所給出的訊號中學習。这些算法會執行許多個 epoch，通常是在較大的提示詞集合上跑過數千甚至數百萬個批次（batch），并在每個批次之間进行梯度更新。
+在 RLHF 流程中，强化学习算法会根据奖励模型（reward model）的回馈，缓慢地更新模型的权重。策略（policy）——也就是正在被训练的模型——会针对训练集中的提示词（prompt）生成补全（completion），接着由奖励模型为其评分，然后强化学习优化器再依据这些资讯执行梯度更新（整体概览见图 16）。本章将说明各种算法的数学原理与取舍，这些算法用来从奖励模型对 on-policy 资料所给出的讯号中学习。这些算法会执行许多个 epoch，通常是在较大的提示词集合上跑过数千甚至数百万个批次（batch），并在每个批次之间进行梯度更新。
 
-## 6.1 强化學習在 RLHF 中的角色
+## 6.1 强化学习在 RLHF 中的角色
 
-讓 RLHF 在语言模型上聲名大噪的算法，正是策略梯度（policy gradient）類的强化學習算法。这些算法——例如近端策略优化（Proximal Policy Optimization, PPO）、群組相對策略优化（Group Relative Policy Optimization, GRPO）与 REINFORCE——使用最近生成的樣本來更新模型（而不是像 Deep Q-Networks（DQN）那類算法把分數存進重播緩衝區（replay buffer），DQN 曾被用于 AlphaGo 等知名專案）。在本節中，我們将介紹策略梯度算法的基礎，以及它們如何被運用在現代 RLHF 框架之中。
+让 RLHF 在语言模型上声名大噪的算法，正是策略梯度（policy gradient）类的强化学习算法。这些算法——例如近端策略优化（Proximal Policy Optimization, PPO）、群组相对策略优化（Group Relative Policy Optimization, GRPO）与 REINFORCE——使用最近生成的样本来更新模型（而不是像 Deep Q-Networks（DQN）那类算法把分数存进重播缓冲区（replay buffer），DQN 曾被用于 AlphaGo 等知名专案）。在本节中，我们将介绍策略梯度算法的基础，以及它们如何被运用在现代 RLHF 框架之中。
 
-從機器學習的層面來看，本節是整個 RLHF 流程中複雜度最高的主题。不過，正如大多數現代 AI 模型一樣，決定其成敗的最大因素仍然是作为流程輸入的数据。
+从机器学习的层面来看，本节是整个 RLHF 流程中复杂度最高的主题。不过，正如大多数现代 AI 模型一样，决定其成败的最大因素仍然是作为流程输入的资料。
 
-當 RLHF 隨着 ChatGPT 進入大眾視野時，外界大致已知他們使用的是 PPO 的某種變體，許多早期的嘗試也都以此为基礎。隨着時間推移，多個研究專案展示了 REINFORCE 式算法的潛力 [111] [109]，其賣點是比 PPO 更簡單：不需要獨立的價值模型（節省記憶體，因此減少所需的 GPU 数量），并且採用更簡單的優勢估計（不需要廣義優勢估計（Generalized Advantage Estimation, GAE）——GAE 是一種用來計算優勢的方法，用于降低策略梯度算法的变异數）。後來又出現了更多算法，包括在推理任務上特別流行的群組相對策略优化（GRPO），但一般而言，这些算法多半都可以針對特定任務进行調校。在本章中，我們會介紹核心的策略梯度框架，以及上述三種算法——因为它們在建立 RLHF 經典文獻體系中扮演了核心角色。
+当 RLHF 随着 ChatGPT 进入大众视野时，外界大致已知他们使用的是 PPO 的某种变体，许多早期的尝试也都以此为基础。随着时间推移，多个研究专案展示了 REINFORCE 式算法的潜力 [111] [109]，其卖点是比 PPO 更简单：不需要独立的价值模型（节省记忆体，因此减少所需的 GPU 数量），并且采用更简单的优势估计（不需要广义优势估计（Generalized Advantage Estimation, GAE）——GAE 是一种用来计算优势的方法，用于降低策略梯度算法的变异数）。后来又出现了更多算法，包括在推理任务上特别流行的群组相对策略优化（GRPO），但一般而言，这些算法多半都可以针对特定任务进行调校。在本章中，我们会介绍核心的策略梯度框架，以及上述三种算法——因为它们在建立 RLHF 经典文献体系中扮演了核心角色。
 
-最簡單的情況下，RLHF 的 RL 階段需要兩個模型：一個策略（正在被训练的模型），以及一個为其輸出評分的奖励模型（如前一章所述）。RL 之前的策略副本會作为參考模型（reference model），用來計算 KL 懲罰（这个模型是凍結的，也就是說它不會被自動微分引擎的梯度更新）。本章涵蓋的最複雜算法 PPO 還會加入第四個模型——一個學習而來的價值函數（value function），用來估計動作中每個 token 的好壞，它同樣是一個在训练過程中被更新的大型语言模型。本章的算法之間的差異，主要在于它們如何估計一個稱为「優勢（advantage）」的量——衡量模型當前動作（補全）相对于平均水準有多好——以及它們如何約束策略更新，讓优化過程在數值上保持稳定。这个 RLHF 流程（不含價值模型）的視覺化概覽如圖 16 所示。
+最简单的情况下，RLHF 的 RL 阶段需要两个模型：一个策略（正在被训练的模型），以及一个为其输出评分的奖励模型（如前一章所述）。RL 之前的策略副本会作为参考模型（reference model），用来计算 KL 惩罚（这个模型是冻结的，也就是说它不会被自动微分引擎的梯度更新）。本章涵盖的最复杂算法 PPO 还会加入第四个模型——一个学习而来的价值函数（value function），用来估计动作中每个 token 的好坏，它同样是一个在训练过程中被更新的大型语言模型。本章的算法之间的差异，主要在于它们如何估计一个称为「优势（advantage）」的量——衡量模型当前动作（补全）相对于平均水准有多好——以及它们如何约束策略更新，让优化过程在数值上保持稳定。这个 RLHF 流程（不含价值模型）的视觉化概览如图 16 所示。
 
-符號定义請參見問題设置（Problem Setup）章节。
+符号定义请参见问题设定（Problem Setup）章节。
 
-![圖](../webapp/assets/figures/fig-p054-1.png)
-*圖 16：RLHF 训练迴圈概覽。数据集中的提示詞被送入微调中的策略，由其生成一個補全。奖励模型为这个補全評分，同时凍結的初始模型（通常是 RL 之前的指令微调模型）對同一段文字計算對數機率，用來計算防止过度漂移的 KL 懲罰。合併後的奖励訊號接着驅動强化學習更新策略參數。*
+![图](../webapp/assets/figures/fig-p054-1.png)
+*图 16：RLHF 训练回圈概览。资料集中的提示词被送入微调中的策略，由其生成一个补全。奖励模型为这个补全评分，同时冻结的初始模型（通常是 RL 之前的指令微调模型）对同一段文本计算对数机率，用来计算防止过度漂移的 KL 惩罚。合并后的奖励讯号接着驱动强化学习更新策略参数。*
 
-> *本章使用强化學習文獻中的 $(s, a)$ 記號，其中 $s$ 代表狀態（state）、$a$ 代表動作（action）。在语言模型的情境下，你常會看到改用 $(x, y)$，其中 $x$ 是提示詞、$y$ 是補全。$(s, a)$ 的框架更为一般化——这些算法原本是为「每個時間步都要採取動作」的序列決策問題所设计。然而，許多 RLHF 实现将整個補全視为單一動作，因此 $(x, y)$ 記號同樣成立。*
+> *本章使用强化学习文献中的 $(s, a)$ 记号，其中 $s$ 代表状态（state）、$a$ 代表动作（action）。在语言模型的情境下，你常会看到改用 $(x, y)$，其中 $x$ 是提示词、$y$ 是补全。$(s, a)$ 的框架更为一般化——这些算法原本是为「每个时间步都要采取动作」的序列决策问题所设计。然而，许多 RLHF 实作将整个补全视为单一动作，因此 $(x, y)$ 记号同样成立。*
 >
-> **RL 速查表（RL Cheatsheet）：** *本章所有核心 RL 損失函數的單頁參考数据，可在 rlhfbook.com/rl-cheatsheet 取得。*
+> **RL 速查表（RL Cheatsheet）：** *本章所有核心 RL 损失函数的单页参考资料，可在 rlhfbook.com/rl-cheatsheet 取得。*
 
 ## 6.2 策略梯度算法（Policy Gradient Algorithms）
 
-本章的核心，就是理解以下这種形式的方程式。这个方程式計算的是我們正在训练的语言模型 $\pi_\theta$ 的梯度 $\Delta\theta$：
+本章的核心，就是理解以下这种形式的方程序。这个方程序计算的是我们正在训练的语言模型 $\pi_\theta$ 的梯度 $\Delta\theta$：
 
 $$
 \Delta \theta \propto \Psi_t \, \nabla_\theta \log \pi_\theta(a_t \mid s_t) \tag{24}
 $$
 
-这裡，方程式由兩個關鍵部分組成：1. $\nabla_\theta \log \pi_\theta(a_t \mid s_t)$——參數空間中哪個方向會讓動作 $a_t$ 更有可能出現。2. $\Psi_t$——这个動作有多好？一個为结果打分的純量。
+这里，方程序由两个关键部分组成：1. $\nabla_\theta \log \pi_\theta(a_t \mid s_t)$——参数空间中哪个方向会让动作 $a_t$ 更有可能出现。2. $\Psi_t$——这个动作有多好？一个为结果打分的纯量。
 
-把兩者放在一起，沒錯，将这兩個量相乘，就得到了策略梯度更新。有些性質很直觀，例如 $\Psi_t > 0$ 時參數更新會讓 $a_t$ 更有可能出現，$\Psi_t < 0$ 時更新則會讓它更不可能出現。策略梯度計算的是哪些參數對某個動作有貢獻，以及我們是否应该讓这个動作在未來更常或更少發生。本章接下来會深入探討做到这件事的各種方式，以及讓它在 LLM 上行得通的具體技巧。
+把两者放在一起，没错，将这两个量相乘，就得到了策略梯度更新。有些性质很直观，例如 $\Psi_t > 0$ 时参数更新会让 $a_t$ 更有可能出现，$\Psi_t < 0$ 时更新则会让它更不可能出现。策略梯度计算的是哪些参数对某个动作有贡献，以及我们是否应该让这个动作在未来更常或更少发生。本章接下来会深入探讨做到这件事的各种方式，以及让它在 LLM 上行得通的具体技巧。
 
-現在，讓我們把这件事再形式化一點。强化學習算法的设计目標，是最大化由狀態 $s \in \mathcal{S}$ 和動作 $a \in \mathcal{A}$ 構成的軌跡（trajectory）上未來的折扣奖励（更多符號請見附录 A「定义」）。代理人（agent）的目標通常稱为回報（return），是從給定時間 $t$ 開始的折扣奖励總和（其中 $\gamma \in [0,1]$ 是一個優先考慮近期奖励的因子）：
+现在，让我们把这件事再形式化一点。强化学习算法的设计目标，是最大化由状态 $s \in \mathcal{S}$ 和动作 $a \in \mathcal{A}$ 构成的轨迹（trajectory）上未来的折扣奖励（更多符号请见附录 A「定义」）。代理人（agent）的目标通常称为回报（return），是从给定时间 $t$ 开始的折扣奖励总和（其中 $\gamma \in [0,1]$ 是一个优先考虑近期奖励的因子）：
 
 $$
 G_t = r_t + \gamma r_{t+1} + \cdots = \sum_{k=0}^{\infty} \gamma^k r_{t+k}. \tag{25}
 $$
 
-回報的定义也可以寫成遞迴形式：
+回报的定义也可以写成递回形式：
 
 $$
 G_t = r_t + \gamma G_{t+1}. \tag{26}
 $$
 
-这个回報是學習價值函數 $V(s)$ 的基礎——價值函數是在給定當前狀態下，對未來回報的估計：
+这个回报是学习价值函数 $V(s)$ 的基础——价值函数是在给定当前状态下，对未来回报的估计：
 
 $$
 V(s) = \mathbb{E}\left[G_t \mid S_t = s\right]. \tag{27}
 $$
 
-所有策略梯度算法都在优化一個策略 $\pi_\theta(a \mid s)$ 以最大化期望回報；这个目標可以用其誘導出的價值函數 $V^{\pi_\theta}(s)$ 來表達。
+所有策略梯度算法都在优化一个策略 $\pi_\theta(a \mid s)$ 以最大化期望回报；这个目标可以用其诱导出的价值函数 $V^{\pi_\theta}(s)$ 来表达。
 
-令 $d_0(s)$ 为初始狀態分布。我們要最大化的回合式（episodic）目標可以寫成：
+令 $d_0(s)$ 为初始状态分布。我们要最大化的回合式（episodic）目标可以写成：
 
 $$
 J(\theta) \;=\; \sum_s d_0(s) V^{\pi_\theta}(s), \tag{28}
 $$
 
-在有限 MDP 中，这是對所有可能起始狀態的加總，但实务上我們從不精確計算它。取而代之的是，我們透過從當前策略取樣 rollout（推演樣本）來以数据估計它。在 RLHF 中，这通常意味着從数据集中取樣提示詞 $x_i$，并生成補全 $y_i \sim \pi_\theta(\cdot \mid x_i)$。令 $R(x_i, y_i)$ 表示指派給該提示詞–補全對的純量序列層級奖励；若 $\tau_i$ 是對應的回合，这就是軌跡奖励 $R(\tau_i)$。接着我們取經驗平均，例如：
+在有限 MDP 中，这是对所有可能起始状态的加总，但实务上我们从不精确计算它。取而代之的是，我们透过从当前策略取样 rollout（推演样本）来以资料估计它。在 RLHF 中，这通常意味着从资料集中取样提示词 $x_i$，并生成补全 $y_i \sim \pi_\theta(\cdot \mid x_i)$。令 $R(x_i, y_i)$ 表示指派给该提示词–补全对的纯量序列层级奖励；若 $\tau_i$ 是对应的回合，这就是轨迹奖励 $R(\tau_i)$。接着我们取经验平均，例如：
 
 $$
 \hat{J}(\theta) = \frac{1}{B}\sum_{i=1}^{B} R(x_i, y_i), \tag{29}
 $$
 
-或者，在具有每步奖励的 MDP 觀點下：
+或者，在具有每步奖励的 MDP 观点下：
 
 $$
 \hat{J}(\theta) = \frac{1}{B}\sum_{i=1}^{B}\sum_{t=0}^{T_i} \gamma^t r_{i,t}. \tag{30}
 $$
 
-实务上，语言模型的 RLHF 會设置 $\gamma = 1$（不做折扣），因为优化的單位是整體的補全，而非個別 token——这个选择會在本章稍後的「MDP 与 Bandit」一節進一步討論。
+实务上，语言模型的 RLHF 会设定 $\gamma = 1$（不做折扣），因为优化的单位是整体的补全，而非个别 token——这个选择会在本章稍后的「MDP 与 Bandit」一节进一步讨论。
 
-策略梯度算法的核心，是計算相对于當前策略的有限時間期望回報的梯度。有了这个期望回報 $J$，參數更新可以如下計算，其中 $\alpha$ 是學習率：
+策略梯度算法的核心，是计算相对于当前策略的有限时间期望回报的梯度。有了这个期望回报 $J$，参数更新可以如下计算，其中 $\alpha$ 是学习率：
 
 $$
 \theta \leftarrow \theta + \alpha \nabla_\theta J(\theta) \tag{31}
 $$
 
-核心的实现細節就在于如何計算这个梯度。
+核心的实作细节就在于如何计算这个梯度。
 
 ### 6.2.1 推导策略梯度
 
-令 $p_\theta(\tau)$ 表示由初始狀態分布 $d_0$、策略 $\pi_\theta$ 以及環境轉移動態所誘導出的軌跡分布（在下方式 34 中展开）。RL 目標的另一種寫法如下：
+令 $p_\theta(\tau)$ 表示由初始状态分布 $d_0$、策略 $\pi_\theta$ 以及环境转移动态所诱导出的轨迹分布（在下方式 34 中展开）。RL 目标的另一种写法如下：
 
 $$
 J(\theta) = \mathbb{E}_{\tau \sim p_\theta}\left[R(\tau)\right], \tag{32}
 $$
 
-其中 $\tau = (s_0, a_0, s_1, a_1, \ldots)$ 是一條軌跡，而 $R(\tau) = \sum_{t=0}^{\infty} r_t$ 是該軌跡的總奖励。或者，我們也可以把期望值寫成對所有可能軌跡的積分：
+其中 $\tau = (s_0, a_0, s_1, a_1, \ldots)$ 是一条轨迹，而 $R(\tau) = \sum_{t=0}^{\infty} r_t$ 是该轨迹的总奖励。或者，我们也可以把期望值写成对所有可能轨迹的积分：
 
 $$
 J(\theta) = \int_\tau p_\theta(\tau) R(\tau) d\tau \tag{33}
 $$
 
-注意到軌跡機率可以表示如下，其中 $\pi_\theta(a_t|s_t)p(s_{t+1}|s_t, a_t)$ 将策略機率与環境轉移機率結合起来，描述從一個狀態–動作對走到下一個狀態的過程：
+注意到轨迹机率可以表示如下，其中 $\pi_\theta(a_t|s_t)p(s_{t+1}|s_t, a_t)$ 将策略机率与环境转移机率结合起来，描述从一个状态–动作对走到下一个状态的过程：
 
 $$
 p_\theta(\tau) = d_0(s_0) \prod_{t=0}^{\infty} \pi_\theta(a_t|s_t) p(s_{t+1}|s_t, a_t), \tag{34}
 $$
 
-若我們對目標（式 32）取相对于策略參數 $\theta$ 的梯度：
+若我们对目标（式 32）取相对于策略参数 $\theta$ 的梯度：
 
 $$
 \nabla_\theta J(\theta) = \int_\tau \nabla_\theta p_\theta(\tau) R(\tau) d\tau \tag{35}
 $$
 
-注意到我們可以使用對數導數技巧（log-derivative trick），把这个積分的梯度改寫为期望值：
+注意到我们可以使用对数导数技巧（log-derivative trick），把这个积分的梯度改写为期望值：
 
 $$
 \begin{aligned}
-\nabla_\theta \log p_\theta(\tau) &= \frac{\nabla_\theta p_\theta(\tau)}{p_\theta(\tau)} && \text{（由連鎖律）}\\[4pt]
-\implies \nabla_\theta p_\theta(\tau) &= p_\theta(\tau)\,\nabla_\theta \log p_\theta(\tau) && \text{（移項整理）}
+\nabla_\theta \log p_\theta(\tau) &= \frac{\nabla_\theta p_\theta(\tau)}{p_\theta(\tau)} && \text{（由连锁律）}\\[4pt]
+\implies \nabla_\theta p_\theta(\tau) &= p_\theta(\tau)\,\nabla_\theta \log p_\theta(\tau) && \text{（移项整理）}
 \end{aligned} \tag{36}
 $$
 
-運用这个對數導數技巧：
+运用这个对数导数技巧：
 
 $$
 \begin{aligned}
@@ -157,27 +157,27 @@ $$
 \end{aligned} \tag{37}
 $$
 
-其中最后一步使用了軌跡分布 $p_\theta(\tau)$ 下期望值的定义：對任意函數 $f$，$\mathbb{E}_{\tau \sim p_\theta}[f(\tau)] = \int_\tau f(\tau)\, p_\theta(\tau)\, d\tau$（在離散情形則为加總）。把它寫成期望值之所以有用，是因为我們可以用蒙地卡羅（Monte Carlo）rollout 來近似它，例如對由當前策略誘導出的軌跡 $\tau_i \sim p_\theta$ 計算 $\frac{1}{B}\sum_{i=1}^{B} f(\tau_i)$。
+其中最后一步使用了轨迹分布 $p_\theta(\tau)$ 下期望值的定义：对任意函数 $f$，$\mathbb{E}_{\tau \sim p_\theta}[f(\tau)] = \int_\tau f(\tau)\, p_\theta(\tau)\, d\tau$（在离散情形则为加总）。把它写成期望值之所以有用，是因为我们可以用蒙地卡罗（Monte Carlo）rollout 来近似它，例如对由当前策略诱导出的轨迹 $\tau_i \sim p_\theta$ 计算 $\frac{1}{B}\sum_{i=1}^{B} f(\tau_i)$。
 
-回到推导，展开軌跡的對數機率：
+回到推导，展开轨迹的对数机率：
 
 $$
 \log p_\theta(\tau) = \log d_0(s_0) + \sum_{t=0}^{\infty} \log \pi_\theta(a_t|s_t) + \sum_{t=0}^{\infty} \log p(s_{t+1}|s_t, a_t) \tag{38}
 $$
 
-現在，若對上式取梯度，我們得到：
+现在，若对上式取梯度，我们得到：
 
-- $\nabla_\theta \log d_0(s_0) = 0$（初始狀態分布与 $\theta$ 無關）
-- $\nabla_\theta \log p(s_{t+1}|s_t, a_t) = 0$（環境轉移動態与 $\theta$ 無關）
+- $\nabla_\theta \log d_0(s_0) = 0$（初始状态分布与 $\theta$ 无关）
+- $\nabla_\theta \log p(s_{t+1}|s_t, a_t) = 0$（环境转移动态与 $\theta$ 无关）
 - 只有 $\nabla_\theta \log \pi_\theta(a_t|s_t)$ 存留下来
 
-因此，軌跡對數機率的梯度簡化为：
+因此，轨迹对数机率的梯度简化为：
 
 $$
 \nabla_\theta \log p_\theta(\tau) = \sum_{t=0}^{\infty} \nabla_\theta \log \pi_\theta(a_t|s_t) \tag{39}
 $$
 
-得到这个方程式是实现上的一個關鍵節點。到这裡，我們已经走得夠遠，可以看出軌跡分布的梯度化簡为语言模型策略機率（也就是我們正在训练的模型所給出的 token 機率）的梯度總和。实务上，这产生了策略梯度方程式的一種常見形式：損失最終看起来像一串對數機率的總和，然后我們透過自動微分（autodiff）計算梯度。你會一再看到的一小段程式碼大致如下：
+得到这个方程序是实作上的一个关键节点。到这里，我们已经走得够远，可以看出轨迹分布的梯度化简为语言模型策略机率（也就是我们正在训练的模型所给出的 token 机率）的梯度总和。实务上，这产生了策略梯度方程序的一种常见形式：损失最终看起来像一串对数机率的总和，然后我们透过自动微分（autodiff）计算梯度。你会一再看到的一小段程序码大致如下：
 
 ```python
 seq_log_probs = (token_log_probs * completion_mask).sum(dim=-1)
@@ -185,50 +185,50 @@ loss = -(seq_log_probs * advantages).mean()
 loss.backward()
 ```
 
-你會在本章中反覆看到这个模式。現在，回到正式的策略梯度數學。
+你会在本章中反复看到这个模式。现在，回到正式的策略梯度数学。
 
-把这个结果代回式 37，我們得到：
+把这个结果代回式 37，我们得到：
 
 $$
 \nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim p_\theta}\left[\sum_{t=0}^{\infty} R(\tau) \nabla_\theta \log \pi_\theta(a_t|s_t)\right] \tag{40}
 $$
 
-人們相當常使用策略梯度的一個更一般化的表述：
+人们相当常使用策略梯度的一个更一般化的表述：
 
 $$
 g = \nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim p_\theta}\left[\sum_{t=0}^{\infty} \Psi_t \nabla_\theta \log \pi_\theta(a_t|s_t)\right] \tag{41}
 $$
 
-其中 $\Psi_t$ 可以是以下幾種（其中的奖励也常會用 $\gamma$ 做折扣），这个分類法取自 Schulman et al. 2015 [112]：
+其中 $\Psi_t$ 可以是以下几种（其中的奖励也常会用 $\gamma$ 做折扣），这个分类法取自 Schulman et al. 2015 [112]：
 
-1. $R(\tau) = \sum_{t=0}^{\infty} r_t$：軌跡的總奖励。
-2. $\sum_{t'=t}^{\infty} r_{t'}$：動作 $a_t$ 之后的奖励，也就是從時間 $t$ 起算的回報 $G_t$。
-3. $\sum_{t'=t}^{\infty} r_{t'} - b(s_t)$：前述形式加上基準線（baselined）的版本。
-4. $Q^\pi(s_t, a_t)$：狀態–動作價值函數（state-action value function）。
-5. $A^\pi(s_t, a_t)$：優勢函數（advantage function），若能被準確計算，它具有理論上最低的变异數。
-6. $r_t + \gamma V^\pi(s_{t+1}) - V^\pi(s_t)$：時序差分（Temporal Difference, TD）殘差。
+1. $R(\tau) = \sum_{t=0}^{\infty} r_t$：轨迹的总奖励。
+2. $\sum_{t'=t}^{\infty} r_{t'}$：动作 $a_t$ 之后的奖励，也就是从时间 $t$ 起算的回报 $G_t$。
+3. $\sum_{t'=t}^{\infty} r_{t'} - b(s_t)$：前述形式加上基准线（baselined）的版本。
+4. $Q^\pi(s_t, a_t)$：状态–动作价值函数（state-action value function）。
+5. $A^\pi(s_t, a_t)$：优势函数（advantage function），若能被准确计算，它具有理论上最低的变异数。
+6. $r_t + \gamma V^\pi(s_{t+1}) - V^\pi(s_t)$：时序差分（Temporal Difference, TD）残差。
 
-其中基準線（baseline）是一個用來降低策略更新变异數的值（下文會有更多說明）。
+其中基准线（baseline）是一个用来降低策略更新变异数的值（下文会有更多说明）。
 
-對语言模型而言，其中一些概念的意義就沒那麼大了。舉例來說，對一個確定性策略 $\pi$，狀態價值为 $V^\pi(s_t) = Q^\pi(s_t, \pi(s_t))$（而對最佳價值函數則有 $V^*(s_t) = \max_{a_t} Q^*(s_t, a_t)$）。對隨機性策略，對應的恆等式为 $V^\pi(s_t) = \mathbb{E}_{a_t \sim \pi(\cdot|s_t)}[Q^\pi(s_t, a_t)]$。貝爾曼方程式（Bellman equation）将 Q 与 V 聯繫起来：一般情況下 $Q^\pi(s_t, a_t) = \mathbb{E}[r_t + \gamma V^\pi(s_{t+1}) \mid s_t, a_t]$，但對狀態轉移为確定性的语言模型，这簡化为 $Q(s_t, a_t) = r_t + \gamma V(s_{t+1})$。優勢函數衡量的是動作 $a_t$ 相对于平均水準好多少：
+对语言模型而言，其中一些概念的意义就没那么大了。举例来说，对一个确定性策略 $\pi$，状态价值为 $V^\pi(s_t) = Q^\pi(s_t, \pi(s_t))$（而对最佳价值函数则有 $V^*(s_t) = \max_{a_t} Q^*(s_t, a_t)$）。对随机性策略，对应的恒等式为 $V^\pi(s_t) = \mathbb{E}_{a_t \sim \pi(\cdot|s_t)}[Q^\pi(s_t, a_t)]$。贝尔曼方程序（Bellman equation）将 Q 与 V 联系起来：一般情况下 $Q^\pi(s_t, a_t) = \mathbb{E}[r_t + \gamma V^\pi(s_{t+1}) \mid s_t, a_t]$，但对状态转移为确定性的语言模型，这简化为 $Q(s_t, a_t) = r_t + \gamma V(s_{t+1})$。优势函数衡量的是动作 $a_t$ 相对于平均水准好多少：
 
 $$
 A(s_t, a_t) = Q(s_t, a_t) - V(s_t) = r_t + \gamma V(s_{t+1}) - V(s_t) \tag{42}
 $$
 
-这个最終形式正是時序差分（TD）殘差（即上面的第 6 項）——RL 中的一個基本量，它衡量價值函數的預測与實際發生结果之間的落差，驅動價值函數朝更準確的估計更新。实务上，會使用一個學習而來的價值函數 $\hat{V}$ 透過这个 TD 誤差來估計優勢。
+这个最终形式正是时序差分（TD）残差（即上面的第 6 项）——RL 中的一个基本量，它衡量价值函数的预测与实际发生结果之间的落差，驱动价值函数朝更准确的估计更新。实务上，会使用一个学习而来的价值函数 $\hat{V}$ 透过这个 TD 误差来估计优势。
 
-### 6.2.2 基礎策略梯度（Vanilla Policy Gradient）
+### 6.2.2 基础策略梯度（Vanilla Policy Gradient）
 
-基礎策略梯度的实现，是透過對策略參數微分來优化上述的 $J(\theta)$ 表達式。一個以時間 $t$ 回報表示的簡單版本为：
+基础策略梯度的实作，是透过对策略参数微分来优化上述的 $J(\theta)$ 表达式。一个以时间 $t$ 回报表示的简单版本为：
 
 $$
 \nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim p_\theta}\left[\sum_{t=0}^{T} G_t \nabla_\theta \log \pi_\theta(a_t|s_t)\right] \tag{43}
 $$
 
-基礎策略梯度算法的一個常見問題是梯度更新的变异數很高，这可以透過多種方式緩解。高变异數的來源在于：梯度更新是透過從環境中通常为數不多的 rollout 來估計回報 $G$ 的，而这些 rollout 容易受到雜訊影響（例如以 temperature > 0 從语言模型生成時的隨機性）。在奖励稀疏的領域中，回報估計之間的变异數更高，因为更多樣本的值是 0 或 1，而非緊密聚集。为了緩解这个問題，人們使用各種技巧來正規化價值估計，稱为基準線（baselines）。基準線以多種方式達成这个目的，實際效果是以「狀態相对于下游動作的價值」來做正規化（例如優勢的情況，它就是 Q 值与價值之間的差）。最簡單的基準線是對批次內奖励取平均，或使用移動平均。即使是这些与動作無關的基準線，也能在不改變期望梯度的前提下降低变异數——因为對任何只依賴狀態的 $b(s)$，都有 $\mathbb{E}_{a \sim \pi(a|s)}[b(s)\nabla_\theta \log \pi_\theta(a|s)] = 0$——從而大幅改善學習訊號。
+基础策略梯度算法的一个常见问题是梯度更新的变异数很高，这可以透过多种方式缓解。高变异数的来源在于：梯度更新是透过从环境中通常为数不多的 rollout 来估计回报 $G$ 的，而这些 rollout 容易受到杂讯影响（例如以 temperature > 0 从语言模型生成时的随机性）。在奖励稀疏的领域中，回报估计之间的变异数更高，因为更多样本的值是 0 或 1，而非紧密聚集。为了缓解这个问题，人们使用各种技巧来正规化价值估计，称为基准线（baselines）。基准线以多种方式达成这个目的，实际效果是以「状态相对于下游动作的价值」来做正规化（例如优势的情况，它就是 Q 值与价值之间的差）。最简单的基准线是对批次内奖励取平均，或使用移动平均。即使是这些与动作无关的基准线，也能在不改变期望梯度的前提下降低变异数——因为对任何只依赖状态的 $b(s)$，都有 $\mathbb{E}_{a \sim \pi(a|s)}[b(s)\nabla_\theta \log \pi_\theta(a|s)] = 0$——从而大幅改善学习讯号。
 
-本章討論的許多策略梯度算法，都建立在策略梯度的優勢表述之上：
+本章讨论的许多策略梯度算法，都建立在策略梯度的优势表述之上：
 
 $$
 \nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim p_\theta}\left[\sum_{t=0}^{T} A^{\pi_\theta}(s_t, a_t) \nabla_\theta \log \pi_\theta(a_t|s_t)\right] \tag{44}
@@ -236,223 +236,223 @@ $$
 
 ### 6.2.3 REINFORCE
 
-REINFORCE 这个算法名稱很可能是一個反向縮寫（backronym），但它所代表的算法組成元素，与現代强化學習算法高度相關。它定义于開創性論文 *Simple statistical gradient-following algorithms for connectionist reinforcement learning* [113]：
+REINFORCE 这个算法名称很可能是一个反向缩写（backronym），但它所代表的算法组成元素，与现代强化学习算法高度相关。它定义于开创性论文 *Simple statistical gradient-following algorithms for connectionist reinforcement learning* [113]：
 
-> 这个名稱是「REward Increment = Nonnegative Factor X Offset Reinforcement X Characteristic Eligibility」（奖励增量 = 非負因子 × 偏移强化 × 特徵資格）的縮寫。
+> 这个名称是「REward Increment = Nonnegative Factor X Offset Reinforcement X Characteristic Eligibility」（奖励增量 = 非负因子 × 偏移强化 × 特征资格）的缩写。
 
-这三個組成元素說明了如何进行「奖励增量」，亦即策略梯度步驟。更新規則有三個部分：
+这三个组成元素说明了如何进行「奖励增量」，亦即策略梯度步骤。更新规则有三个部分：
 
-1. 非負因子（Nonnegative factor）：这是學習率（步長），必須是正數，例如下方的 $\alpha$。
-2. 偏移强化（Offset Reinforcement）：这是基準線 $b$ 或其他對奖励做正規化的因子，用以提升稳定性。
-3. 特徵資格（Characteristic Eligibility）：这将純量奖励訊號歸因到产生該動作的參數上。Williams 将这个資格項記为 $e$（不是指數函數）。在現代策略梯度記號中，它對應到 $\nabla_\theta \log \pi_\theta(a_t \mid s_t)$。
+1. 非负因子（Nonnegative factor）：这是学习率（步长），必须是正数，例如下方的 $\alpha$。
+2. 偏移强化（Offset Reinforcement）：这是基准线 $b$ 或其他对奖励做正规化的因子，用以提升稳定性。
+3. 特征资格（Characteristic Eligibility）：这将纯量奖励讯号归因到产生该动作的参数上。Williams 将这个资格项记为 $e$（不是指数函数）。在现代策略梯度记号中，它对应到 $\nabla_\theta \log \pi_\theta(a_t \mid s_t)$。
 
-因此，其形式看起来相當眼熟：
+因此，其形式看起来相当眼熟：
 
 $$
 \Delta_\theta = \alpha (r - b) e \tag{45}
 $$
 
-用更現代的記號与一般化的回報 $G$ 表示，REINFORCE 运算子形如：
+用更现代的记号与一般化的回报 $G$ 表示，REINFORCE 运算子形如：
 
 $$
 \nabla_\theta J(\theta) \;=\; \mathbb{E}_{\tau \sim p_\theta}\left[\sum_{t=0}^{T} \left(G_t - b(s_t)\right) \nabla_\theta \log \pi_\theta(a_t \mid s_t)\right], \tag{46}
 $$
 
-这裡的 $G_t - b(s_t)$ 这个值，就是策略在當前狀態的優勢（advantage），所以我們可以把策略梯度改寫成後面會繼續沿用的優勢形式，記为 $A$：
+这里的 $G_t - b(s_t)$ 这个值，就是策略在当前状态的优势（advantage），所以我们可以把策略梯度改写成后面会继续沿用的优势形式，记为 $A$：
 
 $$
 \nabla_\theta J(\theta) \;=\; \mathbb{E}_{\tau \sim p_\theta}\left[\sum_{t=0}^{T} A_t \, \nabla_\theta \log \pi_\theta(a_t \mid s_t)\right], \tag{47}
 $$
 
-REINFORCE 是基礎策略梯度的一種特定实现，使用蒙地卡羅估計式來估計梯度。
+REINFORCE 是基础策略梯度的一种特定实作，使用蒙地卡罗估计式来估计梯度。
 
-![圖](../webapp/assets/figures/fig-p060-1.png)
-*圖 17：语言模型的基本 REINFORCE 架构。塑形後的奖励（shaped reward）結合了奖励模型分數与來自參考模型的 KL 懲罰。本章後續都建立在这个結構之上。*
+![图](../webapp/assets/figures/fig-p060-1.png)
+*图 17：语言模型的基本 REINFORCE 架构。塑形后的奖励（shaped reward）结合了奖励模型分数与来自参考模型的 KL 惩罚。本章后续都建立在这个结构之上。*
 
 ### 6.2.4 REINFORCE 留一法（REINFORCE Leave One Out, RLOO）
 
-REINFORCE Leave One Out 相对于標準 REINFORCE 的核心实现差異在于：它取批次中「其他」樣本的平均奖励來計算基準線——而不是對批次內所有奖励取平均 [114], [111], [115]。由于把當前樣本自身的奖励排除在它的基準線之外，RLOO 的基準線与正在被评估的動作互相獨立，这讓梯度估計式保持完全無偏（unbiased）。
+REINFORCE Leave One Out 相对于标准 REINFORCE 的核心实作差异在于：它取批次中「其他」样本的平均奖励来计算基准线——而不是对批次内所有奖励取平均 [114], [111], [115]。由于把当前样本自身的奖励排除在它的基准线之外，RLOO 的基准线与正在被评估的动作互相独立，这让梯度估计式保持完全无偏（unbiased）。
 
-關鍵在于，这只有在每個狀態（提示詞）生成多條軌跡（補全）時才行得通——而这在多個以 RL 微调语言模型的領域中已是常見做法。
+关键在于，这只有在每个状态（提示词）生成多条轨迹（补全）时才行得通——而这在多个以 RL 微调语言模型的领域中已是常见做法。
 
-具體來說，對 REINFORCE Leave-One-Out（RLOO）基準線，給定針對某個提示詞 $s$ 取樣的 $K$ 條軌跡（在提示詞條件下採取的動作）$a_1, \ldots, a_K$，我們把基準線明確定义为以下「逐提示詞（per-prompt）」的形式：
+具体来说，对 REINFORCE Leave-One-Out（RLOO）基准线，给定针对某个提示词 $s$ 取样的 $K$ 条轨迹（在提示词条件下采取的动作）$a_1, \ldots, a_K$，我们把基准线明确定义为以下「逐提示词（per-prompt）」的形式：
 
 $$
 b(s, a_k) = \frac{1}{K-1} \sum_{i=1, i \neq k}^{K} R(s, a_i), \tag{48}
 $$
 
-由此得到優勢：
+由此得到优势：
 
 $$
 A(s, a_k) = R(s, a_k) - b(s, a_k). \tag{49}
 $$
 
-等價地，这也可以表示为：
+等价地，这也可以表示为：
 
 $$
 A(s, a_k) = \frac{K}{K-1}\left(R(s, a_k) - \frac{1}{K}\sum_{i=1}^{K} R(s, a_i)\right). \tag{50}
 $$
 
-这是一個簡單、低变异數的「逐提示詞」優勢估計，与群組相對策略优化（GRPO，稍後在 PPO 之后討論）中使用的群組相對優勢密切相關。实务上，GRPO 式的训练主要差別在于它如何施加 KL 正則項（作为顯式的損失項，还是折入奖励之中），以及是否使用 PPO 式的比值裁剪（ratio clipping）。具體來說，GRPO 的標準实现在損失層級施加 KL 懲罰，而 RLOO 或傳統策略梯度的推导則把 KL 懲罰施加在奖励本身上。隨着從 RLHF 過渡到推理与可验证奖励的强化學習（reinforcement learning with verifiable rewards, RLVR），KL 懲罰的使用整體上已经減少，許多針對推理改編的 RLHF 程式碼甚至完全关闭了它。儘管如此，RLOO 的優勢估計仍可以与 PPO 的裁剪結合使用，这显示了这些算法之間有多麼相似。
+这是一个简单、低变异数的「逐提示词」优势估计，与群组相对策略优化（GRPO，稍后在 PPO 之后讨论）中使用的群组相对优势密切相关。实务上，GRPO 式的训练主要差别在于它如何施加 KL 正则项（作为显式的损失项，还是折入奖励之中），以及是否使用 PPO 式的比值裁剪（ratio clipping）。具体来说，GRPO 的标准实作在损失层级施加 KL 惩罚，而 RLOO 或传统策略梯度的推导则把 KL 惩罚施加在奖励本身上。随着从 RLHF 过渡到推理与可验证奖励的强化学习（reinforcement learning with verifiable rewards, RLVR），KL 惩罚的使用整体上已经减少，许多针对推理改编的 RLHF 程序码甚至完全关闭了它。尽管如此，RLOO 的优势估计仍可以与 PPO 的裁剪结合使用，这显示了这些算法之间有多么相似。
 
-RLOO 以及其他不使用價值網路的算法——價值網路是一個額外的模型副本（即評論者，critic），为每個 token 預測一個純量價值 $V(s_t)$——在計算損失時，會把同一個序列層級的優勢（或奖励）指派給每一個 token。使用學習價值網路的算法（例如 PPO）則會为每個 token 個別指派不同的價值，從 EOS token 處取得的最終奖励向前折扣。在使用 KL 距離懲罰時，RLOO 會把補全中逐 token 的 KL 彙總起来，将这个純量折入序列奖励中，因此得到的優勢會廣播到所有 token 上。PPO 則是在計算 $A_t$ 之前，從逐 token 奖励中減去逐 token 的 KL，從而得到 token 層級的功勞分配（credit assignment）。GRPO 通常保留序列層級的優勢，但在損失中另外加上一個獨立的逐 token 項，而不是從奖励中扣除。这些細節与取捨會在本章稍後討論。
+RLOO 以及其他不使用价值网路的算法——价值网路是一个额外的模型副本（即评论者，critic），为每个 token 预测一个纯量价值 $V(s_t)$——在计算损失时，会把同一个序列层级的优势（或奖励）指派给每一个 token。使用学习价值网路的算法（例如 PPO）则会为每个 token 个别指派不同的价值，从 EOS token 处取得的最终奖励向前折扣。在使用 KL 距离惩罚时，RLOO 会把补全中逐 token 的 KL 汇总起来，将这个纯量折入序列奖励中，因此得到的优势会广播到所有 token 上。PPO 则是在计算 $A_t$ 之前，从逐 token 奖励中减去逐 token 的 KL，从而得到 token 层级的功劳分配（credit assignment）。GRPO 通常保留序列层级的优势，但在损失中另外加上一个独立的逐 token 项，而不是从奖励中扣除。这些细节与取舍会在本章稍后讨论。
 
-![圖](../webapp/assets/figures/fig-p062-1.png)
-*圖 18：REINFORCE Leave-One-Out（RLOO）架构。每個提示詞對應多個補全，提供留一法基準線來做優勢估計，無需學習價值函數。*
+![图](../webapp/assets/figures/fig-p062-1.png)
+*图 18：REINFORCE Leave-One-Out（RLOO）架构。每个提示词对应多个补全，提供留一法基准线来做优势估计，无需学习价值函数。*
 
 ### 6.2.5 近端策略优化（Proximal Policy Optimization, PPO）
 
-近端策略优化（PPO）[116] 是深度强化學習諸多成功案例背後的奠基算法之一（例如稱霸 Dota 2 的 OpenAI Five [117]，以及大量研究工作）。PPO 相对于優勢与策略機率所最大化的目標如下：
+近端策略优化（PPO）[116] 是深度强化学习诸多成功案例背后的奠基算法之一（例如称霸 Dota 2 的 OpenAI Five [117]，以及大量研究工作）。PPO 相对于优势与策略机率所最大化的目标如下：
 
 $$
 J(\theta) = \min\left(\frac{\pi_\theta(a|s)}{\pi_{\theta_\text{old}}(a|s)} A, \; \text{clip}\left(\frac{\pi_\theta(a|s)}{\pi_{\theta_\text{old}}(a|s)}, 1-\varepsilon, 1+\varepsilon\right) A\right). \tag{51}
 $$
 
-这裡，$\pi_\theta(a|s)$ 是正在被优化的當前策略，而 $\pi_{\theta_\text{old}}(a|s)$ 是先前用來收集训练数据的策略（也就是上一輪迭代的策略）。这兩個策略之間的比值源自重要性抽樣（importance sampling），它讓我們得以重複使用舊策略收集的数据，來估計新策略的梯度。
+这里，$\pi_\theta(a|s)$ 是正在被优化的当前策略，而 $\pi_{\theta_\text{old}}(a|s)$ 是先前用来收集训练资料的策略（也就是上一轮迭代的策略）。这两个策略之间的比值源自重要性抽样（importance sampling），它让我们得以重复使用旧策略收集的资料，来估计新策略的梯度。
 
-回想策略梯度的優勢表述（式 44），我們有：
+回想策略梯度的优势表述（式 44），我们有：
 
 $$
 \nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim p_\theta}\left[\sum_{t=0}^{T} A^{\pi_\theta}(s_t, a_t) \nabla_\theta \log \pi_\theta(a_t|s_t)\right]. \tag{52}
 $$
 
-这个期望值是對由 $\pi_\theta$ 誘導的軌跡分布所取樣的軌跡取的，但实务上我們希望在一批由固定策略 $\pi_{\theta_\text{old}}$ 收集的数据上執行多次梯度步。为了修正这个分布不匹配，我們乘上重要性權重 $\frac{\pi_\theta(a|s)}{\pi_{\theta_\text{old}}(a|s)}$，它重新加權樣本，以反映樣本在當前策略下相較于数据收集策略下的可能性高低。若不加任何約束，當这个比值遠離 1 時，优化这个重要性加權目標可能導致破壞性的巨大策略更新。PPO 透過把比值裁剪到 $[1-\varepsilon, 1+\varepsilon]$ 區間來解決这个問題，確保策略不會在單次更新中變化過于劇烈。
+这个期望值是对由 $\pi_\theta$ 诱导的轨迹分布所取样的轨迹取的，但实务上我们希望在一批由固定策略 $\pi_{\theta_\text{old}}$ 收集的资料上执行多次梯度步。为了修正这个分布不匹配，我们乘上重要性权重 $\frac{\pi_\theta(a|s)}{\pi_{\theta_\text{old}}(a|s)}$，它重新加权样本，以反映样本在当前策略下相较于资料收集策略下的可能性高低。若不加任何约束，当这个比值远离 1 时，优化这个重要性加权目标可能导致破坏性的巨大策略更新。PPO 透过把比值裁剪到 $[1-\varepsilon, 1+\varepsilon]$ 区间来解决这个问题，确保策略不会在单次更新中变化过于剧烈。
 
-注意，當我們進入 PPO 及其同類算法後，我們通常直接处理「目標函數（objective）」而非顯式的梯度。这是因为一旦納入 min 与裁剪运算，PPO 目標就「没有」容易解讀的解析梯度（依寫法不同，梯度大約有 4 個項，對應圖 20 中的各個區域）；直接寫出目標函數是傳達这些算法更清楚的方式。
+注意，当我们进入 PPO 及其同类算法后，我们通常直接处理「目标函数（objective）」而非显式的梯度。这是因为一旦纳入 min 与裁剪运算，PPO 目标就「没有」容易解读的解析梯度（依写法不同，梯度大约有 4 个项，对应图 20 中的各个区域）；直接写出目标函数是传达这些算法更清楚的方式。
 
-为完整起見，PPO 通常寫成對時間步取期望的裁剪替代目標（clipped surrogate objective）：
+为完整起见，PPO 通常写成对时间步取期望的裁剪替代目标（clipped surrogate objective）：
 
 $$
 J(\theta) = \mathbb{E}_t\left[\min\left(\rho_t(\theta) A_t, \; \text{clip}(\rho_t(\theta), 1-\varepsilon, 1+\varepsilon) A_t\right)\right], \qquad \rho_t(\theta) = \frac{\pi_\theta(a_t \mid s_t)}{\pi_{\theta_\text{old}}(a_t \mid s_t)}. \tag{53}
 $$
 
-这个目標常被直接加上負號转换成損失函數，讓优化器盡可能将其推向最負的值。
+这个目标常被直接加上负号转换成损失函数，让优化器尽可能将其推向最负的值。
 
-對语言模型而言，这个目標（或損失）是逐 token 計算的。直覺上，这可以從「如何計算整條自迴歸預測序列的機率」來理解——即透過機率的連乘。在此基礎上，常見的实现採用對數機率（log-probabilities），使得計算在現代語言建模框架中更容易執行。实务上，我們計算 token 對數機率的差，再取指數以还原策略比值 $\rho_t$。
+对语言模型而言，这个目标（或损失）是逐 token 计算的。直觉上，这可以从「如何计算整条自回归预测序列的机率」来理解——即透过机率的连乘。在此基础上，常见的实作采用对数机率（log-probabilities），使得计算在现代语言建模框架中更容易执行。实务上，我们计算 token 对数机率的差，再取指数以还原策略比值 $\rho_t$。
 
 $$
 J(\theta) = \frac{1}{|a|} \sum_{t=0}^{|a|} \min\left(\frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_\text{old}}(a_t|s_t)} A_t, \; \text{clip}\left(\frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_\text{old}}(a_t|s_t)}, 1-\varepsilon, 1+\varepsilon\right) A_t\right). \tag{54}
 $$
 
-这是 PPO 的逐 token 版本，它同樣適用于其他策略梯度方法，本章的实现章节會進一步探討。这裡以動作的 token 數做平均的項 $\frac{1}{|a|}$ 源于常見的实现慣例，但并不在損失的正式推导之中（見 [118]）。
+这是 PPO 的逐 token 版本，它同样适用于其他策略梯度方法，本章的实作章节会进一步探讨。这里以动作的 token 数做平均的项 $\frac{1}{|a|}$ 源于常见的实作惯例，但并不在损失的正式推导之中（见 [118]）。
 
-![圖](../webapp/assets/figures/fig-p063-1.png)
-*圖 19：PPO 框架。學習而來的價值函數使廣義優勢估計（GAE）得以計算逐 token 優勢，并与裁剪替代目標一起使用。*
+![图](../webapp/assets/figures/fig-p063-1.png)
+*图 19：PPO 框架。学习而来的价值函数使广义优势估计（GAE）得以计算逐 token 优势，并与裁剪替代目标一起使用。*
 
-接下来我們将說明在不同的優勢与策略比值組合下，这个損失函數會觸發哪些不同情況。在实现層面，PPO 的内部計算涉及兩個主要項：1）帶有學習優勢的標準策略梯度，以及 2）基于最大步長的裁剪策略梯度。
+接下来我们将说明在不同的优势与策略比值组合下，这个损失函数会触发哪些不同情况。在实作层面，PPO 的内部计算涉及两个主要项：1）带有学习优势的标准策略梯度，以及 2）基于最大步长的裁剪策略梯度。
 
-为了理解不同情境如何出現，我們可以把策略比值定义为：
+为了理解不同情境如何出现，我们可以把策略比值定义为：
 
 $$
 \rho(\theta) = \frac{\pi_\theta(a|s)}{\pi_{\theta_\text{old}}(a|s)} \tag{55}
 $$
 
-策略比值是 PPO 及相關算法的核心。它源自對策略計算梯度的過程，并以非常直觀的方式控制參數更新。對任何一批数据，在該批次的第一個梯度步時策略比值從 1 開始，因为此時 $\pi_\theta$ 与 $\pi_{\theta_\text{old}}$ 相同。接着，在下一個梯度步中，如果上一步提高了某些具有正優勢的 token 的可能性，策略比值就會大于 1；反之則小于 1。常見做法是在更新 $\pi_{\theta_\text{old}}$ 之前，用策略梯度算法對每個批次執行 1 到 4 個梯度步。
+策略比值是 PPO 及相关算法的核心。它源自对策略计算梯度的过程，并以非常直观的方式控制参数更新。对任何一批资料，在该批次的第一个梯度步时策略比值从 1 开始，因为此时 $\pi_\theta$ 与 $\pi_{\theta_\text{old}}$ 相同。接着，在下一个梯度步中，如果上一步提高了某些具有正优势的 token 的可能性，策略比值就会大于 1；反之则小于 1。常见做法是在更新 $\pi_{\theta_\text{old}}$ 之前，用策略梯度算法对每个批次执行 1 到 4 个梯度步。
 
-### 6.2.6 理解 PPO 目標函數
+### 6.2.6 理解 PPO 目标函数
 
-整體而言，PPO 目標可以用「目標值對策略比值」圖中的兩條線來視覺化，如圖 20 所示。PPO 目標的最大化是透過改變被取樣動作的機率來達成的。在數值上，这个目標透過巧妙運用最小值运算，同时控制正優勢与負優勢兩種情況，使得更新至多把策略比值推離 1 一個 epsilon 的距離。
+整体而言，PPO 目标可以用「目标值对策略比值」图中的两条线来视觉化，如图 20 所示。PPO 目标的最大化是透过改变被取样动作的机率来达成的。在数值上，这个目标透过巧妙运用最小值运算，同时控制正优势与负优势两种情况，使得更新至多把策略比值推离 1 一个 epsilon 的距离。
 
-在信賴區域（trust region）內，PPO 的運作方式与其他策略梯度算法完全相同。这是刻意设计的！信賴區域这个概念用來限制 PPO 及其同類算法的最大步長，以維持更新的稳定性。PPO 算法的核心——clip 与 min/max 函數——定义了这个區域。在區域之外，目標函數變为平坦。
+在信赖区域（trust region）内，PPO 的运作方式与其他策略梯度算法完全相同。这是刻意设计的！信赖区域这个概念用来限制 PPO 及其同类算法的最大步长，以维持更新的稳定性。PPO 算法的核心——clip 与 min/max 函数——定义了这个区域。在区域之外，目标函数变为平坦。
 
-「信賴區域」的概念來自數值优化文獻 [119]，但在深度强化學習中因信賴區域策略优化（Trust Region Policy Optimization, TRPO）算法而普及，TRPO 被公認为 PPO 的前身 [120]。信賴區域是完整策略梯度步得以施行的區域，因为在这裡更新不會被 PPO 目標的 max/min 运算「裁剪」掉。
+「信赖区域」的概念来自数值优化文献 [119]，但在深度强化学习中因信赖区域策略优化（Trust Region Policy Optimization, TRPO）算法而普及，TRPO 被公认为 PPO 的前身 [120]。信赖区域是完整策略梯度步得以施行的区域，因为在这里更新不会被 PPO 目标的 max/min 运算「裁剪」掉。
 
-策略比值与優勢合起来可以出現在幾種不同的組態中，圖 20 依優勢 $A_t$ 的正負號，以及策略比值 $\rho(\theta)$ 落入三個區域中的哪一個來一一列舉。每個區域的结果由兩個事實決定：優勢的正負號決定我們想讓該動作變得更可能还是更不可能，而 min 运算則在未裁剪項 $\rho(\theta)A_t$ 与其裁剪版本之間做选择。
+策略比值与优势合起来可以出现在几种不同的组态中，图 20 依优势 $A_t$ 的正负号，以及策略比值 $\rho(\theta)$ 落入三个区域中的哪一个来一一列举。每个区域的结果由两个事实决定：优势的正负号决定我们想让该动作变得更可能还是更不可能，而 min 运算则在未裁剪项 $\rho(\theta)A_t$ 与其裁剪版本之间做选择。
 
-裁剪只會在「策略已经把被取樣的動作朝期望方向移動、超出信賴區域邊緣」的兩個區域中把梯度歸零：
+裁剪只会在「策略已经把被取样的动作朝期望方向移动、超出信赖区域边缘」的两个区域中把梯度归零：
 
-- **正優勢且 $\rho(\theta) > 1+\varepsilon$**：該動作在 $\pi_\theta$ 下已经比在 $\pi_{\theta_\text{old}}$ 下明顯更有可能。目標在 $(1+\varepsilon)A_t$ 處飽和，其梯度为零，因此不做任何更新——我們避免过度强化一個已经被充分表達的動作。
-- **負優勢且 $\rho(\theta) < 1-\varepsilon$**：該動作在 $\pi_\theta$ 下已经明顯更不可能。目標在 $(1-\varepsilon)A_t$ 處飽和，梯度同樣为零，不做任何更新——我們避免过度壓制一個已经被抑制的動作。
+- **正优势且 $\rho(\theta) > 1+\varepsilon$**：该动作在 $\pi_\theta$ 下已经比在 $\pi_{\theta_\text{old}}$ 下明显更有可能。目标在 $(1+\varepsilon)A_t$ 处饱和，其梯度为零，因此不做任何更新——我们避免过度强化一个已经被充分表达的动作。
+- **负优势且 $\rho(\theta) < 1-\varepsilon$**：该动作在 $\pi_\theta$ 下已经明显更不可能。目标在 $(1-\varepsilon)A_t$ 处饱和，梯度同样为零，不做任何更新——我们避免过度压制一个已经被抑制的动作。
 
-在其他所有地方，未裁剪項 $\rho(\theta)A_t$ 都是有效的，PPO 執行標準的策略梯度步：當 $A_t > 0$ 時提高動作機率，當 $A_t < 0$ 時降低它。我們可以從圖 20 讀出每個區域對更新後策略 $\pi_\theta$ 的要求：
+在其他所有地方，未裁剪项 $\rho(\theta)A_t$ 都是有效的，PPO 执行标准的策略梯度步：当 $A_t > 0$ 时提高动作机率，当 $A_t < 0$ 时降低它。我们可以从图 20 读出每个区域对更新后策略 $\pi_\theta$ 的要求：
 
-- 正優勢下有斜率、未被裁剪的區域（綠色）**提高**被取樣動作的機率；
-- 負優勢下有斜率、未被裁剪的區域（紅色）**降低**它；
-- 平坦、被裁剪的區域（灰色）讓策略**保持不變**，因为其梯度为零。
+- 正优势下有斜率、未被裁剪的区域（绿色）**提高**被取样动作的机率；
+- 负优势下有斜率、未被裁剪的区域（红色）**降低**它；
+- 平坦、被裁剪的区域（灰色）让策略**保持不变**，因为其梯度为零。
 
-![圖](../webapp/assets/figures/fig-p065-1.png)
-*圖 20：PPO 目標 $J(\theta)$ 作为策略比值 $\rho(\theta)$ 之函數的視覺化，分別呈現正優勢与負優勢兩種情況。每個面板中，三個比值區域都標注了其未裁剪項、裁剪項、最終目標值与梯度。*
+![图](../webapp/assets/figures/fig-p065-1.png)
+*图 20：PPO 目标 $J(\theta)$ 作为策略比值 $\rho(\theta)$ 之函数的视觉化，分别呈现正优势与负优势两种情况。每个面板中，三个比值区域都标注了其未裁剪项、裁剪项、最终目标值与梯度。*
 
-以下把同樣的區域逐項寫出：
+以下把同样的区域逐项写出：
 
-#### 6.2.6.1 正優勢（$A_t > 0$）
+#### 6.2.6.1 正优势（$A_t > 0$）
 
-这表示根據價值函數，所採取的動作是有益的，我們希望提高未來採取該動作的可能性。現在來看策略比值 $\rho(\theta)$ 的不同情況：
+这表示根据价值函数，所采取的动作是有益的，我们希望提高未来采取该动作的可能性。现在来看策略比值 $\rho(\theta)$ 的不同情况：
 
 1. $\rho(\theta) < 1-\varepsilon$：
-   - **解讀**：該動作在新策略下比在舊策略下更不可能出現
-   - **未裁剪項**：$\rho(\theta)A_t$
-   - **裁剪項**：$(1-\varepsilon)A_t$
-   - **目標值**：$\rho(\theta)A_t$
+   - **解读**：该动作在新策略下比在旧策略下更不可能出现
+   - **未裁剪项**：$\rho(\theta)A_t$
+   - **裁剪项**：$(1-\varepsilon)A_t$
+   - **目标值**：$\rho(\theta)A_t$
    - **梯度**：$\nabla_\theta \rho(\theta)A_t \neq 0$
-   - **结果**：一般的策略梯度更新——提高該動作的可能性
+   - **结果**：一般的策略梯度更新——提高该动作的可能性
 
 2. $1-\varepsilon \leq \rho(\theta) \leq 1+\varepsilon$：
-   - **解讀**：該動作在新策略与舊策略下的可能性大致相同
-   - **未裁剪項**：$\rho(\theta)A_t$
-   - **裁剪項**：$\rho(\theta)A_t$
-   - **目標值**：$\rho(\theta)A_t$
+   - **解读**：该动作在新策略与旧策略下的可能性大致相同
+   - **未裁剪项**：$\rho(\theta)A_t$
+   - **裁剪项**：$\rho(\theta)A_t$
+   - **目标值**：$\rho(\theta)A_t$
    - **梯度**：$\nabla_\theta \rho(\theta)A_t \neq 0$
-   - **结果**：一般的策略梯度更新——提高該動作的可能性
+   - **结果**：一般的策略梯度更新——提高该动作的可能性
 
 3. $1+\varepsilon < \rho(\theta)$：
-   - **解讀**：該動作在新策略下比在舊策略下更有可能出現
-   - **未裁剪項**：$\rho(\theta)A_t$
-   - **裁剪項**：$(1+\varepsilon)A_t$
-   - **目標值**：$(1+\varepsilon)A_t$
+   - **解读**：该动作在新策略下比在旧策略下更有可能出现
+   - **未裁剪项**：$\rho(\theta)A_t$
+   - **裁剪项**：$(1+\varepsilon)A_t$
+   - **目标值**：$(1+\varepsilon)A_t$
    - **梯度**：$\nabla_\theta (1+\varepsilon)A_t = 0$
-   - **结果**：不做更新——該動作在新策略下已经更有可能出現
+   - **结果**：不做更新——该动作在新策略下已经更有可能出现
 
-總結來說，當優勢为正（$A_t > 0$）時，我們想提高該動作的機率。因此：
+总结来说，当优势为正（$A_t > 0$）时，我们想提高该动作的机率。因此：
 
-- 只有在 $\pi_\text{new}(a) \leq (1+\varepsilon)\pi_\text{old}(a)$ 的情況下我們才執行梯度步。直覺上，由于優勢为正，我們想提高該動作的機率，但又不想把它提得太高、以致其可能性大幅膨脹。
-- 關鍵在于，當 $\pi_\text{new}(a) > (1+\varepsilon)\pi_\text{old}(a)$ 時，我們不做任何更新，且裁剪後目標的梯度为 0。直覺上，該動作在新策略下已经被更充分地表達了，所以我們不想过度强化它。
+- 只有在 $\pi_\text{new}(a) \leq (1+\varepsilon)\pi_\text{old}(a)$ 的情况下我们才执行梯度步。直觉上，由于优势为正，我们想提高该动作的机率，但又不想把它提得太高、以致其可能性大幅膨胀。
+- 关键在于，当 $\pi_\text{new}(a) > (1+\varepsilon)\pi_\text{old}(a)$ 时，我们不做任何更新，且裁剪后目标的梯度为 0。直觉上，该动作在新策略下已经被更充分地表达了，所以我们不想过度强化它。
 
-#### 6.2.6.2 負優勢（$A_t < 0$）
+#### 6.2.6.2 负优势（$A_t < 0$）
 
-这表示根據價值函數，所採取的動作是有害的，我們希望降低未來採取該動作的可能性。現在來看策略比值 $\rho(\theta)$ 的不同情況：
+这表示根据价值函数，所采取的动作是有害的，我们希望降低未来采取该动作的可能性。现在来看策略比值 $\rho(\theta)$ 的不同情况：
 
 1. $\rho(\theta) < 1-\varepsilon$：
-   - **解讀**：該動作在新策略下比在舊策略下更不可能出現
-   - **未裁剪項**：$\rho(\theta)A_t$
-   - **裁剪項**：$(1-\varepsilon)A_t$
-   - **目標值**：$(1-\varepsilon)A_t$
+   - **解读**：该动作在新策略下比在旧策略下更不可能出现
+   - **未裁剪项**：$\rho(\theta)A_t$
+   - **裁剪项**：$(1-\varepsilon)A_t$
+   - **目标值**：$(1-\varepsilon)A_t$
    - **梯度**：$\nabla_\theta (1-\varepsilon)A_t = 0$
-   - **结果**：不做更新——該動作在新策略下已经更不可能出現
+   - **结果**：不做更新——该动作在新策略下已经更不可能出现
 
 2. $1-\varepsilon \leq \rho(\theta) \leq 1+\varepsilon$：
-   - **解讀**：該動作在新策略与舊策略下的可能性大致相同
-   - **未裁剪項**：$\rho(\theta)A_t$
-   - **裁剪項**：$\rho(\theta)A_t$
-   - **目標值**：$\rho(\theta)A_t$
+   - **解读**：该动作在新策略与旧策略下的可能性大致相同
+   - **未裁剪项**：$\rho(\theta)A_t$
+   - **裁剪项**：$\rho(\theta)A_t$
+   - **目标值**：$\rho(\theta)A_t$
    - **梯度**：$\nabla_\theta \rho(\theta)A_t \neq 0$
-   - **结果**：一般的策略梯度更新——降低該動作的可能性
+   - **结果**：一般的策略梯度更新——降低该动作的可能性
 
 3. $1+\varepsilon < \rho(\theta)$：
-   - **解讀**：該動作在新策略下比在舊策略下更有可能出現
-   - **未裁剪項**：$\rho(\theta)A_t$
-   - **裁剪項**：$(1+\varepsilon)A_t$
-   - **目標值**：$\rho(\theta)A_t$
+   - **解读**：该动作在新策略下比在旧策略下更有可能出现
+   - **未裁剪项**：$\rho(\theta)A_t$
+   - **裁剪项**：$(1+\varepsilon)A_t$
+   - **目标值**：$\rho(\theta)A_t$
    - **梯度**：$\nabla_\theta \rho(\theta)A_t \neq 0$
-   - **结果**：一般的策略梯度更新——降低該動作的可能性
+   - **结果**：一般的策略梯度更新——降低该动作的可能性
 
-總結來說，當優勢为負（$A_t < 0$）時，我們想降低該動作的機率。因此：
+总结来说，当优势为负（$A_t < 0$）时，我们想降低该动作的机率。因此：
 
-- 只有在 $\pi_\text{new}(a) \geq (1-\varepsilon)\pi_\text{old}(a)$ 的情況下我們才執行梯度步。直覺上，由于優勢为負，我們想降低該動作的機率，且降低的幅度与優勢成比例。
-- 關鍵在于，當 $\pi_\text{new}(a) < (1-\varepsilon)\pi_\text{old}(a)$ 時，我們不做任何更新，且裁剪後目標的梯度为 0。直覺上，該動作在新策略下已经更不可能出現，所以我們不想过度壓制它。
+- 只有在 $\pi_\text{new}(a) \geq (1-\varepsilon)\pi_\text{old}(a)$ 的情况下我们才执行梯度步。直觉上，由于优势为负，我们想降低该动作的机率，且降低的幅度与优势成比例。
+- 关键在于，当 $\pi_\text{new}(a) < (1-\varepsilon)\pi_\text{old}(a)$ 时，我们不做任何更新，且裁剪后目标的梯度为 0。直觉上，该动作在新策略下已经更不可能出现，所以我们不想过度压制它。
 
-務必記住一個重點：在信賴區域內，PPO 与標準形式的策略梯度大致相同。
+务必记住一个重点：在信赖区域内，PPO 与标准形式的策略梯度大致相同。
 
-### 6.2.7 價值函數与 PPO
+### 6.2.7 价值函数与 PPO
 
-PPO 中的價值函數是模型的一個額外副本，用來預測每個 token 的價值。在傳統 RL 中，一個 token（或狀態）的價值是對從該時刻起未來回報的預測，通常帶有折扣。在 PPO 中，这个價值被用作學習而來的基準線，可以視为 REINFORCE 所用的簡單蒙地卡羅版本（不需要學習價值網路）的演化。这凸顯了 PPO 在多個層面上——包括优化形式、基準線等等——都是 REINFORCE 与基礎策略梯度的演化版本。实务上，在 PPO 及其他用于语言模型的算法中，價值函數預測的是每個 token 在扣除 KL 懲罰之后的回報（如前所述，傳統上逐 token 的損失會把 KL 折入奖励之中）。
+PPO 中的价值函数是模型的一个额外副本，用来预测每个 token 的价值。在传统 RL 中，一个 token（或状态）的价值是对从该时刻起未来回报的预测，通常带有折扣。在 PPO 中，这个价值被用作学习而来的基准线，可以视为 REINFORCE 所用的简单蒙地卡罗版本（不需要学习价值网路）的演化。这凸显了 PPO 在多个层面上——包括优化形式、基准线等等——都是 REINFORCE 与基础策略梯度的演化版本。实务上，在 PPO 及其他用于语言模型的算法中，价值函数预测的是每个 token 在扣除 KL 惩罚之后的回报（如前所述，传统上逐 token 的损失会把 KL 折入奖励之中）。
 
-學習價值函數有幾種不同的方法（或目標）。廣義優勢估計（Generalized Advantage Estimation, GAE）被視为現代系统中最先進、最標準的实现，但它需要跨多個步驟計算價值預測誤差，因而帶來更多複雜度——請見本章稍後關于 GAE 的小節。價值函數也可以用蒙地卡羅估計來學習，这些估計來自用于更新策略的那些 rollout。PPO 有兩個損失——一個用來學習價值函數，另一個則利用該價值函數來更新策略。
+学习价值函数有几种不同的方法（或目标）。广义优势估计（Generalized Advantage Estimation, GAE）被视为现代系统中最先进、最标准的实作，但它需要跨多个步骤计算价值预测误差，因而带来更多复杂度——请见本章稍后关于 GAE 的小节。价值函数也可以用蒙地卡罗估计来学习，这些估计来自用于更新策略的那些 rollout。PPO 有两个损失——一个用来学习价值函数，另一个则利用该价值函数来更新策略。
 
-![圖](../webapp/assets/figures/fig-p068-1.png)
-*圖 21：價值函數的训练使用 on-policy rollout 來計算目標。模型在每個 token 處預測 $V_t$，并以 MSE 對目標回報 $\hat{V}_t$ 进行训练。優勢 $A_t = \hat{V}_t - V_t$ 隨後为策略梯度更新加權。*
+![图](../webapp/assets/figures/fig-p068-1.png)
+*图 21：价值函数的训练使用 on-policy rollout 来计算目标。模型在每个 token 处预测 $V_t$，并以 MSE 对目标回报 $\hat{V}_t$ 进行训练。优势 $A_t = \hat{V}_t - V_t$ 随后为策略梯度更新加权。*
 
-價值網路損失的一個簡單范例实现如下所示。
+价值网路损失的一个简单范例实作如下所示。
 
 ```python
 # Basic PPO critic targets & loss (no GAE)
@@ -505,22 +505,22 @@ advantages = (targets - v_pred).detach()
 # total_loss = policy_loss + vf_coef * value_loss
 ```
 
-### 6.2.8 群組相對策略优化（Group Relative Policy Optimization, GRPO）
+### 6.2.8 群组相对策略优化（Group Relative Policy Optimization, GRPO）
 
-群組相對策略优化（GRPO）在 DeepSeekMath [121] 中被提出，并在 DeepSeek 的其他工作中使用，例如 DeepSeek-V3 [16] 与 DeepSeek-R1 [15]。GRPO 可以視为受 PPO 啟發的算法，具有非常相似的替代損失，但它避免了學習一個價值函數——後者需要原始策略语言模型的另一個副本（或另一個 checkpoint 作为初始化）。这帶來兩個被主張的好處：
+群组相对策略优化（GRPO）在 DeepSeekMath [121] 中被提出，并在 DeepSeek 的其他工作中使用，例如 DeepSeek-V3 [16] 与 DeepSeek-R1 [15]。GRPO 可以视为受 PPO 启发的算法，具有非常相似的替代损失，但它避免了学习一个价值函数——后者需要原始策略语言模型的另一个副本（或另一个 checkpoint 作为初始化）。这带来两个被主张的好处：
 
-1. 避開了在语言模型骨幹上學習價值函數的難題——这方面的研究至今尚未建立最佳实务。
-2. 節省記憶體，因为不需要在記憶體中保留額外一組模型權重（從需要當前策略、參考策略与價值函數三者，減少到只需要前兩者）。
+1. 避开了在语言模型骨干上学习价值函数的难题——这方面的研究至今尚未建立最佳实务。
+2. 节省记忆体，因为不需要在记忆体中保留额外一组模型权重（从需要当前策略、参考策略与价值函数三者，减少到只需要前两者）。
 
-GRPO 做到这一點的方式，是簡化價值估計，并将同一個價值指派給回合中的每一個 token（也就是說，對某個提示詞的補全裡，每個 token 都被指派同一個價值，而非標準價值函數中的折扣式奖励）——其優勢或基準線的估計方式，是從同一個初始狀態／提示詞 $s$ 收集多個補全（$a_i$）与奖励（$r_i$），也就是蒙地卡羅估計。
+GRPO 做到这一点的方式，是简化价值估计，并将同一个价值指派给回合中的每一个 token（也就是说，对某个提示词的补全里，每个 token 都被指派同一个价值，而非标准价值函数中的折扣式奖励）——其优势或基准线的估计方式，是从同一个初始状态／提示词 $s$ 收集多个补全（$a_i$）与奖励（$r_i$），也就是蒙地卡罗估计。
 
-正式地說，GRPO 的目標与上面的 PPO 目標非常相似。GRPO 的目標（或損失）是在針對給定提示詞 $s$ 的一組補全 $\{a_1, a_2, ..., a_G\}$ 上累積的。以下是 GRPO 的目標：
+正式地说，GRPO 的目标与上面的 PPO 目标非常相似。GRPO 的目标（或损失）是在针对给定提示词 $s$ 的一组补全 $\{a_1, a_2, ..., a_G\}$ 上累积的。以下是 GRPO 的目标：
 
 $$
 J(\theta) = \frac{1}{G}\sum_{i=1}^{G}\left(\min\left(\frac{\pi_\theta(a_i|s)}{\pi_{\theta_\text{old}}(a_i|s)} A_i, \; \text{clip}\left(\frac{\pi_\theta(a_i|s)}{\pi_{\theta_\text{old}}(a_i|s)}, 1-\varepsilon, 1+\varepsilon\right) A_i\right) - \beta \mathcal{D}_\text{KL}(\pi_\theta || \pi_\text{ref})\right). \tag{56}
 $$
 
-注意，相对于 PPO，GRPO 的標準实现把 KL 距離包含在損失之中。与前面一樣，我們可以把它展开为逐 token 的計算：
+注意，相对于 PPO，GRPO 的标准实作把 KL 距离包含在损失之中。与前面一样，我们可以把它展开为逐 token 的计算：
 
 $$
 \begin{aligned}
@@ -529,34 +529,34 @@ J(\theta) = \frac{1}{G}\sum_{i=1}^{G}\frac{1}{|a_i|}\sum_{t=1}^{|a_i|}\Bigg(&\mi
 \end{aligned} \tag{57}
 $$
 
-其中補全索引 $i$ 的優勢計算为：
+其中补全索引 $i$ 的优势计算为：
 
 $$
 A_i = \frac{r_i - \text{mean}(r_1, r_2, \cdots, r_G)}{\text{std}(r_1, r_2, \cdots, r_G)}. \tag{58}
 $$
 
-![圖](../webapp/assets/figures/fig-p070-1.png)
-*圖 22：GRPO 架构。優勢是相对于群組平均值与標準差正規化的。KL 懲罰直接施加在損失上，而非用于塑形奖励。*
+![图](../webapp/assets/figures/fig-p070-1.png)
+*图 22：GRPO 架构。优势是相对于群组平均值与标准差正规化的。KL 惩罚直接施加在损失上，而非用于塑形奖励。*
 
-直覺上，GRPO 的更新是在一個批次內比較「同一個問題的多個答案」。模型學着變得更像被標記为正確的答案，而更不像其他答案。这是一種非常簡單的優勢計算方式——優勢衡量的是特定動作在給定狀態下比平均好多少。相对于 PPO、REINFORCE，以及廣義而言以奖励模型評分執行的 RLHF（相对于輸出奖励），GRPO 通常以每個提示詞高得多的樣本數來運行，因为優勢完全取決于一個補全相对于同提示詞其他補全的相對價值。在这裡，當前策略會對給定提示詞生成多個回應，而群組式的 GRPO 優勢估計便獲得了寶貴的脈絡。PPO 与基礎策略梯度算法的设计初衷是準確估計每一個補全的奖励（事實上，在某些情況下更多補全對改善價值估計幫助不大）。GRPO 及其變體特別適合現代语言模型工具——對同一個提示詞取得多個補全是非常自然的事（相較之下，例如在機器人任務中從同一個環境狀態取得多個動作就沒那麼自然）。
+直觉上，GRPO 的更新是在一个批次内比较「同一个问题的多个答案」。模型学着变得更像被标记为正确的答案，而更不像其他答案。这是一种非常简单的优势计算方式——优势衡量的是特定动作在给定状态下比平均好多少。相对于 PPO、REINFORCE，以及广义而言以奖励模型评分执行的 RLHF（相对于输出奖励），GRPO 通常以每个提示词高得多的样本数来运行，因为优势完全取决于一个补全相对于同提示词其他补全的相对价值。在这里，当前策略会对给定提示词生成多个回应，而群组式的 GRPO 优势估计便获得了宝贵的脉络。PPO 与基础策略梯度算法的设计初衷是准确估计每一个补全的奖励（事实上，在某些情况下更多补全对改善价值估计帮助不大）。GRPO 及其变体特别适合现代语言模型工具——对同一个提示词取得多个补全是非常自然的事（相较之下，例如在机器人任务中从同一个环境状态取得多个动作就没那么自然）。
 
-GRPO 的優勢計算在偏差上有其取捨。以標準差做正規化，會奖励批次中答案正確率变异低的問題。对于答案幾乎全對或全錯的問題，標準差會較低，優勢因而較高。Liu et al. 2025 [118] 基于这个偏差提出移除標準差項，但这麼做的代價是調降了「全錯之中只有少數正確答案」的問題的權重——而这些可能正是對模型而言寶貴的學習訊號。这些高变异數的提示詞恰恰可能是最困難的案例：只有少數取樣的補全找到了正確答案，從而提供強力的训练訊號。
+GRPO 的优势计算在偏差上有其取舍。以标准差做正规化，会奖励批次中答案正确率变异低的问题。对于答案几乎全对或全错的问题，标准差会较低，优势因而较高。Liu et al. 2025 [118] 基于这个偏差提出移除标准差项，但这么做的代价是调降了「全错之中只有少数正确答案」的问题的权重——而这些可能正是对模型而言宝贵的学习讯号。这些高变异数的提示词恰恰可能是最困难的案例：只有少数取样的补全找到了正确答案，从而提供强力的训练讯号。
 
-式 58 是在结果監督（outcome supervision，無論是標準奖励模型还是單一可验证奖励）下運作時 GRPO 的实现方式；在過程監督（process supervision）下則需要不同的实现。在後者的情況中，GRPO 把優勢計算为後續推理步驟的正規化奖励總和。
+式 58 是在结果监督（outcome supervision，无论是标准奖励模型还是单一可验证奖励）下运作时 GRPO 的实作方式；在过程监督（process supervision）下则需要不同的实作。在后者的情况中，GRPO 把优势计算为后续推理步骤的正规化奖励总和。
 
-最后，GRPO 的優勢估計也可以在不使用 PPO 裁剪的情況下，套用到更基礎的策略梯度版本上（例如 REINFORCE），但这不是其標準形式。作为这些算法彼此交織的一個例子，我們可以證明 GRPO 的一個變體 Dr. GRPO（GRPO Done Right）[118] 中的優勢估計，与 RLOO 估計（以其他樣本的平均奖励作为基準線）在只差一個常數缩放因子的意義下等價（这个因子通常無關緊要，因为实现上會對優勢做正規化）。Dr. GRPO 從式 58 中移除了標準差正規化項——注意这同时也把優勢「放大」了，等價于對答案分數有变异的樣本提高 GRPO 的學習率。这解決了偏向低奖励变异數問題（即答案幾乎全對或全錯）的偏差，但若「從只有一個樣本答對的問題中學習」很重要，則可能付出代價。群組大小为 $G$ 時，補全 $i$ 的 Dr. GRPO 優勢定义为：
+最后，GRPO 的优势估计也可以在不使用 PPO 裁剪的情况下，套用到更基础的策略梯度版本上（例如 REINFORCE），但这不是其标准形式。作为这些算法彼此交织的一个例子，我们可以证明 GRPO 的一个变体 Dr. GRPO（GRPO Done Right）[118] 中的优势估计，与 RLOO 估计（以其他样本的平均奖励作为基准线）在只差一个常数缩放因子的意义下等价（这个因子通常无关紧要，因为实作上会对优势做正规化）。Dr. GRPO 从式 58 中移除了标准差正规化项——注意这同时也把优势「放大」了，等价于对答案分数有变异的样本提高 GRPO 的学习率。这解决了偏向低奖励变异数问题（即答案几乎全对或全错）的偏差，但若「从只有一个样本答对的问题中学习」很重要，则可能付出代价。群组大小为 $G$ 时，补全 $i$ 的 Dr. GRPO 优势定义为：
 
 $$
 \tilde{A}_i = r_i - \text{mean}(r_1, r_2, \cdots, r_G) = r_i - \frac{1}{G}\sum_{j=1}^{G} r_j \tag{59}
 $$
 
-在相同記號下，回顧 RLOO 的優勢估計为：
+在相同记号下，回顾 RLOO 的优势估计为：
 
 $$
 A_i^\text{RLOO} = r_i - \frac{1}{G-1}\sum_{j=1, j\neq i}^{G} r_j \tag{60}
 $$
 
-因此，若我們把 Dr. GRPO 的優勢定义乘上 $\frac{G}{G-1}$，就能看到一個缩放後的等價關係：
+因此，若我们把 Dr. GRPO 的优势定义乘上 $\frac{G}{G-1}$，就能看到一个缩放后的等价关系：
 
 $$
 \begin{aligned}
@@ -569,92 +569,92 @@ $$
 \end{aligned} \tag{61}
 $$
 
-### 6.2.9 群組序列策略优化（Group Sequence Policy Optimization, GSPO）
+### 6.2.9 群组序列策略优化（Group Sequence Policy Optimization, GSPO）
 
-當我們對「由先前策略收集的一批数据」執行多個梯度步時，需要用重要性抽樣來修正数据收集策略与當前被优化策略之間的分布不匹配。標準的重要性抽樣恆等式讓我們能用來自另一個分布的樣本，估計某個分布下的期望值：
+当我们对「由先前策略收集的一批资料」执行多个梯度步时，需要用重要性抽样来修正资料收集策略与当前被优化策略之间的分布不匹配。标准的重要性抽样恒等式让我们能用来自另一个分布的样本，估计某个分布下的期望值：
 
 $$
 \mathbb{E}_p[f(x)] = \mathbb{E}_q\left[f(x)\frac{p(x)}{q(x)}\right], \tag{62}
 $$
 
-其中 $p$ 是目標分布，$q$ 是抽樣分布，而 $\frac{p(x)}{q(x)}$ 就是重要性權重。在策略梯度方法中，$p = \pi_\theta$ 是我們想要优化的當前策略，$q = \pi_{\theta_\text{old}}$ 是产生训练数据的策略。这讓我們得以重新加權在 $\pi_{\theta_\text{old}}$ 下收集的樣本，來估計 $\pi_\theta$ 的梯度，從而使每批 rollout 能執行多個梯度步。
+其中 $p$ 是目标分布，$q$ 是抽样分布，而 $\frac{p(x)}{q(x)}$ 就是重要性权重。在策略梯度方法中，$p = \pi_\theta$ 是我们想要优化的当前策略，$q = \pi_{\theta_\text{old}}$ 是产生训练资料的策略。这让我们得以重新加权在 $\pi_{\theta_\text{old}}$ 下收集的样本，来估计 $\pi_\theta$ 的梯度，从而使每批 rollout 能执行多个梯度步。
 
-这種分布不匹配出現在兩種常見情境中：（1）在單一批次上執行多個梯度步，此時 $\pi_\theta$ 在每次更新後都會偏離 $\pi_{\theta_\text{old}}$；（2）在非同步训练系统中，推断後端（例如 vLLM）与训练後端（例如 FSDP）可能因同步延遲而擁有不同的模型權重（見本章稍後的「非同步性（Asynchronicity）」一節——这个問題隨着可验证奖励 RL 的興起而特別受到關注，但在 RLHF 的设居中同樣存在）。
+这种分布不匹配出现在两种常见情境中：（1）在单一批次上执行多个梯度步，此时 $\pi_\theta$ 在每次更新后都会偏离 $\pi_{\theta_\text{old}}$；（2）在非同步训练系统中，推论后端（例如 vLLM）与训练后端（例如 FSDP）可能因同步延迟而拥有不同的模型权重（见本章稍后的「非同步性（Asynchronicity）」一节——这个问题随着可验证奖励 RL 的兴起而特别受到关注，但在 RLHF 的设定中同样存在）。
 
-PPO 与 GRPO 在 token 層級施加重要性抽樣，并透過裁剪「替代目標（surrogate objective）」來稳定學習。然而，这種做法有一個微妙的失效模式：當某個 token 的重要性比值移出裁剪範圍 $[1-\varepsilon, 1+\varepsilon]$ 時，該 token 得到的梯度为零。对于罕見但重要的 token——例如模型一開始賦予低機率的關鍵推理步驟——这種「token 丟棄（token dropping）」可能使模型無法學會更可靠地产生它們。
+PPO 与 GRPO 在 token 层级施加重要性抽样，并透过裁剪「替代目标（surrogate objective）」来稳定学习。然而，这种做法有一个微妙的失效模式：当某个 token 的重要性比值移出裁剪范围 $[1-\varepsilon, 1+\varepsilon]$ 时，该 token 得到的梯度为零。对于罕见但重要的 token——例如模型一开始赋予低机率的关键推理步骤——这种「token 丢弃（token dropping）」可能使模型无法学会更可靠地产生它们。
 
-群組序列策略优化（GSPO）[122] 扩展了 GRPO，将重要性比值改在序列層級計算，而非 token 層級。这个算法——以及它的同類 CISPO（修改策略梯度算法中重要性抽樣的計算方式，稍後討論）——在实务上的動機是：逐 token 的重要性抽樣比值在數值上經常不稳定。概念上的動機則是：當奖励是指派在序列層級時（如同大多數 RLHF 与 RLVR 的设置），重要性抽樣的修正也应该匹配这个粒度。
+群组序列策略优化（GSPO）[122] 扩展了 GRPO，将重要性比值改在序列层级计算，而非 token 层级。这个算法——以及它的同类 CISPO（修改策略梯度算法中重要性抽样的计算方式，稍后讨论）——在实务上的动机是：逐 token 的重要性抽样比值在数值上经常不稳定。概念上的动机则是：当奖励是指派在序列层级时（如同大多数 RLHF 与 RLVR 的设定），重要性抽样的修正也应该匹配这个粒度。
 
-对于長序列以及／或大型稀疏模型（例如現代的專家混合（Mixture-of-Experts, MoE）模型），token 層級的比值可能表現得很不稳定：單一具有巨大比值的 token 可能主導整次策略更新，或者同一個回應內的許多 token 各自獨立地被裁剪，使學習訊號在單一回應中支離破碎。GSPO 的解法是为每個回應計算單一一個重要性權重。
+对于长序列以及／或大型稀疏模型（例如现代的专家混合（Mixture-of-Experts, MoE）模型），token 层级的比值可能表现得很不稳定：单一具有巨大比值的 token 可能主导整次策略更新，或者同一个回应内的许多 token 各自独立地被裁剪，使学习讯号在单一回应中支离破碎。GSPO 的解法是为每个回应计算单一一个重要性权重。
 
-回想完整回應的機率是以自迴歸方式因式分解的：
+回想完整回应的机率是以自回归方式因式分解的：
 
 $$
 \pi_\theta(a \mid s) = \prod_{t=1}^{|a|} \pi_\theta(a_t \mid s, a_{<t}). \tag{63}
 $$
 
-注意，为了簡潔，我們常把條件策略 $\pi_\theta(a_t \mid s, a_{<t})$ 簡寫为 $\pi_\theta(a_t \mid s)$，其中隱含地包含了補全中先前的動作（token）。GSPO 使用幾何平均（为避免長序列的數值問題）定义一個長度正規化的序列層級重要性比值：
+注意，为了简洁，我们常把条件策略 $\pi_\theta(a_t \mid s, a_{<t})$ 简写为 $\pi_\theta(a_t \mid s)$，其中隐含地包含了补全中先前的动作（token）。GSPO 使用几何平均（为避免长序列的数值问题）定义一个长度正规化的序列层级重要性比值：
 
 $$
 \rho_i(\theta) = \left(\frac{\pi_\theta(a_i \mid s)}{\pi_{\theta_\text{old}}(a_i \mid s)}\right)^{\frac{1}{|a_i|}} = \exp\left(\frac{1}{|a_i|}\sum_{t=1}^{|a_i|}\log\frac{\pi_\theta(a_{i,t} \mid s, a_{i,<t})}{\pi_{\theta_\text{old}}(a_{i,t} \mid s, a_{i,<t})}\right). \tag{64}
 $$
 
-GSPO 的目標函數与 GRPO 如出一轍，但使用这个序列層級的比值：
+GSPO 的目标函数与 GRPO 如出一辙，但使用这个序列层级的比值：
 
 $$
 J_\text{GSPO}(\theta) = \mathbb{E}_{s\sim\mathcal{D},\,\{a_i\}_{i=1}^{G}\sim\pi_{\theta_\text{old}}(\cdot|s)}\left[\frac{1}{G}\sum_{i=1}^{G}\min\left(\rho_i(\theta)A_i, \; \text{clip}(\rho_i(\theta), 1-\varepsilon, 1+\varepsilon)A_i\right)\right]. \tag{65}
 $$
 
-由于比值經過長度正規化，裁剪範圍 $\varepsilon$ 是在「逐 token 平均」的尺度上運作的，使得有效約束在不同長度的回應之間具有可比性。在实现上，序列層級的權重 $\rho_i$ 會統一施加于回應 $a_i$ 中的所有 token，这簡化了梯度計算，同时保持序列層級的重要性抽樣（IS）修正。
+由于比值经过长度正规化，裁剪范围 $\varepsilon$ 是在「逐 token 平均」的尺度上运作的，使得有效约束在不同长度的回应之间具有可比性。在实作上，序列层级的权重 $\rho_i$ 会统一施加于回应 $a_i$ 中的所有 token，这简化了梯度计算，同时保持序列层级的重要性抽样（IS）修正。
 
-優勢的計算与 GRPO 相同（式 58），使用群組相對的平均值与標準差正規化——这部分也可以像 GRPO 的其他衍生研究那樣加以修改。GSPO 可以概括为「使用序列層級重要性比值的 GRPO」——IS 修正的粒度与奖励的粒度相匹配。
+优势的计算与 GRPO 相同（式 58），使用群组相对的平均值与标准差正规化——这部分也可以像 GRPO 的其他衍生研究那样加以修改。GSPO 可以概括为「使用序列层级重要性比值的 GRPO」——IS 修正的粒度与奖励的粒度相匹配。
 
-### 6.2.10 裁剪重要性抽樣策略优化（Clipped Importance Sampling Policy Optimization, CISPO）
+### 6.2.10 裁剪重要性抽样策略优化（Clipped Importance Sampling Policy Optimization, CISPO）
 
-裁剪重要性抽樣策略优化（CISPO）[123] 採取了不同的路線：它不是裁剪替代目標，而是直接裁剪重要性權重本身，同时保留所有 token 的梯度。这个目標在被裁剪的重要性權重上使用梯度停止（stop-gradient），回歸到 REINFORCE 式的表述，而非 PPO 式的雙邊裁剪：
+裁剪重要性抽样策略优化（CISPO）[123] 采取了不同的路线：它不是裁剪替代目标，而是直接裁剪重要性权重本身，同时保留所有 token 的梯度。这个目标在被裁剪的重要性权重上使用梯度停止（stop-gradient），回归到 REINFORCE 式的表述，而非 PPO 式的双边裁剪：
 
 $$
 J_\text{CISPO}(\theta) = \mathbb{E}_{s\sim\mathcal{D},\,\{a_i\}_{i=1}^{K}\sim\pi_{\theta_\text{old}}(\cdot|s)}\left[\frac{1}{\sum_{i=1}^{K}|a_i|}\sum_{i=1}^{K}\sum_{t=1}^{|a_i|}\text{sg}\left(\hat{\rho}_{i,t}(\theta)\right) A_{i,t} \log \pi_\theta(a_{i,t} \mid s, a_{i,<t})\right], \tag{66}
 $$
 
-其中 $\text{sg}(\cdot)$ 表示梯度停止（權重會被使用，但不會被微分穿透），而被裁剪的重要性比值为：
+其中 $\text{sg}(\cdot)$ 表示梯度停止（权重会被使用，但不会被微分穿透），而被裁剪的重要性比值为：
 
 $$
 \hat{\rho}_{i,t}(\theta) = \text{clip}\left(\rho_{i,t}(\theta), \; 1-\varepsilon_\text{low}, \; 1+\varepsilon_\text{high}\right), \quad \rho_{i,t}(\theta) = \frac{\pi_\theta(a_{i,t} \mid s, a_{i,<t})}{\pi_{\theta_\text{old}}(a_{i,t} \mid s, a_{i,<t})}. \tag{67}
 $$
 
-与 PPO/GRPO 的關鍵差異微妙但重要：裁剪的是「權重」（而非目標函數），意味着每個 token 仍會收到与其優勢成比例的梯度訊號——權重只是限制了这个訊號被重要性比值放大或抑制的幅度。这是一種偏差–变异數的取捨：裁剪權重引入偏差但控制了变异數，而且關鍵在于，它避免了 token 的梯度被整個丟棄。
+与 PPO/GRPO 的关键差异微妙但重要：裁剪的是「权重」（而非目标函数），意味着每个 token 仍会收到与其优势成比例的梯度讯号——权重只是限制了这个讯号被重要性比值放大或抑制的幅度。这是一种偏差–变异数的取舍：裁剪权重引入偏差但控制了变异数，而且关键在于，它避免了 token 的梯度被整个丢弃。
 
-CISPO 与 GSPO 都是由那些将 RL 推向大規模 MoE 模型極限的組織所开发的，而 MoE 模型以數值問題聞名。这些論文強調了逐 token 重要性抽樣比值有多不稳定、會为梯度帶來多大的变异數而妨礙學習。这使得这些算法在大規模模型上可能特別有影響力，但在較小規模的學術实验中，其效益的研究還較少。
+CISPO 与 GSPO 都是由那些将 RL 推向大规模 MoE 模型极限的组织所开发的，而 MoE 模型以数值问题闻名。这些论文强调了逐 token 重要性抽样比值有多不稳定、会为梯度带来多大的变异数而妨碍学习。这使得这些算法在大规模模型上可能特别有影响力，但在较小规模的学术实验中，其效益的研究还较少。
 
-CISPO 也允許不對稱的裁剪邊界（$\varepsilon_\text{low} \neq \varepsilon_\text{high}$），類似本章稍後討論的 DAPO「clip-higher」修改——允許模型想要上調權重的 token 有更大的更新幅度，從而鼓勵探索。相關工作還包括 Tapered Off-Policy REINFORCE（TOPR）[124]，它同樣直接裁剪 IS 權重（像 CISPO）而非在目標函數內裁剪（像 PPO/GRPO），但它在序列層級運作（像 GSPO），并依據奖励的正負號使用不對稱裁剪——對正奖励不施加 IS 修正，而對負奖励把比值裁剪到 $[0, 1]$——從而实现稳定的 off-policy 學習。
+CISPO 也允许不对称的裁剪边界（$\varepsilon_\text{low} \neq \varepsilon_\text{high}$），类似本章稍后讨论的 DAPO「clip-higher」修改——允许模型想要上调权重的 token 有更大的更新幅度，从而鼓励探索。相关工作还包括 Tapered Off-Policy REINFORCE（TOPR）[124]，它同样直接裁剪 IS 权重（像 CISPO）而非在目标函数内裁剪（像 PPO/GRPO），但它在序列层级运作（像 GSPO），并依据奖励的正负号使用不对称裁剪——对正奖励不施加 IS 修正，而对负奖励把比值裁剪到 $[0, 1]$——从而实现稳定的 off-policy 学习。
 
-### 6.2.11 算法比較
+### 6.2.11 算法比较
 
-本章的每個算法都共享相同的核心梯度形式（式 24），差別在于它如何估計優勢以及如何控制优化過程：
+本章的每个算法都共享相同的核心梯度形式（式 24），差别在于它如何估计优势以及如何控制优化过程：
 
-- **REINFORCE**：最簡單的策略梯度实现，使用奖励的蒙地卡羅估計，并以基于狀態的基準線來降低变异數。
-- **RLOO**：每個提示詞取多個樣本的 REINFORCE，每個樣本的基準線是其餘樣本的平均奖励（留一法），以降低梯度变异數。
-- **PPO**：加入學習而來的價值函數与裁剪的策略比值，以獲得更準確、更稳定的梯度更新。
-- **GRPO**：PPO 的簡化變體，對每個提示詞的多個補全分組，并在組內正規化奖励來計算優勢，免除了對價值函數的需求。
-- **CISPO**：REINFORCE 式的算法，裁剪的是重要性抽樣權重（而非 PPO/GRPO 中的目標函數）并配合梯度停止以維持稳定，使每個 token 都能收到梯度訊號。
-- **GSPO**：類似 GRPO，但以補全長度對策略比值做正規化，避免長度偏差。
-- **DPO**：不是 RL 算法，而是一種解決同一個偏好优化問題的方法——完全繞過獨立的奖励模型，直接從偏好對进行优化（見第 8 章）。
+- **REINFORCE**：最简单的策略梯度实作，使用奖励的蒙地卡罗估计，并以基于状态的基准线来降低变异数。
+- **RLOO**：每个提示词取多个样本的 REINFORCE，每个样本的基准线是其余样本的平均奖励（留一法），以降低梯度变异数。
+- **PPO**：加入学习而来的价值函数与裁剪的策略比值，以获得更准确、更稳定的梯度更新。
+- **GRPO**：PPO 的简化变体，对每个提示词的多个补全分组，并在组内正规化奖励来计算优势，免除了对价值函数的需求。
+- **CISPO**：REINFORCE 式的算法，裁剪的是重要性抽样权重（而非 PPO/GRPO 中的目标函数）并配合梯度停止以维持稳定，使每个 token 都能收到梯度讯号。
+- **GSPO**：类似 GRPO，但以补全长度对策略比值做正规化，避免长度偏差。
+- **DPO**：不是 RL 算法，而是一种解决同一个偏好优化问题的方法——完全绕过独立的奖励模型，直接从偏好对进行优化（见第 8 章）。
 
-上述所有策略梯度算法在推导上都是 on-policy 的，儘管实务上大多會以略为 off-policy 的方式使用。DPO 及第 8 章的其他直接对齐算法則預設就是 off-policy 的。所有算法都可以搭配學習而來的奖励模型或可验证奖励使用。只有 PPO 需要學習價值函數。REINFORCE 与 RLOO 没有重要性抽樣比值——其餘算法則各自引入了一個比值，使每批 rollout 能執行多個梯度步，差別在于粒度与裁剪策略，總結如下表。
+上述所有策略梯度算法在推导上都是 on-policy 的，尽管实务上大多会以略为 off-policy 的方式使用。DPO 及第 8 章的其他直接对齐算法则预设就是 off-policy 的。所有算法都可以搭配学习而来的奖励模型或可验证奖励使用。只有 PPO 需要学习价值函数。REINFORCE 与 RLOO 没有重要性抽样比值——其余算法则各自引入了一个比值，使每批 rollout 能执行多个梯度步，差别在于粒度与裁剪策略，总结如下表。
 
-表 3：策略梯度算法比較。
+表 3：策略梯度算法比较。
 
-| 方法 | IS 粒度 | 裁剪方式 | 優勢估計 |
+| 方法 | IS 粒度 | 裁剪方式 | 优势估计 |
 |---|---|---|---|
-| **REINFORCE** | 無 | 無 | 蒙地卡羅基準線 |
-| **RLOO** | 無 | 無 | 留一法（leave-one-out） |
-| **PPO** | Token | 目標函數（雙邊） | 學習的價值函數 |
-| **GRPO** | Token | 目標函數（雙邊） | 群組相對 |
-| **GSPO** | 序列 | 目標函數（雙邊） | 群組相對 |
-| **CISPO** | Token | 權重（stop-grad） | 群組相對 |
+| **REINFORCE** | 无 | 无 | 蒙地卡罗基准线 |
+| **RLOO** | 无 | 无 | 留一法（leave-one-out） |
+| **PPO** | Token | 目标函数（双边） | 学习的价值函数 |
+| **GRPO** | Token | 目标函数（双边） | 群组相对 |
+| **GSPO** | 序列 | 目标函数（双边） | 群组相对 |
+| **CISPO** | Token | 权重（stop-grad） | 群组相对 |
 
-各方法的核心損失 $\mathcal{L}(\theta)$ 为：
+各方法的核心损失 $\mathcal{L}(\theta)$ 为：
 
 **REINFORCE：**
 
@@ -714,112 +714,112 @@ $$
 -\mathbb{E}_{(x, y^w, y^l)}\left[\log\sigma\left(\beta\left[\Delta\log\pi_\theta(x) - \Delta\log\pi_\text{ref}(x)\right]\right)\right]
 $$
 
-## 6.3 实现（Implementation）
+## 6.3 实作（Implementation）
 
-相較于这些算法最初被發展出来的深度强化學習（Deep RL）文獻，将 RL 用于优化语言模型或其他大型 AI 模型時，需要处理許多細小的实现細節。在本節中，我們會重點說明幾個讓各種流行算法的实现有所差異的關鍵因素。
+相较于这些算法最初被发展出来的深度强化学习（Deep RL）文献，将 RL 用于优化语言模型或其他大型 AI 模型时，需要处理许多细小的实作细节。在本节中，我们会重点说明几个让各种流行算法的实作有所差异的关键因素。
 
-这類训练還牽涉許多其他小細節。舉例來說，對语言模型进行 RLHF 時，一個關鍵步驟是生成之后要交給奖励模型評分的文字。正常情況下，模型应该生成一個序列結束（end-of-sequence, EOS）token 來表示它已完成生成，但常見的做法是對生成長度设置硬性上限，以便有效利用基礎設施。RLHF 的一種失敗模式是模型的回答經常被截斷，導致奖励模型的評分落到分布之外（out-of-distribution），产生無法預測的分數。解決之道是*只*在出現 `eos_token` 時才執行奖励模型評分，否则就對生成過長的模型施加懲罰。
+这类训练还牵涉许多其他小细节。举例来说，对语言模型进行 RLHF 时，一个关键步骤是生成之后要交给奖励模型评分的文本。正常情况下，模型应该生成一个序列结束（end-of-sequence, EOS）token 来表示它已完成生成，但常见的做法是对生成长度设定硬性上限，以便有效利用基础设施。RLHF 的一种失败模式是模型的回答经常被截断，导致奖励模型的评分落到分布之外（out-of-distribution），产生无法预测的分数。解决之道是*只*在出现 `eos_token` 时才执行奖励模型评分，否则就对生成过长的模型施加惩罚。
 
-流行的 RLHF 開源工具在各算法的实现細節上差異很大（見 [125] 中的表 10）。此處未涵蓋的一些设计決策包括：
+流行的 RLHF 开源工具在各算法的实作细节上差异很大（见 [125] 中的表 10）。此处未涵盖的一些设计决策包括：
 
-- **價值網路初始化（Value network initialization）**：PPO 与其他類似算法内部使用的學習型價值網路，可以從相同架构的另一個模型出發，也可以用隨機權重初始化。这對效能可能有很大影響。InstructGPT [3] 建立的標準做法（Tülu 3 在其 RLVR 工作中再度沿用 [6]）是用 RLHF 期間使用的奖励模型來初始化價值網路。也有人使用 RLHF 训练之前的检查點（通常是 SFT 模型）并附加一個隨機初始化的價值頭（value head），或使用完全重新初始化的语言模型（較不常見，因为 RLHF 會需要更久才能收斂，但可行）。
-- **奖励正規化、奖励白化与（或）優勢白化（Reward normalization, reward whitening, and/or advantage whitening）**：正規化将 RM（或環境）給出的所有數值限制在 0 到 1 之間，有助于學習稳定性。白化（whitening）更進一步，把奖励或優勢估計转换为零均值、單位变异數，能提供更強的稳定性提升。
-- **不同的 KL 估計器（Different KL estimators）**：面對複雜的语言模型，要精確計算模型之間的 KL 散度可能相當複雜，因此常以多種近似方法取代精確計算 [126]。
-- **KL 控制器（KL controllers）**：PPO 及相關算法的原始实现具有動態控制器，會锁定特定的 KL 目標值，并根據近期的量測结果调整懲罰強度。大多數現代 RLHF 实现使用靜態 KL 懲罰，但这一點同樣可能有所不同。
+- **价值网路初始化（Value network initialization）**：PPO 与其他类似算法内部使用的学习型价值网路，可以从相同架构的另一个模型出发，也可以用随机权重初始化。这对性能可能有很大影响。InstructGPT [3] 建立的标准做法（Tülu 3 在其 RLVR 工作中再度沿用 [6]）是用 RLHF 期间使用的奖励模型来初始化价值网路。也有人使用 RLHF 训练之前的检查点（通常是 SFT 模型）并附加一个随机初始化的价值头（value head），或使用完全重新初始化的语言模型（较不常见，因为 RLHF 会需要更久才能收敛，但可行）。
+- **奖励正规化、奖励白化与（或）优势白化（Reward normalization, reward whitening, and/or advantage whitening）**：正规化将 RM（或环境）给出的所有数值限制在 0 到 1 之间，有助于学习稳定性。白化（whitening）更进一步，把奖励或优势估计转换为零均值、单位变异数，能提供更强的稳定性提升。
+- **不同的 KL 估计器（Different KL estimators）**：面对复杂的语言模型，要精确计算模型之间的 KL 散度可能相当复杂，因此常以多种近似方法取代精确计算 [126]。
+- **KL 控制器（KL controllers）**：PPO 及相关算法的原始实作具有动态控制器，会锁定特定的 KL 目标值，并根据近期的量测结果调整惩罚强度。大多数现代 RLHF 实作使用静态 KL 惩罚，但这一点同样可能有所不同。
 
-關于 RLHF 实现細節的更多資訊，請參閱 [127]。關于这些算法的進一步資訊，請參閱 [128]。
+关于 RLHF 实作细节的更多资讯，请参阅 [127]。关于这些算法的进一步资讯，请参阅 [128]。
 
-### 6.3.1 策略梯度基礎（Policy-Gradient Basics）
+### 6.3.1 策略梯度基础（Policy-Gradient Basics）
 
-以下是一個簡單的策略梯度实现，使用優勢（advantage）來估計梯度，为 PPO 与 GRPO 等進階算法做準備：
+以下是一个简单的策略梯度实作，使用优势（advantage）来估计梯度，为 PPO 与 GRPO 等进阶算法做准备：
 
 ```python
 pg_loss = -advantages * ratio
 ```
 
-这裡的 ratio 是新策略模型相对于參考模型的（逐 token）機率比值（通常由對數機率差計算而得）。
+这里的 ratio 是新策略模型相对于参考模型的（逐 token）机率比值（通常由对数机率差计算而得）。
 
-为了理解这个式子，最好先了解一批更新中可能出現的各種情況。請記住，我們希望隨着模型在任務上表現越好，損失會*下降*。
+为了理解这个式子，最好先了解一批更新中可能出现的各种情况。请记住，我们希望随着模型在任务上表现越好，损失会*下降*。
 
-情況 1：優勢为正，表示該動作優于該狀態的期望值。我們想要强化这个行为。在这種情況下，由于式中的負號，模型會讓这个行为更有可能發生。为此，它會提高 logratio。正的 logratio，亦即 token 的對數機率總和變大，代表模型更有可能生成这些 token。
+情况 1：优势为正，表示该动作优于该状态的期望值。我们想要强化这个行为。在这种情况下，由于式中的负号，模型会让这个行为更有可能发生。为此，它会提高 logratio。正的 logratio，亦即 token 的对数机率总和变大，代表模型更有可能生成这些 token。
 
-情況 2：優勢为負，表示該動作劣于該狀態的期望值。道理非常類似。此時，如果新模型讓該序列變得更有可能，損失就會是正的，因此模型會設法调整策略參數，讓这个補全（completion）變得更不可能。
+情况 2：优势为负，表示该动作劣于该状态的期望值。道理非常类似。此时，如果新模型让该序列变得更有可能，损失就会是正的，因此模型会设法调整策略参数，让这个补全（completion）变得更不可能。
 
-情況 3：優勢为零，因此不需要任何更新。損失为零，不要改變策略模型。
+情况 3：优势为零，因此不需要任何更新。损失为零，不要改变策略模型。
 
-### 6.3.2 損失聚合的取捨（Loss Aggregation Tradeoffs）
+### 6.3.2 损失聚合的取舍（Loss Aggregation Tradeoffs）
 
-以语言模型实现任何策略梯度算法時都會面臨一個問題：如何把逐 token 的損失聚合成最終的純量損失？給定樣本 $i$ 在 token $t$ 的逐 token 損失 $\ell_{i,t}$、補全長度 $|a_i|$ 与批次大小 $B$，主要有三種策略：
+以语言模型实作任何策略梯度算法时都会面临一个问题：如何把逐 token 的损失聚合成最终的纯量损失？给定样本 $i$ 在 token $t$ 的逐 token 损失 $\ell_{i,t}$、补全长度 $|a_i|$ 与批次大小 $B$，主要有三种策略：
 
-**策略 1：逐序列正規化（Per-sequence normalization）**（標準 GRPO；部分 PPO 实现也採用）
+**策略 1：逐序列正规化（Per-sequence normalization）**（标准 GRPO；部分 PPO 实作也采用）
 
 $$
 L = \frac{1}{B}\sum_{i=1}^{B} \frac{1}{|a_i|}\sum_{t=1}^{|a_i|} \ell_{i,t} \tag{68}
 $$
 
-每個序列對批次損失的貢獻相同，与長度無關。程式碼如下：
+每个序列对批次损失的贡献相同，与长度无关。程序码如下：
 
 ```python
-# 策略 1：逐序列正規化
+# 策略 1：逐序列正规化
 sequence_loss = ((per_token_loss * completion_mask).sum(dim=1) / \
             completion_mask.sum(dim=1)).mean()
 ```
 
-**策略 2：逐 token 正規化（Per-token normalization）**（DAPO [129]）
+**策略 2：逐 token 正规化（Per-token normalization）**（DAPO [129]）
 
 $$
 L = \frac{\sum_{i=1}^{B}\sum_{t=1}^{|a_i|} \ell_{i,t}}{\sum_{i=1}^{B} |a_i|} \tag{69}
 $$
 
-每個 token 的貢獻相同；序列越長，對梯度的影響按比例越大。程式碼如下：
+每个 token 的贡献相同；序列越长，对梯度的影响按比例越大。程序码如下：
 
 ```python
-# 策略 2：逐 token 正規化
+# 策略 2：逐 token 正规化
 token_loss = ((per_token_loss * completion_mask).sum() / \
             completion_mask.sum())
 ```
 
-**策略 3：固定長度正規化（Fixed-length normalization）**（Dr. GRPO [118]）
+**策略 3：固定长度正规化（Fixed-length normalization）**（Dr. GRPO [118]）
 
 $$
 L = \frac{1}{B}\sum_{i=1}^{B} \frac{1}{L_{\max}}\sum_{t=1}^{|a_i|} \ell_{i,t} \tag{70}
 $$
 
-以最大序列長度 $L_{\max}$ 正規化，使各序列之間的逐 token 尺度一致，同时仍讓較長的序列因为包含較多有效 token 而貢獻較多的總梯度。程式碼如下：
+以最大序列长度 $L_{\max}$ 正规化，使各序列之间的逐 token 尺度一致，同时仍让较长的序列因为包含较多有效 token 而贡献较多的总梯度。程序码如下：
 
 ```python
-# 策略 3：固定長度正規化
+# 策略 3：固定长度正规化
 fixed_len_loss = ((per_token_loss * completion_mask).sum(dim=1) / \
             L_max).mean()
 ```
 
-其中 $L_{\max}$ 通常是整個训练流程期間的全域常數，用來指定生成 token 的最大数量。
+其中 $L_{\max}$ 通常是整个训练流程期间的全局常数，用来指定生成 token 的最大数量。
 
-請注意，上述程式碼中的 `completion_mask` 是一個由 1 和 0 組成的矩陣，其中提示（prompt）token 會被遮罩掉（設为 0），因为我們不希望模型從預測提示 token 中學習。
+请注意，上述程序码中的 `completion_mask` 是一个由 1 和 0 组成的矩阵，其中提示（prompt）token 会被遮罩掉（设为 0），因为我们不希望模型从预测提示 token 中学习。
 
 #### 6.3.2.1 为什么这很重要？（Why Does This Matter?）
 
-直覺上，逐序列正規化（策略 1）似乎最好，因为我們在意的是*结果（outcomes）*，而不是個別 token。然而，这會引入基于序列長度的微妙偏誤，依偏誤方向不同，可能導致模型过度思考（overthink），或低估天生就需要使用較多 token 的策略。考慮兩條長度不同、帶有逐 token 損失的序列：
+直觉上，逐序列正规化（策略 1）似乎最好，因为我们在意的是*结果（outcomes）*，而不是个别 token。然而，这会引入基于序列长度的微妙偏误，依偏误方向不同，可能导致模型过度思考（overthink），或低估天生就需要使用较多 token 的策略。考虑两条长度不同、带有逐 token 损失的序列：
 
 ```python
-seq_1_losses = [1, 1, 1, 1, 10]  # 5 個 token，平均 = 2.8
-seq_2_losses = [1, 1, 1, 1, 1, 1, 1, 1, 1, 10]  # 10 個 token，平均 = 1.9
+seq_1_losses = [1, 1, 1, 1, 10]  # 5 个 token，平均 = 2.8
+seq_2_losses = [1, 1, 1, 1, 1, 1, 1, 1, 1, 10]  # 10 个 token，平均 = 1.9
 ```
 
-採用**策略 1**（逐序列）：批次損失为 $(2.8 + 1.9)/2 = 2.35$，而且關鍵在于，短序列中的每個 token 收到的梯度都比長序列中的 token 更大。
+采用**策略 1**（逐序列）：批次损失为 $(2.8 + 1.9)/2 = 2.35$，而且关键在于，短序列中的每个 token 收到的梯度都比长序列中的 token 更大。
 
-採用**策略 2**（逐 token）：批次損失为 $(14 + 19)/15 = 2.2$，所有 token 收到的梯度大小相同。
+采用**策略 2**（逐 token）：批次损失为 $(14 + 19)/15 = 2.2$，所有 token 收到的梯度大小相同。
 
-採用**策略 3**（固定長度，$L_{\max} = 10$）：短序列貢獻 1.4，長序列貢獻 1.9，在平衡逐 token 梯度的同时，仍以序列为單位加權。
+采用**策略 3**（固定长度，$L_{\max} = 10$）：短序列贡献 1.4，长序列贡献 1.9，在平衡逐 token 梯度的同时，仍以序列为单位加权。
 
-想更完整地觀察这些策略如何影響梯度，請參考下面的腳本。
+想更完整地观察这些策略如何影响梯度，请参考下面的脚本。
 
 ```python
 from typing import Optional
 import torch
 
 def masked_mean(values: torch.Tensor, mask: torch.Tensor, axis: Optional[int] = None) -> torch.Tensor:
-    """計算帶遮罩張量的平均值。"""
+    """计算带遮罩张量的平均值。"""
     if axis is not None:
         return (values * mask).sum(axis=axis) / mask.sum(axis=axis)
     else:
@@ -831,7 +831,7 @@ def masked_sum(
         axis: Optional[int] = None,
         constant_normalizer: float = 1.0,
     ) -> torch.Tensor:
-    """計算帶遮罩張量的總和。以常數进行正規化。"""
+    """计算带遮罩张量的总和。以常数进行正规化。"""
     if axis is not None:
         return (values * mask).sum(axis=axis) / constant_normalizer
     else:
@@ -849,9 +849,9 @@ advs = torch.tensor([
 ])
 
 masks = torch.tensor([
-    # 生成 1：4 個 token
+    # 生成 1：4 个 token
     [1, 1, 1, 1, 0, 0, 0,],
-    # 生成 2：7 個 token
+    # 生成 2：7 个 token
     [1, 1, 1, 1, 1, 1, 1,],
 ])
 
@@ -888,304 +888,304 @@ print("ratio.grad", ratio.grad)
 # [0.0909, 0.0909, 0.0909, 0.0909, 0.0909, 0.0909, 0.0909]])
 ```
 
-輸出显示，採用策略 1（`masked_mean`）時，短序列的逐 token 梯度（0.25）比長序列（0.14）更大。策略 2 与 3 則讓各序列之間的逐 token 梯度相等。請注意，若使用梯度累積（gradient accumulation）——即在執行反向傳播步驟之前，先将多個小批次（minibatch）的梯度加總——这些结果可能會大不相同；在这種情況下，較短与較長序列之間的平衡可能會反轉。
+输出显示，采用策略 1（`masked_mean`）时，短序列的逐 token 梯度（0.25）比长序列（0.14）更大。策略 2 与 3 则让各序列之间的逐 token 梯度相等。请注意，若使用梯度累积（gradient accumulation）——即在执行反向传播步骤之前，先将多个小批次（minibatch）的梯度加总——这些结果可能会大不相同；在这种情况下，较短与较长序列之间的平衡可能会反转。
 
-实务上，最佳策略取決于特定的训练设置。在 RLHF 中，通常偏好數值稳定性最好、或損失变异最小的方法。
+实务上，最佳策略取决于特定的训练设定。在 RLHF 中，通常偏好数值稳定性最好、或损失变异最小的方法。
 
-#### 6.3.2.2 相關議題：MDP 与拉霸機框架（Related: MDP vs. Bandit Framing）
+#### 6.3.2.2 相关议题：MDP 与拉霸机框架（Related: MDP vs. Bandit Framing）
 
-損失聚合的选择，連結到我們如何框架化 RL 問題这个更深層的區別。**MDP（token 層級）**觀點把每個 token $a_t$ 視为一個動作，狀態 $s_t$ 則是當前的前綴。实务上，當我們以學習到的價值函數 $V(s_t)$ 計算 token 層級的優勢（例如 GAE [112]）并逐 token 施加 KL 懲罰時，用的就是这種框架。搭配學習型價值網路的 PPO 是典型范例 [116]。
+损失聚合的选择，连结到我们如何框架化 RL 问题这个更深层的区别。**MDP（token 层级）**观点把每个 token $a_t$ 视为一个动作，状态 $s_t$ 则是当前的前缀。实务上，当我们以学习到的价值函数 $V(s_t)$ 计算 token 层级的优势（例如 GAE [112]）并逐 token 施加 KL 惩罚时，用的就是这种框架。搭配学习型价值网路的 PPO 是典型范例 [116]。
 
-相對地，**拉霸機（bandit，序列層級）**觀點把整個補全視为單一動作，對應一個純量奖励 $R$。在程式碼中，这代表計算一個序列層級的優勢 $A_{\text{seq}}$，并将它廣播到所有 token。RLOO 与 GRPO 式的優勢常用于这種拉霸機式设置 [115] [111] [121]。DPO 与 A-LoL 等直接对齐方法也定义序列層級的目標，儘管它們并非策略梯度估計器 [130]。
+相对地，**拉霸机（bandit，序列层级）**观点把整个补全视为单一动作，对应一个纯量奖励 $R$。在程序码中，这代表计算一个序列层级的优势 $A_{\text{seq}}$，并将它广播到所有 token。RLOO 与 GRPO 式的优势常用于这种拉霸机式设定 [115] [111] [121]。DPO 与 A-LoL 等直接对齐方法也定义序列层级的目标，尽管它们并非策略梯度估计器 [130]。
 
-請注意，許多 GRPO 实现使用拉霸機式優勢，*同时*在損失中額外加入逐 token 的 KL 項；而許多 PPO/RLOO 实现則在計算優勢之前，就把 KL 折入奖励之中；兩種慣例在实务上都存在。
+请注意，许多 GRPO 实作使用拉霸机式优势，*同时*在损失中额外加入逐 token 的 KL 项；而许多 PPO/RLOO 实作则在计算优势之前，就把 KL 折入奖励之中；两种惯例在实务上都存在。
 
-以下范例對比了这兩種做法：
+以下范例对比了这两种做法：
 
 ```python
-# === 拉霸機式（序列層級） ===
-# 每個序列一個純量奖励；優勢廣播到所有 token
-reward = torch.tensor([3.0, 1.0])        # (B,) 例如奖励模型分數
-baseline = reward.mean()                 # 簡單基準線（RLOO 使用留一法）
+# === 拉霸机式（序列层级） ===
+# 每个序列一个纯量奖励；优势广播到所有 token
+reward = torch.tensor([3.0, 1.0])        # (B,) 例如奖励模型分数
+baseline = reward.mean()                 # 简单基准线（RLOO 使用留一法）
 advantage_seq = reward - baseline        # (B,)
 advantages = advantage_seq[:, None].expand(-1, seq_len)  # (B, L)
-# tensor([[ 1.,  1.,  1.,  1.],    <- 所有 token 的優勢相同
+# tensor([[ 1.,  1.,  1.,  1.],    <- 所有 token 的优势相同
 #         [-1., -1., -1., -1.]])
 
-# === MDP 式（token 層級） ===
-# 逐 token 奖励 + 學習到的 V(s_t)；每個 token 有自己的優勢
-# （也可以使用逐 token 的 KL 塑形、格式奖励或其他 token 層級訊號）
+# === MDP 式（token 层级） ===
+# 逐 token 奖励 + 学习到的 V(s_t)；每个 token 有自己的优势
+# （也可以使用逐 token 的 KL 塑形、格式奖励或其他 token 层级讯号）
 advantages = gae(per_token_rewards, values, done_mask, gamma=1.0, lam=0.95)
-# tensor([[ 0.2,  0.5,  0.8,  1.5],   <- 隨位置而異
+# tensor([[ 0.2,  0.5,  0.8,  1.5],   <- 随位置而异
 #         [-0.3, -0.5, -0.8, -1.4]])
 ```
 
-这種框架上的區別，也解釋了为什么幾乎所有 RLHF 实现都把折扣因子 $\gamma$ 設为 1.0。在標準 RL 中，折扣（$\gamma < 1$）是不可或缺的：它在多步回合（episode）中平衡短期与長期奖励的优化，这對智慧體（agent）長期學到有效行为至關重要。但在 RLHF 设居中，即使採用 token 層級的 MDP 觀點，优化的歸納偏置（inductive bias）仍是整體補全的品質——奖励訊號評分的是整個回應，而非個別 token。對較早的 token 施加折扣，會在毫無原則性依據的情況下任意降低它們的貢獻。隨着代理式（agentic）RL 情境逐漸成熟——模型會採取工具呼叫、程式碼執行与網頁浏览等真正的多步驟動作——折扣可能重新變得重要，因为这些情境涉及真正相異、且長期後果各不相同的循序決策。
+这种框架上的区别，也解释了为什么几乎所有 RLHF 实作都把折扣因子 $\gamma$ 设为 1.0。在标准 RL 中，折扣（$\gamma < 1$）是不可或缺的：它在多步回合（episode）中平衡短期与长期奖励的优化，这对智慧体（agent）长期学到有效行为至关重要。但在 RLHF 设定中，即使采用 token 层级的 MDP 观点，优化的归纳偏置（inductive bias）仍是整体补全的品质——奖励讯号评分的是整个回应，而非个别 token。对较早的 token 施加折扣，会在毫无原则性依据的情况下任意降低它们的贡献。随着代理式（agentic）RL 情境逐渐成熟——模型会采取工具呼叫、程序码执行与网页浏览等真正的多步骤动作——折扣可能重新变得重要，因为这些情境涉及真正相异、且长期后果各不相同的循序决策。
 
 ### 6.3.3 非同步 RL 系统（Asynchronous RL Systems）
 
-策略梯度算法的預設实现是所謂的**同策略（on-policy）**執行：智慧體（语言模型）採取的動作（生成內容）會先被評分，然后才更新模型。策略梯度的理論推导依賴所有動作都嚴格同策略，也就是模型永遠掌握最新試驗／rollout 的结果。实务上，維持嚴格的同策略執行會大幅拖慢训练 [131]——而且無論如何，完美的同步在技術上本來就不可能。因此，最近所有语言模型上的實證结果，其實都稍微超出理論證明的範圍。实务上發生的事，是針對「實際行得通的做法」來设计算法与系统。
+策略梯度算法的预设实作是所谓的**同策略（on-policy）**执行：智慧体（语言模型）采取的动作（生成内容）会先被评分，然后才更新模型。策略梯度的理论推导依赖所有动作都严格同策略，也就是模型永远掌握最新试验／rollout 的结果。实务上，维持严格的同策略执行会大幅拖慢训练 [131]——而且无论如何，完美的同步在技术上本来就不可能。因此，最近所有语言模型上的实证结果，其实都稍微超出理论证明的范围。实务上发生的事，是针对「实际行得通的做法」来设计算法与系统。
 
-![圖](../webapp/assets/figures/fig-p082-1.png)
-*圖 23：依循 Noukhovitch 等人（2024）的做法，比較同步与非同步 RL 训练中「生成—更新」階段的示意圖。*
+![图](../webapp/assets/figures/fig-p082-1.png)
+*图 23：依循 Noukhovitch 等人（2024）的做法，比较同步与非同步 RL 训练中「生成—更新」阶段的示意图。*
 
-常見的解法是讓推断与训练持續在不同的 GPU 節點上執行，并使用專为高效同时運行兩者而设计的軟體，如圖 23 底部所示。语言模型流行的開源 RL 工具的常見做法，是使用 Ray 之類的分散式行程管理函数庫，在策略梯度學習迴圈与推断迴圈之間傳遞資訊，而推断迴圈使用高效率的推断引擎，例如 vLLM。在这類架构中，負責執行 RL 步驟的 GPU 稱为「learner（學習器）」，負責從语言模型抽樣的 GPU 稱为「actor（行動者）」。讓训练更加非同步時，面臨的主要挑戰是保持训练稳定并維持學習訊號。
+常见的解法是让推论与训练持续在不同的 GPU 节点上执行，并使用专为高效同时运行两者而设计的软体，如图 23 底部所示。语言模型流行的开源 RL 工具的常见做法，是使用 Ray 之类的分散式进程管理函式库，在策略梯度学习回圈与推论回圈之间传递资讯，而推论回圈使用高效率的推论引擎，例如 vLLM。在这类架构中，负责执行 RL 步骤的 GPU 称为「learner（学习器）」，负责从语言模型抽样的 GPU 称为「actor（行动者）」。让训练更加非同步时，面临的主要挑战是保持训练稳定并维持学习讯号。
 
-这些系统的设计与实现，都建立在「接近同策略的数据就足以稳定學習」这个前提之上。此時，生成与更新兩個階段可以輕鬆同步，避免训练系统的任一部分出現閒置运算，做法就是把模型權重從 learner 傳遞給圖 24 中的 actor。對推理模型而言，問題本身的推断時間極長——每個答案需要 10K 到 100K+ 個 token——使得 rollout 的生成成为遠更嚴重的瓶頸。在較同步的 RL 基礎設施上训练推理模型時，一個常見的問題是批次中某一個提示的答案可能需要多得多的時間才能生成（無論是因为更多 token 还是更多次工具呼叫），導致大部分被分配的运算資源在它完成之前都處于閒置狀態。針對这種長度不匹配問題的第二種解法稱为序列層級打包（sequence-level packing）：透過巧妙的遮罩把較短的樣本堆疊進同一批次，讓模型能持續进行 rollout，并在批次內的樣本之間更好地分配長度正規化。分散式 RL 基礎設施的完整複雜度超出本書範圍，因为它可能引發許多其他微妙的問題，拖慢训练或造成不稳定。
+这些系统的设计与实作，都建立在「接近同策略的资料就足以稳定学习」这个前提之上。此时，生成与更新两个阶段可以轻松同步，避免训练系统的任一部分出现闲置运算，做法就是把模型权重从 learner 传递给图 24 中的 actor。对推理模型而言，问题本身的推论时间极长——每个答案需要 10K 到 100K+ 个 token——使得 rollout 的生成成为远更严重的瓶颈。在较同步的 RL 基础设施上训练推理模型时，一个常见的问题是批次中某一个提示的答案可能需要多得多的时间才能生成（无论是因为更多 token 还是更多次工具呼叫），导致大部分被分配的运算资源在它完成之前都处于闲置状态。针对这种长度不匹配问题的第二种解法称为序列层级打包（sequence-level packing）：透过巧妙的遮罩把较短的样本堆叠进同一批次，让模型能持续进行 rollout，并在批次内的样本之间更好地分配长度正规化。分散式 RL 基础设施的完整复杂度超出本书范围，因为它可能引发许多其他微妙的问题，拖慢训练或造成不稳定。
 
-![圖](../webapp/assets/figures/fig-p083-1.png)
-*圖 24：一個分散式 RL 系统范例：透過管理兩個佇列，将数据傳遞給 learner 与 actor 的 GPU，兩者可以用 Ray 等分散式計算函数庫进行同步。Olmo Team 2025，授权 CC-BY。*
+![图](../webapp/assets/figures/fig-p083-1.png)
+*图 24：一个分散式 RL 系统范例：透过管理两个伫列，将资料传递给 learner 与 actor 的 GPU，两者可以用 Ray 等分散式计算函式库进行同步。Olmo Team 2025，授权 CC-BY。*
 
-隨着这些推理模型的興起，人們進一步關注讓训练与推断迴圈完全異策略（off-policy）化：策略梯度更新的训练批次，由多個實例生成答案時最近完成的 rollout 填滿 [132] [133]。完全非同步的训练還能讓 RL 训练更容易橫跨多個数据中心扩展，因为可以选择拉長 learner 節點（執行策略梯度步驟）与 actor（負責解題）之間權重同步的時間間隔 [134]。
+随着这些推理模型的兴起，人们进一步关注让训练与推论回圈完全异策略（off-policy）化：策略梯度更新的训练批次，由多个实例生成答案时最近完成的 rollout 填满 [132] [133]。完全非同步的训练还能让 RL 训练更容易横跨多个资料中心扩展，因为可以选择拉长 learner 节点（执行策略梯度步骤）与 actor（负责解题）之间权重同步的时间间隔 [134]。
 
-相關方法也在探索完全異策略的策略梯度算法 [124]。
+相关方法也在探索完全异策略的策略梯度算法 [124]。
 
-### 6.3.4 截斷重要性抽樣（Truncated Importance Sampling）
+### 6.3.4 截断重要性抽样（Truncated Importance Sampling）
 
-截斷重要性抽樣（Truncated Importance Sampling, TIS）是現代语言模型非同步 RL 框架中，用來稳定训练的一項關鍵工具。重要性抽樣（importance sampling）是一種校正手段，用來重新加權從某個分布抽出的樣本，以估計另一個分布下的期望值（如第 (62) 式所介紹）。截斷重要性抽樣 [135] 以 $\min(\rho, C)$（$C$ 为某個常數）为这些權重置定上限，用少量偏差換取策略梯度中有界的变异數。
+截断重要性抽样（Truncated Importance Sampling, TIS）是现代语言模型非同步 RL 框架中，用来稳定训练的一项关键工具。重要性抽样（importance sampling）是一种校正手段，用来重新加权从某个分布抽出的样本，以估计另一个分布下的期望值（如第 (62) 式所介绍）。截断重要性抽样 [135] 以 $\min(\rho, C)$（$C$ 为某个常数）为这些权重设定上限，用少量偏差换取策略梯度中有界的变异数。
 
-这是施加在策略梯度上的重要性抽樣校正，但与 PPO 和 CISPO 的雙邊裁剪（将比值約束在 1 附近）不同，TIS 使用單邊上限：比值可以自由降到 1 以下，但會被截在 $C$，以防止極端的向上加權。在 PPO、GRPO、CISPO（及相關算法）中，比值 $\rho_t^{\text{policy}} = \pi_\theta(a_t \mid s)/\pi_{\theta_{\text{old}}}(a_t \mid s)$ 校正的是同一個 RL 批次內、多個梯度步之間的策略漂移（policy drift）。當我們轉向以前一小節的非同步性为核心概念的現實世界 RL 框架時，還可能出現更大的數值差異來源（同樣需要重要性抽樣的數值校正）。即使抽樣器（sampler）与 learner 共用完全相同的參數 $\theta$，它們的有效 token 分布仍可能不同，因为推断引擎（例如 vLLM）与训练框架（例如 FSDP）使用不同的核心（kernel）、精度与平行化策略 [136]。因此，把同一個策略在兩個系统上的评估结果加以區分是有用的，記为 $\pi_\theta^{\text{sampler}}$ 与 $\pi_\theta^{\text{learner}}$，并定义對應的比值及其截斷形式：
+这是施加在策略梯度上的重要性抽样校正，但与 PPO 和 CISPO 的双边裁剪（将比值约束在 1 附近）不同，TIS 使用单边上限：比值可以自由降到 1 以下，但会被截在 $C$，以防止极端的向上加权。在 PPO、GRPO、CISPO（及相关算法）中，比值 $\rho_t^{\text{policy}} = \pi_\theta(a_t \mid s)/\pi_{\theta_{\text{old}}}(a_t \mid s)$ 校正的是同一个 RL 批次内、多个梯度步之间的策略漂移（policy drift）。当我们转向以前一小节的非同步性为核心概念的现实世界 RL 框架时，还可能出现更大的数值差异来源（同样需要重要性抽样的数值校正）。即使抽样器（sampler）与 learner 共用完全相同的参数 $\theta$，它们的有效 token 分布仍可能不同，因为推论引擎（例如 vLLM）与训练框架（例如 FSDP）使用不同的核心（kernel）、精度与平行化策略 [136]。因此，把同一个策略在两个系统上的评估结果加以区分是有用的，记为 $\pi_\theta^{\text{sampler}}$ 与 $\pi_\theta^{\text{learner}}$，并定义对应的比值及其截断形式：
 
 $$
 \rho_t^{\text{learner}} = \frac{\pi_\theta^{\text{learner}}(a_t \mid s, a_{<t})}{\pi_\theta^{\text{sampler}}(a_t \mid s, a_{<t})}, \qquad \bar{\rho}_t^{\text{learner}} = \min(\rho_t^{\text{learner}},\, C). \tag{71}
 $$
 
-这兩種校正是互補的，但它們出現在策略梯度实现中的原因不同——一個補償 RL 批次训练過程中的策略漂移，另一個補償实现引起的分布差異——而且可以同时使用。兩者如何結合，取決于算法：
+这两种校正是互补的，但它们出现在策略梯度实作中的原因不同——一个补偿 RL 批次训练过程中的策略漂移，另一个补偿实作引起的分布差异——而且可以同时使用。两者如何结合，取决于算法：
 
-#### 6.3.4.1 REINFORCE 搭配 TIS（單一梯度步）（REINFORCE with TIS (Single Gradient Step)）
+#### 6.3.4.1 REINFORCE 搭配 TIS（单一梯度步）（REINFORCE with TIS (Single Gradient Step)）
 
-这裡不存在策略漂移（$\pi_\theta = \pi_{\theta_{\text{old}}}$），所以唯一的不匹配出現在 learner 与 sampler 之間。此時 $\pi_{\theta_{\text{old}}} = \pi_{\text{gen}}$，TIS 直接校正 learner–sampler 之間的差距：
+这里不存在策略漂移（$\pi_\theta = \pi_{\theta_{\text{old}}}$），所以唯一的不匹配出现在 learner 与 sampler 之间。此时 $\pi_{\theta_{\text{old}}} = \pi_{\text{gen}}$，TIS 直接校正 learner–sampler 之间的差距：
 
 $$
 \nabla_\theta J \approx \mathbb{E}_{a \sim \pi_\theta^{\text{sampler}}} \left[ \bar{\rho}_t^{\text{learner}} \cdot A_t \cdot \nabla_\theta \log \pi_\theta^{\text{learner}}(a_t \mid s, a_{<t}) \right]. \tag{72}
 $$
 
-#### 6.3.4.2 PPO/GRPO 搭配 TIS（多個梯度步）（PPO/GRPO with TIS (Multiple Gradient Steps)）
+#### 6.3.4.2 PPO/GRPO 搭配 TIS（多个梯度步）（PPO/GRPO with TIS (Multiple Gradient Steps)）
 
-現在兩種比值同时起作用。在嚴謹的实现中，策略比值裡的「舊 logprobs」會在 learner 上重新計算（GSPO 論文對此有討論），因此策略比值 $\rho_t^{\text{policy}} = \pi_\theta^{\text{learner}}/\pi_{\theta_{\text{old}}}^{\text{learner}}$ 捕捉純粹的策略漂移，而 $\bar{\rho}_t^{\text{learner}} = \min(\pi_{\theta_{\text{old}}}^{\text{learner}}/\pi_{\theta_{\text{old}}}^{\text{sampler}},\ C)$ 則另外校正生成检查點上的後端不匹配：
+现在两种比值同时起作用。在严谨的实作中，策略比值里的「旧 logprobs」会在 learner 上重新计算（GSPO 论文对此有讨论），因此策略比值 $\rho_t^{\text{policy}} = \pi_\theta^{\text{learner}}/\pi_{\theta_{\text{old}}}^{\text{learner}}$ 捕捉纯粹的策略漂移，而 $\bar{\rho}_t^{\text{learner}} = \min(\pi_{\theta_{\text{old}}}^{\text{learner}}/\pi_{\theta_{\text{old}}}^{\text{sampler}},\ C)$ 则另外校正生成检查点上的后端不匹配：
 
 $$
 J_{\text{PPO+TIS}}(\theta) = \mathbb{E}\left[ \min\!\left( \rho_t^{\text{policy}} A_t,\ \operatorname{clip}\!\left(\rho_t^{\text{policy}},\, 1-\varepsilon,\, 1+\varepsilon\right) A_t \right) \cdot \bar{\rho}_t^{\text{learner}} \right]. \tag{73}
 $$
 
-这裡 $\pi_{\theta_{\text{old}}} \neq \pi_{\text{gen}}$：舊的 logprobs 來自 learner，而不是 sampler。如果某個框架跳過这个重新計算的步驟，直接把 sampler 的 logprobs 當作 $\pi_{\theta_{\text{old}}}$，那麼策略比值本身就已经涵蓋了後端不匹配，不需要額外的 TIS 校正——但此時裁剪操作作用在一個更嘈雜的比值上，这个比值甚至在任何梯度步之前就偏離了 1.0。这就是 Yao 等人 [136] 提出的「你的框架偷偷讓你做了異策略 RL」（your framework secretly brings you off-policy RL）觀察。
+这里 $\pi_{\theta_{\text{old}}} \neq \pi_{\text{gen}}$：旧的 logprobs 来自 learner，而不是 sampler。如果某个框架跳过这个重新计算的步骤，直接把 sampler 的 logprobs 当作 $\pi_{\theta_{\text{old}}}$，那么策略比值本身就已经涵盖了后端不匹配，不需要额外的 TIS 校正——但此时裁剪操作作用在一个更嘈杂的比值上，这个比值甚至在任何梯度步之前就偏离了 1.0。这就是 Yao 等人 [136] 提出的「你的框架偷偷让你做了异策略 RL」（your framework secretly brings you off-policy RL）观察。
 
-实务上，LLM 的 RL 系统會把 TIS 作为策略梯度損失上的逐 token 校正權重來使用：
+实务上，LLM 的 RL 系统会把 TIS 作为策略梯度损失上的逐 token 校正权重来使用：
 
 ```python
-# 形狀：(B*G, L)
+# 形状：(B*G, L)
 C = 2.0  # TIS 上限
 
 logratio = learner_logprobs - sampler_logprobs
-logratio = logratio.clamp(-10.0, 10.0)               # 數值安全性
-tis_weight = torch.exp(logratio).clamp(max=C)         # 單邊截斷
+logratio = logratio.clamp(-10.0, 10.0)               # 数值安全性
+tis_weight = torch.exp(logratio).clamp(max=C)         # 单边截断
 
-# 作为逐 token 策略梯度損失上的固定校正權重
+# 作为逐 token 策略梯度损失上的固定校正权重
 per_token_pg_loss = per_token_pg_loss * tis_weight.detach()
 ```
 
-这裡的 $[-10, 10]$ clamp 只是取指數前的數值稳定性措施；真正的截斷重要性抽樣步驟是以 $C$ 为上限的單邊截斷。实务上，圍繞这些 logprobs 的簿記工作——保存生成時的 sampler logprobs、在舊检查點上重新計算 learner logprobs、以及在梯度步中追蹤當前 logprobs——是分散式 RL 框架中相當可觀的一部分鷹架工程。与 GSPO 不同，这種校正是 token 層級的，因为它处理的是 token 層級的數值不匹配，而非序列層級的奖励粒度。針對 learner–sampler 比值的 TIS 已被各大開源 RL 框架採用（VeRL、TRL、OpenRLHF、SkyRL、OAT，以及使用 $C = 2$ 的 Open Instruct），而且对于長推理軌跡（第 7 章）越來越重要，因为微小的逐 token 差異會在數千個生成 token 之間不斷累積。
+这里的 $[-10, 10]$ clamp 只是取指数前的数值稳定性措施；真正的截断重要性抽样步骤是以 $C$ 为上限的单边截断。实务上，围绕这些 logprobs 的簿记工作——储存生成时的 sampler logprobs、在旧检查点上重新计算 learner logprobs、以及在梯度步中追踪当前 logprobs——是分散式 RL 框架中相当可观的一部分鹰架工程。与 GSPO 不同，这种校正是 token 层级的，因为它处理的是 token 层级的数值不匹配，而非序列层级的奖励粒度。针对 learner–sampler 比值的 TIS 已被各大开源 RL 框架采用（VeRL、TRL、OpenRLHF、SkyRL、OAT，以及使用 $C = 2$ 的 Open Instruct），而且对于长推理轨迹（第 7 章）越来越重要，因为微小的逐 token 差异会在数千个生成 token 之间不断累积。
 
 ### 6.3.5 范例：PPO（Example: PPO）
 
-PPO 有非常多現成的实现。核心的*損失（loss）*計算如下所示。對稳定效能同樣關鍵的還有*價值（value）*的計算，这部分存在多種選項（包括*價值模型*損失的多種選項）。
+PPO 有非常多现成的实作。核心的*损失（loss）*计算如下所示。对稳定性能同样关键的还有*价值（value）*的计算，这部分存在多种选项（包括*价值模型*损失的多种选项）。
 
-請注意，这裡的參考策略（或舊的 logprobs）來自生成內容被抽樣當下的時間點，不一定是參考策略。參考策略只用于 KL 距離約束／懲罰。
+请注意，这里的参考策略（或旧的 logprobs）来自生成内容被抽样当下的时间点，不一定是参考策略。参考策略只用于 KL 距离约束／惩罚。
 
 ```python
-# B：批次大小，L：序列長度，G：生成数量
-# 将 KL 懲罰施加到奖励上
-rewards = rewards - self.beta * per_token_kl  # 形狀：(B*G, L)
+# B：批次大小，L：序列长度，G：生成数量
+# 将 KL 惩罚施加到奖励上
+rewards = rewards - self.beta * per_token_kl  # 形状：(B*G, L)
 
-# 取得價值預測
-values = value_net(completions)  # 形狀：(B*G, L)
+# 取得价值预测
+values = value_net(completions)  # 形状：(B*G, L)
 
-# 以反向迴圈計算回報（LM RLHF 的 gamma 通常为 1.0）
-# 對奖励做遮罩，避免填充 token（可能帶有 KL 懲罰）洩漏進回報
+# 以反向回圈计算回报（LM RLHF 的 gamma 通常为 1.0）
+# 对奖励做遮罩，避免填充 token（可能带有 KL 惩罚）泄漏进回报
 returns = torch.zeros_like(rewards)
 running = torch.zeros(rewards.shape[0], device=rewards.device, dtype=rewards.dtype)
 for t in reversed(range(rewards.shape[1])):
-    # 将填充歸零：只對有效的補全 token 累積奖励／回報
+    # 将填充归零：只对有效的补全 token 累积奖励／回报
     running = (rewards[:, t] + self.gamma * running) * completion_mask[:, t]
     returns[:, t] = running
 
-# 計算優勢：A_t = G_t - V(s_t)
-advantages = returns - values.detach()  # 形狀：(B*G, L)
-# 注意：这裡對價值網路做 detach，以免在計算策略梯度損失時
-# 更新價值函數的參數
+# 计算优势：A_t = G_t - V(s_t)
+advantages = returns - values.detach()  # 形状：(B*G, L)
+# 注意：这里对价值网路做 detach，以免在计算策略梯度损失时
+# 更新价值函数的参数
 
-# 正規化優勢（非必要但較稳定）
+# 正规化优势（非必要但较稳定）
 advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 ```
 
 ```python
-# 計算新舊策略之間的機率比值
-ratio = torch.exp(new_per_token_logps - per_token_logps)  # 形狀：(B*G, L)
+# 计算新旧策略之间的机率比值
+ratio = torch.exp(new_per_token_logps - per_token_logps)  # 形状：(B*G, L)
 
-# PPO 裁剪目標
+# PPO 裁剪目标
 eps = self.cliprange  # 例如 0.2
-pg_losses1 = -advantages * ratio  # 形狀：(B*G, L)
-pg_losses2 = -advantages * torch.clamp(ratio, 1.0 - eps, 1.0 + eps)  # 形狀：(B*G, L)
-pg_loss_max = torch.max(pg_losses1, pg_losses2)  # 形狀：(B*G, L)
+pg_losses1 = -advantages * ratio  # 形状：(B*G, L)
+pg_losses2 = -advantages * torch.clamp(ratio, 1.0 - eps, 1.0 + eps)  # 形状：(B*G, L)
+pg_loss_max = torch.max(pg_losses1, pg_losses2)  # 形状：(B*G, L)
 
-# 價值函數損失：預測回報
-vf_loss = 0.5 * ((returns - values) ** 2)  # 形狀：(B*G, L)
+# 价值函数损失：预测回报
+vf_loss = 0.5 * ((returns - values) ** 2)  # 形状：(B*G, L)
 
-# 結合策略与價值損失
-per_token_loss = pg_loss_max + self.vf_coef * vf_loss  # 形狀：(B*G, L)
+# 结合策略与价值损失
+per_token_loss = pg_loss_max + self.vf_coef * vf_loss  # 形状：(B*G, L)
 
-# 套用補全遮罩并計算最終損失
+# 套用补全遮罩并计算最终损失
 loss = ((per_token_loss * completion_mask).sum(dim=1) /
 completion_mask.sum(dim=1)).mean()
- # 純量
+ # 纯量
 
-# 計算用于記錄的指標
+# 计算用于记录的指标
 with torch.no_grad():
-    # 計算裁剪比例
+    # 计算裁剪比例
     clip_frac = ((pg_losses2 > pg_losses1).float() * completion_mask).sum() / \
 completion_mask.sum()
 
-    # 計算近似 KL
+    # 计算近似 KL
     approx_kl = (0.5 * ((new_per_token_logps - per_token_logps)**2) * \
 completion_mask).sum() / completion_mask.sum()
 
-    # 計算用于記錄的價值損失
+    # 计算用于记录的价值损失
     value_loss = vf_loss.mean()
 ```
 
-理解 PPO 的核心，在于策略梯度損失如何更新。請聚焦在这三行：
+理解 PPO 的核心，在于策略梯度损失如何更新。请聚焦在这三行：
 
 ```python
-pg_losses1 = -advantages * ratio  # 形狀：(B*G, L)
-pg_losses2 = -advantages * torch.clamp(ratio, 1.0 - eps, 1.0 + eps)  # 形狀：(B*G, L)
-pg_loss_max = torch.max(pg_losses1, pg_losses2)  # 形狀：(B*G, L)
+pg_losses1 = -advantages * ratio  # 形状：(B*G, L)
+pg_losses2 = -advantages * torch.clamp(ratio, 1.0 - eps, 1.0 + eps)  # 形状：(B*G, L)
+pg_loss_max = torch.max(pg_losses1, pg_losses2)  # 形状：(B*G, L)
 ```
 
-`pg_losses1` 是普通的、以優勢加權的策略梯度損失。`pg_losses2` 套用相同的公式，但把機率比值鉗制在 $[1-\varepsilon, 1+\varepsilon]$ 範圍內，限制策略在單次更新中能改變的幅度。
+`pg_losses1` 是普通的、以优势加权的策略梯度损失。`pg_losses2` 套用相同的公式，但把机率比值钳制在 $[1-\varepsilon, 1+\varepsilon]$ 范围内，限制策略在单次更新中能改变的幅度。
 
-關鍵洞見在于對兩個損失取 `torch.max`。因为我們最小化的是一個*負的*損失（回想優勢前面的負號），取最大值會選出更悲觀的梯度——即产生較小策略更新的那一個。當優勢为正（好的動作）時，裁剪防止策略過于激進地提高該動作的機率；當優勢为負（壞的動作）時，裁剪防止朝反方向的过度修正。
+关键洞见在于对两个损失取 `torch.max`。因为我们最小化的是一个*负的*损失（回想优势前面的负号），取最大值会选出更悲观的梯度——即产生较小策略更新的那一个。当优势为正（好的动作）时，裁剪防止策略过于激进地提高该动作的机率；当优势为负（坏的动作）时，裁剪防止朝反方向的过度修正。
 
-透過鉗制對數機率比值，PPO 限制了策略偏離「生成训练数据的那個版本」的距離，在不需要顯式信賴域（trust region）計算的情況下稳定學習。
+透过钳制对数机率比值，PPO 限制了策略偏离「生成训练资料的那个版本」的距离，在不需要显式信赖域（trust region）计算的情况下稳定学习。
 
-上面的程式碼也显示 PPO 在策略之外同时學習一個價值函數，这增加了实现複雜度，但裁剪後的目標才是核心機制。
+上面的程序码也显示 PPO 在策略之外同时学习一个价值函数，这增加了实作复杂度，但裁剪后的目标才是核心机制。
 
-#### 6.3.5.1 每個樣本一個梯度步時的 PPO/GRPO 簡化（無裁剪）（PPO/GRPO Simplification with One Gradient Step per Sample (No Clipping)）
+#### 6.3.5.1 每个样本一个梯度步时的 PPO/GRPO 简化（无裁剪）（PPO/GRPO Simplification with One Gradient Step per Sample (No Clipping)）
 
-若超參數「每個樣本的梯度步數」等于 1，PPO（与 GRPO）的实现可以優雅得多。这个值的典型设置通常是 2–4 或更高。在 PPO 或 GRPO 的主要公式中（見第 (51) 式），「參考」策略是先前的參數——也就是生成補全或動作時所用的那組參數。因此，若只取一個梯度步，則 $\pi_\theta = \pi_{\theta_{\text{old}}}$，更新規則簡化如下（記號 $[\,]_\nabla$ 表示停止梯度，stop gradient）：
+若超参数「每个样本的梯度步数」等于 1，PPO（与 GRPO）的实作可以优雅得多。这个值的典型设定通常是 2–4 或更高。在 PPO 或 GRPO 的主要公式中（见第 (51) 式），「参考」策略是先前的参数——也就是生成补全或动作时所用的那组参数。因此，若只取一个梯度步，则 $\pi_\theta = \pi_{\theta_{\text{old}}}$，更新规则简化如下（记号 $[\,]_\nabla$ 表示停止梯度，stop gradient）：
 
 $$
 J(\theta) = \frac{1}{G}\sum_{i=1}^{G} \left( \frac{\pi_\theta(a_i|s)}{\left[\pi_\theta(a_i|s)\right]_\nabla} A_i - \beta \mathcal{D}_{\mathrm{KL}}(\pi_\theta || \pi_{\text{ref}}) \right). \tag{74}
 $$
 
-这使得 PPO 或 GRPO 的实现可以省略第二個策略梯度与裁剪邏輯，讓优化器遠遠更接近標準的策略梯度。
+这使得 PPO 或 GRPO 的实作可以省略第二个策略梯度与裁剪逻辑，让优化器远远更接近标准的策略梯度。
 
 ### 6.3.6 范例：GRPO（Example: GRPO）
 
-DeepSeekMath 論文描述了 GRPO 一些与 PPO 不同的实现細節 [121]，尤其是与深度强化學習（而非语言模型）中 PPO 的標準用法相比。例如，RLHF 优化中的 KL 懲罰（回想一下，在没有奖励模型、以可验证奖励训练推理模型時，也會使用 KL 懲罰）是直接施加在損失更新中，而不是施加在奖励函數上。標準 RLHF 的 KL 懲罰施加方式为 $r = r_\theta - \beta \mathcal{D}_{\mathrm{KL}}$，而 GRPO 的实现大致是：
+DeepSeekMath 论文描述了 GRPO 一些与 PPO 不同的实作细节 [121]，尤其是与深度强化学习（而非语言模型）中 PPO 的标准用法相比。例如，RLHF 优化中的 KL 惩罚（回想一下，在没有奖励模型、以可验证奖励训练推理模型时，也会使用 KL 惩罚）是直接施加在损失更新中，而不是施加在奖励函数上。标准 RLHF 的 KL 惩罚施加方式为 $r = r_\theta - \beta \mathcal{D}_{\mathrm{KL}}$，而 GRPO 的实作大致是：
 
 $$
 L = L_{\text{policy gradient}} + \beta * \mathcal{D}_{\mathrm{KL}} \tag{75}
 $$
 
-不過，实现方式有很多種。傳統上，KL 距離是針對提示 $s$ 的補全中的每一個 token 計算的。在推理训练中，會從一個提示抽樣多個補全，而一個批次中有多個提示，所以 KL 距離的形狀會是 [B, L, N]，其中 B 是批次大小，L 是序列長度，N 是每個提示的補全数量。
+不过，实作方式有很多种。传统上，KL 距离是针对提示 $s$ 的补全中的每一个 token 计算的。在推理训练中，会从一个提示抽样多个补全，而一个批次中有多个提示，所以 KL 距离的形状会是 [B, L, N]，其中 B 是批次大小，L 是序列长度，N 是每个提示的补全数量。
 
-綜合起来，使用第一種損失聚合方式，虛擬碼可以寫成如下。
+综合起来，使用第一种损失聚合方式，虚拟码可以写成如下。
 
 ```python
-# B：批次大小，L：序列長度，G：生成数量
-# 計算逐群組奖励 # 形狀：(B,)
+# B：批次大小，L：序列长度，G：生成数量
+# 计算逐群组奖励 # 形状：(B,)
 mean_grouped_rewards = rewards.view(-1, self.num_generations).mean(dim=1)
 std_grouped_rewards = rewards.view(-1, self.num_generations).std(dim=1)
 
 
-# 對奖励做正規化以計算優勢
+# 对奖励做正规化以计算优势
 mean_grouped_rewards = mean_grouped_rewards.repeat_interleave(self.num_generations, dim=0)
 std_grouped_rewards = std_grouped_rewards.repeat_interleave(self.num_generations, dim=0)
-# 形狀：(B*G,)
+# 形状：(B*G,)
 
-# 計算優勢
+# 计算优势
 advantages = (rewards - mean_grouped_rewards) / (std_grouped_rewards + 1e-4)
 advantages = advantages.unsqueeze(1)
-# 形狀：(B*G, 1)
+# 形状：(B*G, 1)
 
-# 計算新舊策略之間的機率比值
-ratio = torch.exp(new_per_token_logps - per_token_logps)  # 形狀：(B*G, L)
+# 计算新旧策略之间的机率比值
+ratio = torch.exp(new_per_token_logps - per_token_logps)  # 形状：(B*G, L)
 
-# PPO 裁剪目標
+# PPO 裁剪目标
 eps = self.cliprange  # 例如 0.2
-pg_losses1 = -advantages * ratio  # 形狀：(B*G, L)
-pg_losses2 = -advantages * torch.clamp(ratio, 1.0 - eps, 1.0 + eps)  # 形狀：(B*G, L)
-pg_loss_max = torch.max(pg_losses1, pg_losses2)  # 形狀：(B*G, L)
+pg_losses1 = -advantages * ratio  # 形状：(B*G, L)
+pg_losses2 = -advantages * torch.clamp(ratio, 1.0 - eps, 1.0 + eps)  # 形状：(B*G, L)
+pg_loss_max = torch.max(pg_losses1, pg_losses2)  # 形状：(B*G, L)
 
-# GRPO 的重點——PPO 傳統上将此施加在奖励中
-# 与 KL 懲罰結合
-per_token_loss = pg_loss_max + self.beta * per_token_kl  # 形狀：(B*G, L)
+# GRPO 的重点——PPO 传统上将此施加在奖励中
+# 与 KL 惩罚结合
+per_token_loss = pg_loss_max + self.beta * per_token_kl  # 形状：(B*G, L)
 
-# 套用補全遮罩并計算最終損失
+# 套用补全遮罩并计算最终损失
 loss = ((per_token_loss * completion_mask).sum(dim=1) /
 completion_mask.sum(dim=1)).mean()
- # 純量
+ # 纯量
 
-# 計算用于記錄的核心指標（KL、奖励等也會記錄）
+# 计算用于记录的核心指标（KL、奖励等也会记录）
 with torch.no_grad():
-    # 計算裁剪比例
+    # 计算裁剪比例
     clip_frac = ((pg_losses2 > pg_losses1).float() * completion_mask).sum() / \
 completion_mask.sum()
 
-    # 計算近似 KL
+    # 计算近似 KL
     approx_kl = (0.5 * ((new_per_token_logps - per_token_logps)**2) * \
 completion_mask).sum() / completion_mask.sum()
 ```
 
-關于如何解讀这段程式碼的更多細節，請參閱上面的 PPO 一節。与 PPO 范例的核心差異如下：
+关于如何解读这段程序码的更多细节，请参阅上面的 PPO 一节。与 PPO 范例的核心差异如下：
 
-- **優勢計算（Advantage computation）**：GRPO 以群組为基準正規化奖励（對同一提示的多個生成取平均值与標準差），而不是使用學習到的價值函數作为基準線。
-- **没有價值網路（No value network）**：GRPO 完全移除價值模型，省去 `vf_loss` 及其相關複雜度。
-- **KL 懲罰的位置（KL penalty placement）**：GRPO 把 KL 懲罰直接加進損失，而不是從奖励中扣除（这是標準实现，但 KL 的施加方式還存在更多版本）。
+- **优势计算（Advantage computation）**：GRPO 以群组为基准正规化奖励（对同一提示的多个生成取平均值与标准差），而不是使用学习到的价值函数作为基准线。
+- **没有价值网路（No value network）**：GRPO 完全移除价值模型，省去 `vf_loss` 及其相关复杂度。
+- **KL 惩罚的位置（KL penalty placement）**：GRPO 把 KL 惩罚直接加进损失，而不是从奖励中扣除（这是标准实作，但 KL 的施加方式还存在更多版本）。
 
 #### 6.3.6.1 RLOO 与 GRPO（RLOO vs. GRPO）
 
-RLOO 的優勢更新和 GRPO 非常接近，凸顯出这兩個算法在概念上的相似性——只要把 PPO 式的裁剪与 KL 懲罰細節分開來看。具體來說，RLOO 的優勢是相对于一個与 GRPO 極为相似的基準線計算的——即該補全的奖励相对于同一問題其他補全的奖励。简明地說，RLOO 的優勢估計如下（扩充自 TRL 的实现）：
+RLOO 的优势更新和 GRPO 非常接近，凸显出这两个算法在概念上的相似性——只要把 PPO 式的裁剪与 KL 惩罚细节分开来看。具体来说，RLOO 的优势是相对于一个与 GRPO 极为相似的基准线计算的——即该补全的奖励相对于同一问题其他补全的奖励。简明地说，RLOO 的优势估计如下（扩充自 TRL 的实作）：
 
 ```python
-# rloo_k --> 每個提示的補全数量
-# rlhf_reward --> 起初是所有補全總奖励的平坦張量。長度 B = N x k
+# rloo_k --> 每个提示的补全数量
+# rlhf_reward --> 起初是所有补全总奖励的平坦张量。长度 B = N x k
 rlhf_reward = rlhf_reward.reshape(rloo_k, -1) #
-# 現在形狀为：(k, N)，每一欄 j 包含提示 j 的 k 個奖励。
+# 现在形状为：(k, N)，每一栏 j 包含提示 j 的 k 个奖励。
 
 baseline = (rlhf_reward.sum(0) - rlhf_reward) / (rloo_k - 1)
-# baseline --> 留一法（leave-one-out）基準線奖励。形狀：(k, N)
-#  baseline[i, j] 是提示 j 上所有 i' != i 樣本的平均奖励。
+# baseline --> 留一法（leave-one-out）基准线奖励。形状：(k, N)
+#  baseline[i, j] 是提示 j 上所有 i' != i 样本的平均奖励。
 
 advantages = rlhf_reward - baseline
-# advantages --> 相同形狀：(k, N)
+# advantages --> 相同形状：(k, N)
 
-advantages = advantages.flatten() # 与原始張量形狀相同
+advantages = advantages.flatten() # 与原始张量形状相同
 ```
 
-RLOO 其餘的实现細節，同樣遵循实现策略梯度時的其他取捨。
+RLOO 其余的实作细节，同样遵循实作策略梯度时的其他取舍。
 
-## 6.4 輔助主题（Auxiliary Topics）
+## 6.4 辅助主题（Auxiliary Topics）
 
-要精通策略梯度算法的應用，還有無數其他考量。此處我們討論成功部署策略梯度 RL 算法時，一些位于長尾的複雜細節。
+要精通策略梯度算法的应用，还有无数其他考量。此处我们讨论成功部署策略梯度 RL 算法时，一些位于长尾的复杂细节。
 
-### 6.4.1 廣義優勢估計（Generalized Advantage Estimation, GAE）
+### 6.4.1 广义优势估计（Generalized Advantage Estimation, GAE）
 
-廣義優勢估計（Generalized Advantage Estimation, GAE）是策略梯度算法計算優勢的另一種方法 [112]，能更好地平衡偏差与变异數之間的權衡。傳統的單步優勢估計可能引入過多偏差，而使用完整軌跡則常有高变异數的問題。GAE 計算多步優勢估計的指數加權平均，其中超參數 $\lambda$ 控制偏差–变异數的權衡——範圍從單步 TD（$\lambda = 0$）到完整軌跡回報（$\lambda = 1$）；$\lambda = 0.95$ 是 LLM 微调的常見預設值。
+广义优势估计（Generalized Advantage Estimation, GAE）是策略梯度算法计算优势的另一种方法 [112]，能更好地平衡偏差与变异数之间的权衡。传统的单步优势估计可能引入过多偏差，而使用完整轨迹则常有高变异数的问题。GAE 计算多步优势估计的指数加权平均，其中超参数 $\lambda$ 控制偏差–变异数的权衡——范围从单步 TD（$\lambda = 0$）到完整轨迹回报（$\lambda = 1$）；$\lambda = 0.95$ 是 LLM 微调的常见预设值。
 
-優勢估計可以有多種形式，我們可以定义一個 $n$ 步優勢估計器（類似本章開頭的 TD 殘差）如下：
+优势估计可以有多种形式，我们可以定义一个 $n$ 步优势估计器（类似本章开头的 TD 残差）如下：
 
 $$
 \hat{A}_t^{(n)} = \begin{cases} r_t + \gamma V(s_{t+1}) - V(s_t), & n = 1 \\ r_t + \gamma r_{t+1} + \gamma^2 V(s_{t+2}) - V(s_t), & n = 2 \\ \vdots & \\ r_t + \gamma r_{t+1} + \gamma^2 r_{t+2} + \cdots - V(s_t), & n = \infty \end{cases} \tag{76}
 $$
 
-这裡 $n$ 越短，变异數越低但偏差越高，因为我們把更多的學習能力歸于每一條軌跡——它可能會過擬合。GAE 試圖把这个公式推廣为一個加權的多步平均，而不是選定某個特定的 $n$。首先，我們必須定义預測價值的時序差分（temporal difference, TD）殘差：
+这里 $n$ 越短，变异数越低但偏差越高，因为我们把更多的学习能力归于每一条轨迹——它可能会过拟合。GAE 试图把这个公式推广为一个加权的多步平均，而不是选定某个特定的 $n$。首先，我们必须定义预测价值的时序差分（temporal difference, TD）残差：
 
 $$
 \delta_t^V = r_t + \gamma V(s_{t+1}) - V(s_t) \tag{77}
 $$
 
-为了利用它，我們引入另一個變數 $\lambda$ 作为 GAE 的混合參數。它會折成我們想要估計的未來優勢的指數衰減：
+为了利用它，我们引入另一个变数 $\lambda$ 作为 GAE 的混合参数。它会折成我们想要估计的未来优势的指数衰减：
 
 $$
 \begin{aligned}
@@ -1197,20 +1197,20 @@ $$
 \end{aligned} \tag{78}
 $$
 
-直覺上，这可以用來以優雅的方式平均多步的優勢估計。范例实现如下：
+直觉上，这可以用来以优雅的方式平均多步的优势估计。范例实作如下：
 
 ```python
-# LM RLHF 的 GAE（token 層級）
+# LM RLHF 的 GAE（token 层级）
 #
 # B：批次大小
-# L：長度
-# 輸入：
+# L：长度
+# 输入：
 #   rewards：  (B, L) 施加 KL 之后的逐 token 奖励
-#   values：   (B, L) 當前的 V_theta(s_t)
-#   done_mask：(B, L) 終止 token（EOS 或被懲罰的截斷）處为 1.0，其餘为 0.0
+#   values：   (B, L) 当前的 V_theta(s_t)
+#   done_mask：(B, L) 终止 token（EOS 或被惩罚的截断）处为 1.0，其余为 0.0
 #   gamma：float（通常为 1.0），
-#   lam（lambda 的縮寫）：float，位于 [0,1]
-#   （終止之后的填充應設 rewards=0、values=0）
+#   lam（lambda 的缩写）：float，位于 [0,1]
+#   （终止之后的填充应设 rewards=0、values=0）
 B, L = rewards.shape
 advantages = torch.zeros_like(rewards)
 next_v = torch.zeros(B, device=rewards.device, dtype=rewards.dtype)
@@ -1223,50 +1223,50 @@ for t in reversed(range(L)):
     advantages[:, t] = gae
     next_v = values[:, t]
 
-targets = advantages + values      # 價值回歸的 y_t
-advantages = advantages.detach()   # 用于策略損失
+targets = advantages + values      # 价值回归的 y_t
+advantages = advantages.detach()   # 用于策略损失
 ```
 
-这个反向迴圈累積時序差分（TD）誤差（$\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$），它衡量實際结果比價值函數的預測好或壞多少，并以 $(\gamma\lambda)^l$ 进行指數衰減。在終止 token 處，`not_done=0` 防止從後續狀態进行自舉（bootstrapping）并重置 GAE 累積器，因此每個回合的優勢是各自獨立計算的（由于迴圈是反向執行的，終止 token 會在回合邊界乾淨地截斷指數加權的累積——这使得这个实现對打包（packing）友善，能正確处理串接成一條的多個序列）。最終的 `targets` 作为另外训练的價值函數（在这个 GAE 迴圈之外學習）的回歸目標，而 detach 後的 `advantages` 用來加權策略梯度——之所以 detach，是为了讓策略更新不會把梯度反向傳播進價值網路。在语言模型的 RLHF 中，$\gamma = 1.0$ 很常見，因为回合是短的 token 序列，偏好無折扣的信用分配（credit assignment）（而且往往是所有 token 一起）。
+这个反向回圈累积时序差分（TD）误差（$\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$），它衡量实际结果比价值函数的预测好或坏多少，并以 $(\gamma\lambda)^l$ 进行指数衰减。在终止 token 处，`not_done=0` 防止从后续状态进行自举（bootstrapping）并重设 GAE 累积器，因此每个回合的优势是各自独立计算的（由于回圈是反向执行的，终止 token 会在回合边界干净地截断指数加权的累积——这使得这个实作对打包（packing）友善，能正确处理串接成一条的多个序列）。最终的 `targets` 作为另外训练的价值函数（在这个 GAE 回圈之外学习）的回归目标，而 detach 后的 `advantages` 用来加权策略梯度——之所以 detach，是为了让策略更新不会把梯度反向传播进价值网路。在语言模型的 RLHF 中，$\gamma = 1.0$ 很常见，因为回合是短的 token 序列，偏好无折扣的信用分配（credit assignment）（而且往往是所有 token 一起）。
 
-*延伸閱讀請見 [137]。*
+*延伸阅读请见 [137]。*
 
-### 6.4.2 雙重正则化（Double Regularization）
+### 6.4.2 双重正则化（Double Regularization）
 
-本章我們已看過兩種正则化。一種以步長約束的形式內建在 PPO 这類算法中，另一種則是相对于优化起點的、基于 KL 散度的距離懲罰。
+本章我们已看过两种正则化。一种以步长约束的形式内建在 PPO 这类算法中，另一种则是相对于优化起点的、基于 KL 散度的距离惩罚。
 
-深度强化學習中許多流行的策略梯度算法（包括 PPO 及其前身）的誕生，都源自于控制智慧體學習過程的需求。在 RLHF 中——如第 15 章「正则化」与第 3 章「训练总览」所深入討論的——本身就內建了一個正则化項，即相对于被微调的原始策略的距離懲罰。從这个觀點來看，PPO（具有内部步長正则化）与 REINFORCE（更簡單，且在特定超參數下 PPO 會退化为它）这類算法之間的差異，对于微调语言模型來說，遠不如從零開始训练智慧體時那麼重要。
+深度强化学习中许多流行的策略梯度算法（包括 PPO 及其前身）的诞生，都源自于控制智慧体学习过程的需求。在 RLHF 中——如第 15 章「正则化」与第 3 章「训练总览」所深入讨论的——本身就内建了一个正则化项，即相对于被微调的原始策略的距离惩罚。从这个观点来看，PPO（具有内部步长正则化）与 REINFORCE（更简单，且在特定超参数下 PPO 会退化为它）这类算法之间的差异，对于微调语言模型来说，远不如从零开始训练智慧体时那么重要。
 
-在 PPO 中，負責限制更新步長上限的目標稱为代理目標（surrogate objective）。要監控 PPO 的正则化對 RLHF 更新的影響程度，可以觀察許多流行实现中的 clip fraction 變數，也就是批次中機率比值落在裁剪區間之外的樣本百分比。这是 PPO 正則器可能生效頻率的有用代理指標，但并非每個这樣的樣本梯度都为零：只有在選中被裁剪的分支時，代理目標才會變平——例如比值高于 $1+\varepsilon$ 的正優勢樣本，或比值低于 $1-\varepsilon$ 的負優勢樣本。
+在 PPO 中，负责限制更新步长上限的目标称为代理目标（surrogate objective）。要监控 PPO 的正则化对 RLHF 更新的影响程度，可以观察许多流行实作中的 clip fraction 变数，也就是批次中机率比值落在裁剪区间之外的样本百分比。这是 PPO 正则器可能生效频率的有用代理指标，但并非每个这样的样本梯度都为零：只有在选中被裁剪的分支时，代理目标才会变平——例如比值高于 $1+\varepsilon$ 的正优势样本，或比值低于 $1-\varepsilon$ 的负优势样本。
 
-在语言模型的实务中，PPO 与 GRPO 这類算法通常每批次只執行一個梯度步，这意味着 PPO 原生的正则化從未生效（因为裁剪只可能在策略于批次內大幅改變時發生），而 KL 距離懲罰佔主導地位。不過这并非通則。例如，DAPO 每批次使用 16 個梯度步 [129]，而 Tülu 3 對 8B 与 70B 模型每批次使用 4 次 PPO 更新迭代，但對 405B 模型降为 1 次以維持训练稳定性 [6]。
+在语言模型的实务中，PPO 与 GRPO 这类算法通常每批次只执行一个梯度步，这意味着 PPO 原生的正则化从未生效（因为裁剪只可能在策略于批次内大幅改变时发生），而 KL 距离惩罚占主导地位。不过这并非通则。例如，DAPO 每批次使用 16 个梯度步 [129]，而 Tülu 3 对 8B 与 70B 模型每批次使用 4 次 PPO 更新迭代，但对 405B 模型降为 1 次以维持训练稳定性 [6]。
 
-### 6.4.3 延伸閱讀（Further Reading）
+### 6.4.3 延伸阅读（Further Reading）
 
-隨着 RLHF 鞏固了它在現代后训练（post-training）核心的地位，人們陸續提出其他策略梯度 RL 算法以及一般性的 RL 算法來改進训练流程，但它們尚未在主導最佳实务方面扮演核心角色。延伸閱讀的例子包括：
+随着 RLHF 巩固了它在现代后训练（post-training）核心的地位，人们陆续提出其他策略梯度 RL 算法以及一般性的 RL 算法来改进训练流程，但它们尚未在主导最佳实务方面扮演核心角色。延伸阅读的例子包括：
 
-- **成對近端策略优化（Pairwise Proximal Policy Optimization, P3O；Wu 等人，2023）** [138]：直接在 PPO 式的策略更新中使用成對数据，無需學習中介的奖励模型。
-- **軟性自適應策略优化（Soft Adaptive Policy Optimization, SAPO）** [139]：以平滑、由溫度控制的閘控（gating）取代 PPO/GRPO 式的硬裁剪，目標是建立連續的信賴域，在降低異策略 token 權重的同时，保留接近同策略的學習訊號。
-- 異策略的策略梯度算法可以实现更進一步的非同步训练，例如**對比策略梯度（Contrastive Policy Gradient, CoPG）** [140]（直接对齐算法 IPO 与普通策略梯度的推廣），Cohere 曾将其用于其 Command A 模型 [57]。
-- 也有其他为语言模型设计的 REINFORCE 算法实现，例如 **ReMax** [141]，它实现了一種專門为了因應奖励模型推断的不確定性來源而设计的基準線正規化。
-- 部分基礎模型，例如 Apple Intelligence Foundation Models [142] 或 Kimi k1.5 推理模型 [143]，使用了**鏡像下降策略优化（Mirror Descent Policy Optimization, MDPO）** [144] 的變體。这方面的基礎研究仍在持續發展中 [145]，但 Mirror Descent 是一種优化方法，而不直接是一種策略梯度算法。这裡的重點在于，它能以与既有 RL 基礎設施非常相似的方式替換使用。
-- **解耦裁剪与動態抽樣策略优化（Decoupled Clip and Dynamic sAmpling Policy Optimization, DAPO）**：針對推理语言模型提出對 GRPO 的 4 項修改，以更適應需要長軌跡、且需要提高新的、未被充分利用的 token 機率的場景 [129]。这些修改是：1、使用兩個不同的裁剪超參數 $\varepsilon_{\text{low}}$ 与 $\varepsilon_{\text{high}}$，讓 logratio 正側的裁剪可以踏出更大的步伐以利探索；2、動態抽樣，移除批次中所有奖励全为 0 或全为 1 的樣本（没有學習訊號）；3、使用前文「实现：GRPO」中討論的逐 token 損失；以及 4、對過長的樣本施加軟性懲罰，以避免從被截斷的答案中學習。
-- **基于價值的增強近端策略优化（Value-based Augmented Proximal Policy Optimization, VAPO）** [146]：結合 DAPO 的多項优化（包括更高的裁剪上限、token 層級策略梯度与不同的長度正規化）与 Value-Calibrated PPO [147] 的洞見，預先训练價值函數并使用長度自適應的 GAE，展示了基于價值的方法相对于 GRPO 的潛力。
+- **成对近端策略优化（Pairwise Proximal Policy Optimization, P3O；Wu 等人，2023）** [138]：直接在 PPO 式的策略更新中使用成对资料，无需学习中介的奖励模型。
+- **软性自适应策略优化（Soft Adaptive Policy Optimization, SAPO）** [139]：以平滑、由温度控制的闸控（gating）取代 PPO/GRPO 式的硬裁剪，目标是建立连续的信赖域，在降低异策略 token 权重的同时，保留接近同策略的学习讯号。
+- 异策略的策略梯度算法可以实现更进一步的非同步训练，例如**对比策略梯度（Contrastive Policy Gradient, CoPG）** [140]（直接对齐算法 IPO 与普通策略梯度的推广），Cohere 曾将其用于其 Command A 模型 [57]。
+- 也有其他为语言模型设计的 REINFORCE 算法实作，例如 **ReMax** [141]，它实作了一种专门为了因应奖励模型推论的不确定性来源而设计的基准线正规化。
+- 部分基础模型，例如 Apple Intelligence Foundation Models [142] 或 Kimi k1.5 推理模型 [143]，使用了**镜像下降策略优化（Mirror Descent Policy Optimization, MDPO）** [144] 的变体。这方面的基础研究仍在持续发展中 [145]，但 Mirror Descent 是一种优化方法，而不直接是一种策略梯度算法。这里的重点在于，它能以与既有 RL 基础设施非常相似的方式替换使用。
+- **解耦裁剪与动态抽样策略优化（Decoupled Clip and Dynamic sAmpling Policy Optimization, DAPO）**：针对推理语言模型提出对 GRPO 的 4 项修改，以更适应需要长轨迹、且需要提高新的、未被充分利用的 token 机率的场景 [129]。这些修改是：1、使用两个不同的裁剪超参数 $\varepsilon_{\text{low}}$ 与 $\varepsilon_{\text{high}}$，让 logratio 正侧的裁剪可以踏出更大的步伐以利探索；2、动态抽样，移除批次中所有奖励全为 0 或全为 1 的样本（没有学习讯号）；3、使用前文「实作：GRPO」中讨论的逐 token 损失；以及 4、对过长的样本施加软性惩罚，以避免从被截断的答案中学习。
+- **基于价值的增强近端策略优化（Value-based Augmented Proximal Policy Optimization, VAPO）** [146]：结合 DAPO 的多项优化（包括更高的裁剪上限、token 层级策略梯度与不同的长度正规化）与 Value-Calibrated PPO [147] 的洞见，预先训练价值函数并使用长度自适应的 GAE，展示了基于价值的方法相对于 GRPO 的潜力。
 
-## 6.5 建議实验（Suggested Experiments）
+## 6.5 建议实验（Suggested Experiments）
 
-隨附的实现程式碼位于 `code/policy_gradients/`，是为小型、可觀察的 RL 训练而设计。預設设置檔會在來自 `reasoning-gym` 的 `spell_backward` 程序性任務上训练 `Qwen/Qwen3-1.7B`；这是很好的第一個練習，因为失敗与部分進展都很容易查看。
+随附的实作程序码位于 `code/policy_gradients/`，是为小型、可观察的 RL 训练而设计。预设设定档会在来自 `reasoning-gym` 的 `spell_backward` 程序性任务上训练 `Qwen/Qwen3-1.7B`；这是很好的第一个练习，因为失败与部分进展都很容易检视。
 
-1. **用 GRPO 執行單字反轉任務。**
+1. **用 GRPO 执行单字反转任务。**
 
    ```bash
    cd code/
    uv run python -m policy_gradients.train --config policy_gradients/configs/grpo.yaml
    ```
 
-   追蹤 `avg_correctness`、`avg_format` 与 `avg_binary`。第一個值得問的問題是每個提示群組是否包含對比：如果抽樣出的補全全對或全錯，群組相對（group-relative）更新幾乎没有學習訊號。
+   追踪 `avg_correctness`、`avg_format` 与 `avg_binary`。第一个值得问的问题是每个提示群组是否包含对比：如果抽样出的补全全对或全错，群组相对（group-relative）更新几乎没有学习讯号。
 
-2. **比較群組相對与單一樣本估計器。** 執行對應的起始设置檔：
+2. **比较群组相对与单一样本估计器。** 执行对应的起始设定档：
 
    ```bash
    cd code/
@@ -1275,11 +1275,11 @@ advantages = advantages.detach()   # 用于策略損失
    uv run python -m policy_gradients.train --config policy_gradients/configs/grpo.yaml
    ```
 
-   比較正確性訊號改善的速度，以及損失的雜訊程度。相較于只看公式，RLOO 与 GRPO 应该能讓提示內基準線（within-prompt baseline）的角色具體得多。
+   比较正确性讯号改善的速度，以及损失的杂讯程度。相较于只看公式，RLOO 与 GRPO 应该能让提示内基准线（within-prompt baseline）的角色具体得多。
 
-3. **掃描對比旋鈕。** 复制 `policy_gradients/configs/grpo.yaml`，并改變 `num_rollouts`、`temperature`、`data.size` 与 `format_weight`。較小的 `num_rollouts` 會降低群組對比；溫度太低可能使樣本塌縮（collapse）；溫度太高則會产生太多格式錯誤的答案。这是理解为什么 RLVR 配方常在動优化器之前，先在抽樣设置上投入大量心力的最簡單方式。
+3. **扫描对比旋钮。** 复制 `policy_gradients/configs/grpo.yaml`，并改变 `num_rollouts`、`temperature`、`data.size` 与 `format_weight`。较小的 `num_rollouts` 会降低群组对比；温度太低可能使样本塌缩（collapse）；温度太高则会产生太多格式错误的答案。这是理解为什么 RLVR 配方常在动优化器之前，先在抽样设定上投入大量心力的最简单方式。
 
-4. **從玩具奖励邁向數學。** 对于 GSM8K 式的实验，先從 `code/reward_models/train_orm.py` 与 `code/rejection_sampling/` 的范例着手，再新增新的線上 RL 環境。一個不錯的貢獻方向是：一個小型的 `reasoning-gym` 或 GSM8K 策略梯度设置檔，能在 sub-1B 的 Qwen 模型上執行，并回報相同的群組對比診斷指標。
+4. **从玩具奖励迈向数学。** 对于 GSM8K 式的实验，先从 `code/reward_models/train_orm.py` 与 `code/rejection_sampling/` 的范例着手，再新建新的线上 RL 环境。一个不错的贡献方向是：一个小型的 `reasoning-gym` 或 GSM8K 策略梯度设定档，能在 sub-1B 的 Qwen 模型上执行，并回报相同的群组对比诊断指标。
 
 </script>
 <script src="../assets/marked.min.js"></script>

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  // 表 9（Olmo 3）：各評測在多次推断執行之间的標準差
+  // 表 9（Olmo 3）：各評測在多次推理执行之间的標準差
   var BENCH = [
     { name: 'GPQA', sigma: 1.48, group: 'high' },
     { name: 'AlpacaEval 3', sigma: 1.24, group: 'high' },
@@ -20,8 +20,8 @@
   ];
   var GROUP = {
     high: { label: '高变异', color: 'var(--accent-2)' },
-    stable: { label: '稳定', color: 'var(--accent)' },
-    vstable: { label: '非常稳定', color: 'var(--link)' }
+    stable: { label: '穩定', color: 'var(--accent)' },
+    vstable: { label: '非常穩定', color: 'var(--link)' }
   };
 
   function h(tag, attrs) {
@@ -119,8 +119,8 @@
 
   window.ChapterWidget = {
     title: '「分数差有意義吗？」評測变异查核器',
-    intro: '表 9 显示：同一个模型重複評測，分数本来就会抖动。选一个評測、輸入兩个模型的分数，' +
-      '看看这个差距是超出雜訊范围的真实差异，还是單次執行的抽样運气。',
+    intro: '表 9 显示：同一个模型重複評測，分数本来就会抖动。选一个評測、输入兩个模型的分数，' +
+      '看看这个差距是超出雜訊范围的真实差异，还是單次执行的采样運气。',
     render: function (root) {
       var panel = h('div', { className: 'widget-panel' });
       var select = h('select', { 'aria-label': '选择評測基準' });
@@ -144,8 +144,8 @@
         h('div', { text: '表 9 全覽：各評測的標準差 σ（由高到低）', style: 'font-weight:700;margin-bottom:.6em;' }));
       var barsBox = h('div');
       barsPanel.appendChild(barsBox);
-      barsPanel.appendChild(h('p', { text: '注意：LiveCodeBench 与 AIME 24 之所以落在稳定區，是因为表中数字已是 Avg@10／Avg@32' +
-        '（重複執行取平均）后的结果——單次執行其实吵得多。降噪可以買，但成本很容易迅速膨脹（见 C.2）。',
+      barsPanel.appendChild(h('p', { text: '注意：LiveCodeBench 与 AIME 24 之所以落在穩定區，是因为表中数字已是 Avg@10／Avg@32' +
+        '（重複执行取平均）后的结果——單次执行其实吵得多。降噪可以買，但成本很容易迅速膨脹（见 C.2）。',
         style: 'font-size:.8rem;color:var(--fg-muted);margin:.7em 0 0;' }));
 
       function check() {
@@ -155,7 +155,7 @@
         barsBox.appendChild(buildBars(Number(select.value)));
         if (!isFinite(a) || !isFinite(b)) {
           card.innerHTML = '';
-          card.appendChild(h('p', { text: '請先輸入兩个模型的分数。', style: 'color:var(--accent-2);margin:0;' }));
+          card.appendChild(h('p', { text: '請先输入兩个模型的分数。', style: 'color:var(--accent-2);margin:0;' }));
           svgBox.textContent = '';
           return;
         }
@@ -164,16 +164,16 @@
         var verdict, tone, advice;
         if (diff === 0) {
           verdict = '兩模型分数相同——沒有差距可以查核'; tone = 'var(--fg-muted)';
-          advice = '分数打平不代表能力相同：在 ' + bm.name + ' 上單次執行本来就会抖动約 ±' + bm.sigma.toFixed(2) +
+          advice = '分数打平不代表能力相同：在 ' + bm.name + ' 上單次执行本来就会抖动約 ±' + bm.sigma.toFixed(2) +
             ' 分。如 C.3 所建議，重要決策要多跑幾个 seed 取平均再比較。';
         } else if (k < 1) {
           verdict = '差 ' + diff.toFixed(1) + ' 分 = ' + k.toFixed(1) + 'σ——很可能只是雜訊'; tone = 'var(--accent-2)';
-          advice = '这个差距完全落在 ' + bm.name + ' 單次執行的正常抖动范围内，換个隨机種子重跑可能就反轉了。' +
+          advice = '这个差距完全落在 ' + bm.name + ' 單次执行的正常抖动范围内，換个隨机種子重跑可能就反轉了。' +
             '如 C.3 所建議：重要決策要多跑幾个 seed 取平均，別憑單次分数选模型。';
         } else if (k < 2) {
           verdict = '差 ' + diff.toFixed(1) + ' 分 = ' + k.toFixed(1) + 'σ——灰色地带，不足以下結论'; tone = 'var(--accent-2)';
-          advice = '差距介于 1σ 与 2σ 之间：可能是真实进步，也可能是抽样運气。依 C.3 的建議，' +
-            '重要決策要多跑幾个 seed 取平均，看差距是否稳定維持后再拍板。';
+          advice = '差距介于 1σ 与 2σ 之间：可能是真实进步，也可能是采样運气。依 C.3 的建議，' +
+            '重要決策要多跑幾个 seed 取平均，看差距是否穩定維持后再拍板。';
         } else {
           verdict = '差 ' + diff.toFixed(1) + ' 分 = ' + k.toFixed(1) + 'σ——大概率是真实差异'; tone = 'var(--accent)';
           advice = '差距远超出 ' + bm.name + ' 的單次抖动（σ = ' + bm.sigma.toFixed(2) + '），大概率反映真实能力差异。' +
