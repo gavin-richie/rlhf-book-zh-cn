@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Locale } from "@/i18n/locale-context";
 import LocaleSwitcher from "./LocaleSwitcher";
+import ThemeToggle from "./ThemeToggle";
 
 interface TopBarProps {
   locale: Locale;
@@ -49,6 +50,7 @@ export default function TopBar({ locale, current, prev, next }: TopBarProps) {
           )}
         </div>
         <LocaleSwitcher />
+        <ThemeToggle />
         <Link
           href={githubRepo}
           target="_blank"

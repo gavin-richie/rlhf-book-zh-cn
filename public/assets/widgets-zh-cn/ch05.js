@@ -1,10 +1,10 @@
-/* 第 5 章交互元件：Bradley-Terry 獎勵模型探索器 */
+/* 第 5 章互动元件：Bradley-Terry 奖励模型探索器 */
 (function () {
   'use strict';
 
-  // ---------- 数學工具 ----------
+  // ---------- 数学工具 ----------
   const sigmoid = (x) => 1 / (1 + Math.exp(-x));
-  const softplus = (x) => (x > 30 ? x : Math.log1p(Math.exp(x))); // 数值穩定
+  const softplus = (x) => (x > 30 ? x : Math.log1p(Math.exp(x))); // 数值稳定
   const nll = (d) => softplus(-d); // -log σ(d)
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const fmt = (v, d) => (Object.is(v, -0) ? 0 : v).toFixed(d == null ? 3 : d);
@@ -64,7 +64,7 @@
 
     const sRc = makeSlider('被选回复分数 r<sub>c</sub>', -5, 5, 0.1, st.rc, (v) => { st.rc = v; update(); });
     const sRr = makeSlider('被拒回复分数 r<sub>r</sub>', -5, 5, 0.1, st.rr, (v) => { st.rr = v; update(); });
-    const sM = makeSlider('偏好边際 m（Llama 2 式，0 = 关闭）', 0, 3, 0.1, st.m, (v) => { st.m = v; update(); });
+    const sM = makeSlider('偏好边际 m（Llama 2 式，0 = 关闭）', 0, 3, 0.1, st.m, (v) => { st.m = v; update(); });
     const controls = el('div', { class: 'widget-panel' }, [el('div', { class: 'widget-row' }, [sRc.lab, sRr.lab, sM.lab])]);
 
     const stD = statBox('分差 Δ = r_c − r_r'), stP = statBox('偏好概率 P = σ(Δ)'), stL = statBox('NLL 损失 −log σ(Δ − m)');
@@ -104,27 +104,27 @@
       dotTag.setAttribute('x', clamp(sx(dz) + 10, PAD.l, W - 130)); dotTag.setAttribute('y', clamp(sy(P) - 10, 22, H - PAD.b - 6));
       dotTag.textContent = 'Δ=' + fmt(dz, 2) + ', P=' + fmt(P, 2);
       let msg;
-      if (Math.abs(dz) < 0.15) msg = '分差 ≈ 0：模型完全无法區分兩个回复，P ≈ 0.5，损失 ≈ log 2 ≈ 0.693——隨机猜測的水準，也是獎勵头剛初始化、尚未训练时的典型状态。';
-      else if (dz >= 4) msg = '分差很大：P = ' + fmt(P) + '，sigmoid 已飽和，损失趨近 0。这筆样本幾乎不再产生梯度，繼續拉大分差的边際效益極小。';
-      else if (dz >= 1) msg = '模型已明確偏好被选回复（P = ' + fmt(P, 2) + '），损失降至 ' + fmt(L) + '。−log σ(Δ) 的梯度隨 Δ 增大而衰減，之后的更新会越来越溫和。';
-      else if (dz > 0) msg = '模型略偏好被选回复，但信心不足：P 只比 0.5 高一點，损失仍接近 0.693，梯度会持續推动 r_c 上升、r_r 下降以擴大分差。';
-      else if (dz > -4) msg = '排序錯了：模型給被拒回复更高分（P = ' + fmt(P, 2) + ' < 0.5），损失 ' + fmt(L) + ' 高于 0.693，而且錯得越多梯度越大——这筆样本会被強力修正。';
-      else msg = '嚴重排反：σ(Δ) ≈ 0，−log σ(Δ) 近似线性成长（≈ |Δ| = ' + fmt(-dz, 1) + '），这筆样本会主导整个批次的梯度。';
-      if (st.m > 0) msg += ' 目前打开边際 m = ' + fmt(st.m, 1) + '：损失改以 σ(Δ − m) 計算（式 19），chosen 至少要高出 ' + fmt(st.m, 1) + ' 分损失才会壓低——标注的偏好強度越大，请求的分差就越大。';
+      if (Math.abs(dz) < 0.15) msg = '分差 ≈ 0：模型完全无法区分两个回复，P ≈ 0.5，损失 ≈ log 2 ≈ 0.693——随机猜测的水准，也是奖励头刚初始化、尚未训练时的典型状态。';
+      else if (dz >= 4) msg = '分差很大：P = ' + fmt(P) + '，sigmoid 已饱和，损失趋近 0。这笔样本几乎不再产生梯度，继续拉大分差的边际效益极小。';
+      else if (dz >= 1) msg = '模型已明确偏好被选回复（P = ' + fmt(P, 2) + '），损失降至 ' + fmt(L) + '。−log σ(Δ) 的梯度随 Δ 增大而衰减，之后的更新会越来越温和。';
+      else if (dz > 0) msg = '模型略偏好被选回复，但信心不足：P 只比 0.5 高一点，损失仍接近 0.693，梯度会持续推动 r_c 上升、r_r 下降以扩大分差。';
+      else if (dz > -4) msg = '排序错了：模型给被拒回复更高分（P = ' + fmt(P, 2) + ' < 0.5），损失 ' + fmt(L) + ' 高于 0.693，而且错得越多梯度越大——这笔样本会被强力修正。';
+      else msg = '严重排反：σ(Δ) ≈ 0，−log σ(Δ) 近似线性成长（≈ |Δ| = ' + fmt(-dz, 1) + '），这笔样本会主导整个批次的梯度。';
+      if (st.m > 0) msg += ' 目前开启边际 m = ' + fmt(st.m, 1) + '：损失改以 σ(Δ − m) 计算（式 19），chosen 至少要高出 ' + fmt(st.m, 1) + ' 分损失才会压低——标注的偏好强度越大，要求的分差就越大。';
       interp.innerHTML = '<strong>解读：</strong>' + msg;
     }
     update();
     return el('div', { style: 'display:flex; flex-direction:column; gap:1rem;' }, [eqPanel, controls, stats, chartPanel, interp]);
   }
 
-  // ================= 分页 2：训练獎勵模型 =================
+  // ================= 分页 2：训练奖励模型 =================
   const PAIRS = [
-    { q: '什么是獎勵模型？', c: '獎勵模型讀入提示与回复，輸出一个純量分数，作为 RLHF 下游优化的代理訊號。', r: '獎勵模型就是一種会給獎勵的模型。', qc: 2.5, qr: -1.5 },
+    { q: '什么是奖励模型？', c: '奖励模型读入提示与回复，输出一个标量分数，作为 RLHF 下游优化的代理信号。', r: '奖励模型就是一种会给奖励的模型。', qc: 2.5, qr: -1.5 },
     { q: '把「今天天气很好」翻成英文。', c: 'The weather is really nice today.', r: 'Today weather very good.', qc: 1.5, qr: -0.5 },
-    { q: '台北 101 有多高？', c: '台北 101 高 508 公尺，2004 年落成时是世界第一高樓。', r: '印象中大概五百公尺左右吧。', qc: 2.0, qr: 0.8 },
-    { q: '推薦一部科幻电影。', c: '推薦《星際效應》：黑洞的視覺呈現与配樂都極为出色。', r: '推薦《駭客任务》，很經典。', qc: 1.2, qr: 0.7 },
-    { q: '如何煮出好吃的白飯？', c: '洗米后以 1:1.1 的水量浸泡二十分钟再炊煮，起鍋前再燜十分钟。', r: '把米加水丟进电鍋按下去就好。', qc: 1.8, qr: 0.2 },
-    { q: '寫一句鼓勵人的話。', c: '每一步微小的前进，都是明天回头时最好的风景。', r: '加油。', qc: 1.0, qr: -0.8 },
+    { q: '台北 101 有多高？', c: '台北 101 高 508 公尺，2004 年落成时是世界第一高楼。', r: '印象中大概五百公尺左右吧。', qc: 2.0, qr: 0.8 },
+    { q: '推荐一部科幻电影。', c: '推荐《星际效应》：黑洞的视觉呈现与配乐都极为出色。', r: '推荐《骇客任务》，很经典。', qc: 1.2, qr: 0.7 },
+    { q: '如何煮出好吃的白饭？', c: '洗米后以 1:1.1 的水量浸泡二十分钟再炊煮，起锅前再焖十分钟。', r: '把米加水丢进电锅按下去就好。', qc: 1.8, qr: 0.2 },
+    { q: '写一句鼓励人的话。', c: '每一步微小的前进，都是明天回头时最好的风景。', r: '加油。', qc: 1.0, qr: -0.8 },
   ];
   PAIRS.forEach((p) => { p.gap = p.qc - p.qr; p.pstar = sigmoid(p.gap); });
   const FLOOR = PAIRS.reduce((s, p) => s + (p.pstar * nll(p.gap) + (1 - p.pstar) * nll(-p.gap)), 0) / PAIRS.length;
@@ -141,21 +141,21 @@
     tex(eqMain, '\\mathcal{L} = -\\big[p^{*}\\log\\sigma(\\Delta) + (1-p^{*})\\log\\sigma(-\\Delta)\\big],\\qquad ' +
       'r_c \\mathrel{+}= \\eta\\,(p^{*} - \\sigma(\\Delta)),\\quad r_r \\mathrel{-}= \\eta\\,(p^{*} - \\sigma(\\Delta))');
     const eqNote = el('p', { style: 'margin:.3rem 0 0; font-size:.85rem; color:var(--fg-muted);',
-      text: '每一對回复各有「隐藏真实品质」q。标注者依 Bradley-Terry 模型行事：把品质較高者选为 chosen 的比例为 p* = σ(q_c − q_r)。上式即 BT 的 NLL 损失對 p* 取期望后的解析梯度更新（η = ' + LR + '）。' });
+      text: '每一对回复各有「隐藏真实品质」q。标注者依 Bradley-Terry 模型行事：把品质较高者选为 chosen 的比例为 p* = σ(q_c − q_r)。上式即 BT 的 NLL 损失对 p* 取期望后的解析梯度更新（η = ' + LR + '）。' });
     const eqPanel = el('div', { class: 'widget-panel', style: 'overflow-x:auto;' }, [eqMain, eqNote]);
 
     const btnStep = el('button', { type: 'button', text: '训练一步' });
     const btnAuto = el('button', { type: 'button', text: '自动训练 ' + AUTO_STEPS + ' 步' });
     const btnShift = el('button', { type: 'button', text: '所有分数 +1' });
-    const btnReset = el('button', { type: 'button', text: '重置' });
-    const stStep = statBox('训练步数'), stLoss = statBox('平均 BT 损失'), stFloor = statBox('雜訊下限（标注不一致）');
+    const btnReset = el('button', { type: 'button', text: '重设' });
+    const stStep = statBox('训练步数'), stLoss = statBox('平均 BT 损失'), stFloor = statBox('噪声下限（标注不一致）');
     stFloor.v.textContent = fmt(FLOOR);
     const controls = el('div', { class: 'widget-panel' }, [
       el('div', { class: 'widget-row', style: 'gap:.5rem;' }, [btnStep, btnAuto, btnShift, btnReset]),
       el('div', { class: 'widget-row', style: 'margin-top:.6rem;' }, [stStep.box, stLoss.box, stFloor.box]),
     ]);
 
-    // ---- 條狀图：12 个 reward ----
+    // ---- 条状图：12 个 reward ----
     const W = 560, BH = 250, BP = { l: 46, r: 14, t: 16, b: 34 }, Y = 3.2;
     const by = (v) => BP.t + (1 - (clamp(v, -Y, Y) + Y) / (2 * Y)) * (BH - BP.t - BP.b);
     const bars = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + BH, style: 'width:100%; height:auto; display:block;' });
@@ -174,7 +174,7 @@
       const tc = svgEl('line', { x1: x0 + gw * 0.12, x2: x0 + gw * 0.18 + bw + gw * 0.06, stroke: 'var(--fg)', 'stroke-width': 1.4, 'stroke-dasharray': '4 3', opacity: 0.7 });
       const tr = svgEl('line', { x1: x0 + gw * 0.5, x2: x0 + gw * 0.56 + bw + gw * 0.06, stroke: 'var(--fg)', 'stroke-width': 1.4, 'stroke-dasharray': '4 3', opacity: 0.7 });
       bars.appendChild(bc); bars.appendChild(br); bars.appendChild(tc); bars.appendChild(tr);
-      bars.appendChild(svgText({ x: x0 + gw / 2, y: BH - BP.b + 16, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--fg-muted)' }, '第 ' + (i + 1) + ' 對'));
+      bars.appendChild(svgText({ x: x0 + gw / 2, y: BH - BP.b + 16, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--fg-muted)' }, '第 ' + (i + 1) + ' 对'));
       const hit = svgEl('rect', { x: x0, y: 0, width: gw, height: BH, fill: 'transparent', style: 'cursor:pointer;' });
       hit.addEventListener('click', () => { st.sel = i; update(); });
       bars.appendChild(hit);
@@ -184,7 +184,7 @@
     [['var(--accent)', 'chosen（被选）'], ['var(--accent-2)', 'rejected（被拒）']].forEach(([c, t]) => {
       legend.appendChild(el('span', {}, [el('span', { style: 'display:inline-block; width:.9em; height:.9em; border-radius:3px; background:' + c + '; margin-right:.35em; vertical-align:-.1em;' }), el('span', { text: t })]));
     });
-    legend.appendChild(el('span', { text: '┄ 收斂目标：該對平均值 ± (q_c − q_r)/2（点击任一對看内容）' }));
+    legend.appendChild(el('span', { text: '┄ 收敛目标：该对平均值 ± (q_c − q_r)/2（点击任一对看内容）' }));
     const barPanel = el('div', { class: 'widget-panel' }, [bars, legend]);
 
     // ---- 平均损失曲线 ----
@@ -196,7 +196,7 @@
       loss.appendChild(svgText({ x: LP.l - 7, y: ly(v) + 4, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--fg-muted)' }, v));
     });
     loss.appendChild(svgEl('line', { x1: LP.l, y1: ly(FLOOR), x2: W - LP.r, y2: ly(FLOOR), stroke: 'var(--accent-2)', 'stroke-dasharray': '5 4' }));
-    loss.appendChild(svgText({ x: W - LP.r - 4, y: ly(FLOOR) - 5, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--accent-2)' }, '雜訊下限 ' + fmt(FLOOR, 2) + '（p* < 1 造成）'));
+    loss.appendChild(svgText({ x: W - LP.r - 4, y: ly(FLOOR) - 5, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--accent-2)' }, '噪声下限 ' + fmt(FLOOR, 2) + '（p* < 1 造成）'));
     loss.appendChild(svgText({ x: (LP.l + W - LP.r) / 2, y: LH - 3, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--fg-muted)' }, '训练步数 → 平均损失'));
     const lossPath = svgEl('path', { fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2 }); loss.appendChild(lossPath);
     const lossPanel = el('div', { class: 'widget-panel' }, [loss]);
@@ -223,7 +223,7 @@
     });
     btnShift.addEventListener('click', () => {
       PAIRS.forEach((_, i) => { st.rc[i] += 1; st.rr[i] += 1; });
-      st.note = '剛才把 12 个分数全部 +1：所有分差 Δ 不变，偏好概率与损失也「完全不变」——BT 獎勵沒有絕對零點，只有差值有意義。';
+      st.note = '刚才把 12 个分数全部 +1：所有分差 Δ 不变，偏好概率与损失也「完全不变」——BT 奖励没有绝对零点，只有差值有意义。';
       update();
     });
     btnReset.addEventListener('click', () => {
@@ -249,31 +249,31 @@
       lossPath.setAttribute('d', history.map((v, i) =>
         (i ? 'L' : 'M') + (LP.l + (i / span) * (W - LP.l - LP.r)).toFixed(1) + ',' + ly(v).toFixed(1)).join(' '));
       const p = PAIRS[st.sel], i = st.sel, dz = st.rc[i] - st.rr[i];
-      detail.innerHTML = '<strong>第 ' + (i + 1) + ' 對</strong>｜提示：「' + p.q + '」<br>' +
+      detail.innerHTML = '<strong>第 ' + (i + 1) + ' 对</strong>｜提示：「' + p.q + '」<br>' +
         '<span style="color:var(--accent);">chosen（r = ' + fmt(st.rc[i], 2) + '）：</span>' + p.c + '<br>' +
         '<span style="color:var(--accent-2);">rejected（r = ' + fmt(st.rr[i], 2) + '）：</span>' + p.r + '<br>' +
         '<span style="color:var(--fg-muted);">隐藏品质差 q_c − q_r = ' + fmt(p.gap, 1) + ' → 标注一致率 p* = ' + fmt(p.pstar, 3) +
-        '；目前學到 Δ = ' + fmt(dz, 2) + '（收斂时 Δ → ' + fmt(p.gap, 1) + '），該對损失 = ' + fmt(pairLoss(i)) + '。</span>';
+        '；目前学到 Δ = ' + fmt(dz, 2) + '（收敛时 Δ → ' + fmt(p.gap, 1) + '），该对损失 = ' + fmt(pairLoss(i)) + '。</span>';
       let msg;
-      if (st.step === 0) msg = '尚未训练：12 个 reward 全为 0，每一對的 P 都是 0.5，平均损失 = log 2 ≈ 0.693。按「训练一步」看看解析梯度怎么推动分数。';
-      else if (L - FLOOR < 0.02) msg = '已貼近雜訊下限（虛线）：损失降不下去了，因为偏好标注本身就不一致（p* < 1）。此时每一對學到的分差 Δ ≈ 真实品质差 q_c − q_r，但「絕對分数」停在任意位置——每一對的平均值從训练开始就沒动过。';
-      else if (L - FLOOR < 0.1) msg = '接近收斂：品质差大的對（如第 1 對，p* ≈ 0.98）分差拉得又快又开；品质差小的對（如第 4 對，p* ≈ 0.62）梯度早早变小、分差維持小——BT 损失自动把「标注有多一致」轉譯成「分差該多大」。';
-      else msg = '训练中（第 ' + st.step + ' 步）：每一步 chosen 上升、rejected 等量下降，兩者的平均恒为 0——梯度 η(p* − σ(Δ)) 只作用在「差值」上，模型從头到尾學的都是相對排序。';
+      if (st.step === 0) msg = '尚未训练：12 个 reward 全为 0，每一对的 P 都是 0.5，平均损失 = log 2 ≈ 0.693。按「训练一步」看看解析梯度怎么推动分数。';
+      else if (L - FLOOR < 0.02) msg = '已贴近噪声下限（虚线）：损失降不下去了，因为偏好标注本身就不一致（p* < 1）。此时每一对学到的分差 Δ ≈ 真实品质差 q_c − q_r，但「绝对分数」停在任意位置——每一对的平均值从训练开始就没动过。';
+      else if (L - FLOOR < 0.1) msg = '接近收敛：品质差大的对（如第 1 对，p* ≈ 0.98）分差拉得又快又开；品质差小的对（如第 4 对，p* ≈ 0.62）梯度早早变小、分差维持小——BT 损失自动把「标注有多一致」转译成「分差该多大」。';
+      else msg = '训练中（第 ' + st.step + ' 步）：每一步 chosen 上升、rejected 等量下降，两者的平均恒为 0——梯度 η(p* − σ(Δ)) 只作用在「差值」上，模型从头到尾学的都是相对排序。';
       interp.innerHTML = '<strong>解读：</strong>' + msg +
         (st.note ? '<br><strong>平移实验：</strong>' + st.note : '') +
-        '<br><strong>教學重點：</strong>獎勵分数是從成對比較中「湧現」的相對量：對每个分数加同一常量 c，σ(Δ) 与损失完全不变（式 13）——所以單一分数沒有絕對意義，跨模型、甚至跨提示的分数都不能直接比大小。';
+        '<br><strong>教学重点：</strong>奖励分数是从成对比较中「涌现」的相对量：对每个分数加同一常量 c，σ(Δ) 与损失完全不变（式 13）——所以单一分数没有绝对意义，跨模型、甚至跨提示的分数都不能直接比大小。';
     }
     update();
     return el('div', { style: 'display:flex; flex-direction:column; gap:1rem;' }, [eqPanel, controls, barPanel, lossPanel, detail, interp]);
   }
 
-  // ================= 元件本体（分页籤） =================
+  // ================= 元件本体（分页签） =================
   window.ChapterWidget = {
-    title: 'Bradley-Terry 獎勵模型探索器',
-    intro: '分页 1：拖动被选／被拒回复的分数，看 sigmoid 如何把分差变成偏好概率与 NLL 损失；分页 2：在 6 筆繁中偏好對上用解析梯度实際训练 12 个純量 reward，觀察分数如何從比較中「湧現」。',
+    title: 'Bradley-Terry 奖励模型探索器',
+    intro: '分页 1：拖动被选／被拒回复的分数，看 sigmoid 如何把分差变成偏好概率与 NLL 损失；分页 2：在 6 笔繁中偏好对上用解析梯度实际训练 12 个标量 reward，观察分数如何从比较中「涌现」。',
     render(root) {
       const panels = [buildTab1(), buildTab2()];
-      const tabBtns = ['1｜偏好概率', '2｜训练獎勵模型'].map((t, i) => {
+      const tabBtns = ['1｜偏好概率', '2｜训练奖励模型'].map((t, i) => {
         const b = el('button', { type: 'button', text: t, 'aria-selected': 'false' });
         b.addEventListener('click', () => setTab(i));
         return b;

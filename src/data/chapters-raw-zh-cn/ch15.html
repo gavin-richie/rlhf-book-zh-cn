@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hans">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -55,7 +55,7 @@ $$\mathcal{D}_{\text{KL}}(P\|Q) = \sum_{x \in \mathcal{X}} P(x) \log\left(\frac{
 
 在 RLHF 中，我们关心的两个分布通常是新模型版本的分布（例如 $P(x)$）与参考策略的分布（例如 $Q(x)$）。不同的优化器会使用不同的 KL 方向。本书通篇使用的最常见「KL 惩罚」（KL Penalty），称为对参考策略的反向 KL（reverse KL）。实务上，这可以简化为一个蒙地卡罗估计（Monte Carlo estimate）：从 RL 模型取样词元，再由参考模型计算其机率。直观来说，这种反向 KL 具有一个数值性质：当新模型 $P$（或 $\pi_{\text{RL}}$）将大量机率质量放在原始参考模型指派低机率的区域时，就会施加很大的惩罚。
 
-另一个 KL 方向在机器学习中仍然常被使用，例如某些 RL 算法内部的信赖区域（trust region）计算。这种惩罚直观上惩罚的是：新模型的更新*没有*将机率指派给 $Q$（或 $\pi_{\text{ref}}$）中的高概度（high-likelihood）区域。这更接近于蒸馏（distillation）或行为复制（behavioral cloning）所使用的目标。
+另一个 KL 方向在机器学习中仍然常被使用，例如某些 RL 演算法内部的信赖区域（trust region）计算。这种惩罚直观上惩罚的是：新模型的更新*没有*将机率指派给 $Q$（或 $\pi_{\text{ref}}$）中的高概度（high-likelihood）区域。这更接近于蒸馏（distillation）或行为复制（behavioral cloning）所使用的目标。
 
 ### 15.1.1 参考模型到生成内容（Reference Model to Generations）
 
@@ -93,7 +93,7 @@ kl_approx = seq_logprob - ref_seq_logprob
 kl_full   = F.kl_div(ref_logprobs, logprobs, reduction='batchmean')
 ```
 
-一些实作范例包括 TRL 以及 Hamish Ivison 的 Jax 程序码。
+一些实作范例包括 TRL 以及 Hamish Ivison 的 Jax 程式码。
 
 ## 15.2 隐式正则化（Implicit Regularization）
 
@@ -112,7 +112,7 @@ kl_full   = F.kl_div(ref_logprobs, logprobs, reduction='batchmean')
 
 ### 15.2.2 以做促记：On-Policy 资料减缓遗忘（Retaining by Doing: On-Policy Data Mitigates Forgetting）
 
-上一节显示，在单一任务上 RL 能泛化、而 SFT 会记忆。Chen et al. 2025 [356] 则提出互补的问题：当*依序*（sequentially）在多个任务上训练时，模型能否保留它原本已经知道的东西？他们发现，RL 在目标任务上取得与 SFT 相当或更高的增益，同时遗忘的程度远低于 SFT，并将这项优势追溯至两个目标函数在优化内容上的根本差异。
+上一节显示，在单一任务上 RL 能泛化、而 SFT 会记忆。Chen et al. 2025 [356] 则提出互补的问题：当*依次*（sequentially）在多个任务上训练时，模型能否保留它原本已经知道的东西？他们发现，RL 在目标任务上取得与 SFT 相当或更高的增益，同时遗忘的程度远低于 SFT，并将这项优势追溯至两个目标函数在优化内容上的根本差异。
 
 要理解这两种方法的行为为何如此不同，我们可以透过 KL 散度的视角来检视它们的目标。在本节中，我们首先说明两种常见的后训练方法可以对应到 KL 散度的两个方向，然后解释将它们作为损失函数使用时的数值行为，如何转化为不同的模型行为。
 
@@ -206,7 +206,7 @@ $$\text{Forgetting} \approx f\left( \mathbb{E}_{x\sim\tau} \left[ \text{KL}(\pi_
 
 在多种 RL 与 SFT 的训练变体中，作者以实证方式证明，遗忘与训练后策略和初始策略之间的 KL 散度高度相关（$R^2 = 0.96$），**而且是以新任务资料衡量的**。这一点令人惊讶，因为 KL 是在*新任务的*输入分布上衡量的，而不是在先前任务的保留资料上，但它仍然能够预测过去任务的表现下降。在实务上，这为我们提供了一个强大的工具，可以直接从基础策略与训练后策略之间的漂移来估计遗忘——在我们新的专门资料上衡量 KL 距离。
 
-为了厘清是什么驱动了 RL 策略较小的 KL 偏移，作者沿着两个轴分解 RL 与 SFT 的差异——on-policy 对上离线（offline）资料，以及目标函数是否包含负梯度（negative gradients）（RL 中存在：当样本得分低于奖励基线时；SFT 中则不存在：它只强化正确的示范），负梯度会将机率从错误的输出推开。值得注意的是的是，他们发现 on-policy 对上离线资料完全解释了泛化表现的差异，而负梯度没有可辨别的影响。
+为了厘清是什么驱动了 RL 策略较小的 KL 偏移，作者沿着两个轴分解 RL 与 SFT 的差异——on-policy 对上离线（offline）资料，以及目标函数是否包含负梯度（negative gradients）（RL 中存在：当样本得分低于奖励基线时；SFT 中则不存在：它只强化正确的示范），负梯度会将机率从错误的输出推开。值得注意的是，他们发现 on-policy 对上离线资料完全解释了泛化表现的差异，而负梯度没有可辨别的影响。
 
 ![图](../webapp/assets/figures/fig-p182-1.png)
 
@@ -240,7 +240,7 @@ $$= -\log \sigma \left( \beta \log \frac{P_\theta(c_i^w, y_i^w \mid x_i)}{P_{\te
 
 ### 15.3.2 基于间距的正则化（Margin-Based Regularization）
 
-在 RLHF 技术堆叠的其他部分，对优化的控制较不明确。大多数奖励模型除了标准的对比损失函数（contrastive loss function）之外，没有任何正则化。直接对齐算法（Direct Alignment Algorithms）则以不同的方式处理对 KL 散度的正则化——透过 $\beta$ 参数（见直接对齐一章）。
+在 RLHF 技术堆叠的其他部分，对优化的控制较不明确。大多数奖励模型除了标准的对比损失函数（contrastive loss function）之外，没有任何正则化。直接对齐演算法（Direct Alignment Algorithms）则以不同的方式处理对 KL 散度的正则化——透过 $\beta$ 参数（见直接对齐一章）。
 
 Llama 2 为奖励模型训练提出了一种间距损失（margin loss）[49]：
 

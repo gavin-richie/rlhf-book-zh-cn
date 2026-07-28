@@ -1,17 +1,17 @@
-/* 第 14 章：獎勵过度优化模擬器（Goodhart 定律） */
+/* 第 14 章：奖励过度优化模拟器（Goodhart 定律） */
 (function () {
   'use strict';
 
   // ===== 模型（Gao et al. 过度优化缩放律的简化形式）=====
-  const D_MAX = 3;                                   // 橫軸范围：d = √KL
-  const gold = (d, a, b) => d * (a - b * d);         // 真实獎勵（金標）：先升后降
-  const proxy = (d, a) => d * a;                     // 代理獎勵：近似單調上升
-  const peakD = (a, b) => a / (2 * b);               // 真实獎勵峰值（最佳停止點）
-  // KL 懲罰下的收斂點：最大化 α·d − λ·d²（KL = d²）→ d_stop = α / 2λ
+  const D_MAX = 3;                                   // 横轴范围：d = √KL
+  const gold = (d, a, b) => d * (a - b * d);         // 真实奖励（金标）：先升后降
+  const proxy = (d, a) => d * a;                     // 代理奖励：近似单调上升
+  const peakD = (a, b) => a / (2 * b);               // 真实奖励峰值（最佳停止点）
+  // KL 惩罚下的收敛点：最大化 α·d − λ·d²（KL = d²）→ d_stop = α / 2λ
   const stopD = (a, lam) => Math.min(a / (2 * lam), D_MAX);
   const fmt = (v) => v.toFixed(2);
 
-  // ===== SVG 佈局 =====
+  // ===== SVG 布局 =====
   const W = 700, H = 330, ML = 50, MR = 16, MT = 30, MB = 44;
   const PW = W - ML - MR, PH = H - MT - MB;
   const NS = 'http://www.w3.org/2000/svg';
@@ -51,7 +51,7 @@
     }
     slider('α（初始改善速率）', 0.8, 2.4, 0.05, state.a, 'a');
     slider('β（过度优化速率）', 0.3, 1.2, 0.05, state.b, 'b');
-    slider('λ（KL 懲罰係数）', 0.15, 1.6, 0.05, state.lam, 'lam');
+    slider('λ（KL 惩罚系数）', 0.15, 1.6, 0.05, state.lam, 'lam');
     const playBtn = document.createElement('button');
     playBtn.textContent = '▶ 播放训练';
     playBtn.style.flex = '0 0 auto';
@@ -63,14 +63,14 @@
     legend.className = 'widget-row';
     legend.style.cssText = 'margin:.8rem 0 .3rem;font-size:.83rem;color:var(--fg-muted);gap:1.4rem';
     legend.innerHTML =
-      '<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--accent-2)" stroke-width="2" stroke-dasharray="5 4"/></svg> 代理獎勵（獎勵模型分数）</span>' +
-      '<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--accent)" stroke-width="2"/></svg> 真实獎勵（金標）</span>';
+      '<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--accent-2)" stroke-width="2" stroke-dasharray="5 4"/></svg> 代理奖励（奖励模型分数）</span>' +
+      '<span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--accent)" stroke-width="2"/></svg> 真实奖励（金标）</span>';
     rootEl.appendChild(legend);
 
     // ---- 主图 ----
     const svg = el('svg', {
       viewBox: '0 0 ' + W + ' ' + H, width: '100%', role: 'img',
-      'aria-label': '代理獎勵与真实獎勵隨优化距離 d 变化的曲线图'
+      'aria-label': '代理奖励与真实奖励随优化距离 d 变化的曲线图'
     });
     svg.style.cssText = 'display:block;background:var(--panel-2);border:1px solid var(--border);border-radius:10px';
     rootEl.appendChild(svg);
@@ -82,25 +82,25 @@
 
     const gGrid = el('g', {}, svg);
     const gPlot = el('g', { 'clip-path': 'url(#ch14-plot)' }, svg);
-    // 尚未走过的曲线：淡色鋪底
+    // 尚未走过的曲线：淡色铺底
     const pGoldDim = el('path', { fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2, opacity: 0.22 }, gPlot);
     const pProxyDim = el('path', { fill: 'none', stroke: 'var(--accent-2)', 'stroke-width': 2, 'stroke-dasharray': '6 5', opacity: 0.22 }, gPlot);
     // 已走过的部分：全彩（progress 裁切）
     const gProg = el('g', { 'clip-path': 'url(#ch14-prog)' }, gPlot);
     const pGold = el('path', { fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2.4 }, gProg);
     const pProxy = el('path', { fill: 'none', stroke: 'var(--accent-2)', 'stroke-width': 2.4, 'stroke-dasharray': '6 5' }, gProg);
-    // 训练停止豎直標线 + 兩曲线上的当前點
+    // 训练停止竖直标线 + 两曲线上的当前点
     const stopLine = el('line', { stroke: 'var(--fg-muted)', 'stroke-width': 1.5, 'stroke-dasharray': '3 4' }, gPlot);
     const dotGold = el('circle', { r: 5, fill: 'var(--accent)', stroke: 'var(--panel-2)', 'stroke-width': 2 }, gPlot);
     const dotProxy = el('circle', { r: 5, fill: 'var(--accent-2)', stroke: 'var(--panel-2)', 'stroke-width': 2 }, gPlot);
-    const gTop = el('g', {}, svg); // 標籤層（不裁切）
+    const gTop = el('g', {}, svg); // 标签层（不裁切）
     const peakDot = el('circle', { r: 5.5, fill: 'var(--accent)', stroke: 'var(--panel)', 'stroke-width': 2 }, gTop);
     const peakLbl = el('text', { 'font-size': 12, 'font-weight': 600, fill: 'var(--fg)', 'text-anchor': 'middle' }, gTop);
     peakLbl.textContent = '最佳停止';
     const stopLbl = el('text', { 'font-size': 11.5, fill: 'var(--fg-muted)' }, gTop);
-    stopLbl.textContent = '训练停在这裡（由 λ 決定）';
+    stopLbl.textContent = '训练停在这里（由 λ 决定）';
 
-    // ---- 公式（KaTeX）与即时讀数 ----
+    // ---- 公式（KaTeX）与即时读数 ----
     const eq = document.createElement('div');
     eq.style.cssText = 'margin:.9rem 0 .4rem;font-size:.95rem;overflow-x:auto';
     rootEl.appendChild(eq);
@@ -113,7 +113,7 @@
     readout.style.cssText = 'margin-top:.8rem;font-size:.9rem;line-height:1.7';
     rootEl.appendChild(readout);
 
-    // ---- 座標換算 ----
+    // ---- 座标换算 ----
     let yMin = 0, yMax = 1;
     const X = (d) => ML + (d / D_MAX) * PW;
     const Y = (r) => MT + (yMax - r) / (yMax - yMin) * PH;
@@ -126,7 +126,7 @@
       return s;
     }
 
-    // ---- 靜態重繪（參数改变时）----
+    // ---- 静态重绘（参数改变时）----
     function drawStatic() {
       const { a, b } = state;
       yMax = a * D_MAX * 1.06;
@@ -144,9 +144,9 @@
         t.textContent = d;
       }
       const xl = el('text', { x: ML + PW / 2, y: H - 8, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--fg-muted)' }, gGrid);
-      xl.textContent = 'd = √KL(π‖π₀)（优化距離）';
+      xl.textContent = 'd = √KL(π‖π₀)（优化距离）';
       const yl = el('text', { x: 14, y: MT + PH / 2, 'font-size': 12, fill: 'var(--fg-muted)', 'text-anchor': 'middle', transform: 'rotate(-90 14 ' + (MT + PH / 2) + ')' }, gGrid);
-      yl.textContent = '獎勵';
+      yl.textContent = '奖励';
 
       const path1 = curvePath((d) => gold(d, a, b));
       const path2 = curvePath((d) => proxy(d, a));
@@ -164,7 +164,7 @@
       else eq.textContent = 'R_gold = d(α − βd) = d(' + fmt(a) + ' − ' + fmt(b) + '·d)，d_stop = α/2λ = ' + fmt(stopD(a, state.lam));
     }
 
-    // ---- 动態重繪（標线位置改变时）----
+    // ---- 动态重绘（标线位置改变时）----
     function drawPos() {
       const { a, b, pos } = state;
       const x = X(pos);
@@ -180,27 +180,27 @@
       dotProxy.setAttribute('cx', x); dotProxy.setAttribute('cy', Y(rp));
       stats.innerHTML =
         '<span>d = <strong style="color:var(--fg)">' + fmt(pos) + '</strong></span>' +
-        '<span>代理獎勵 = <strong style="color:var(--fg)">' + fmt(rp) + '</strong></span>' +
-        '<span>真实獎勵 = <strong style="color:var(--fg)">' + fmt(rg) + '</strong></span>' +
+        '<span>代理奖励 = <strong style="color:var(--fg)">' + fmt(rp) + '</strong></span>' +
+        '<span>真实奖励 = <strong style="color:var(--fg)">' + fmt(rg) + '</strong></span>' +
         '<span>峰值 d* = α/2β = <strong style="color:var(--fg)">' + fmt(peakD(a, b)) + '</strong></span>';
 
       const dp = peakD(a, b), rPeak = gold(Math.min(dp, D_MAX), a, b);
       let msg;
       if (pos < dp * 0.92) {
-        msg = '<strong style="color:var(--accent)">✅ 安全區</strong>：代理与真实獎勵仍同向上升——繼續优化仍有真实收益，距最佳停止點还有 Δd = ' + fmt(dp - pos) + '。';
+        msg = '<strong style="color:var(--accent)">✅ 安全区</strong>：代理与真实奖励仍同向上升——继续优化仍有真实收益，距最佳停止点还有 Δd = ' + fmt(dp - pos) + '。';
       } else if (pos <= dp * 1.08) {
-        msg = '<strong style="color:var(--accent)">⏸ 接近最佳停止點</strong>：真实獎勵正處峰值附近（R* ≈ ' + fmt(rPeak) + '）。此刻停止训练（early stopping）能拿到最好的模型。';
+        msg = '<strong style="color:var(--accent)">⏸ 接近最佳停止点</strong>：真实奖励正处峰值附近（R* ≈ ' + fmt(rPeak) + '）。此刻停止训练（early stopping）能拿到最好的模型。';
       } else {
-        const drop = rg <= 0 ? '甚至跌到負值' : '已自峰值下滑 ' + Math.round((1 - rg / rPeak) * 100) + '%';
-        msg = '<strong style="color:var(--accent-2)">⚠️ 已进入过度优化</strong>：代理獎勵仍在上升（獎勵模型分数看起来一切健康），但真实獎勵' + drop +
-          '——这就是 Goodhart 定律：「当一个衡量指標成为目标，它就不再是个好指標。」';
+        const drop = rg <= 0 ? '甚至跌到负值' : '已自峰值下滑 ' + Math.round((1 - rg / rPeak) * 100) + '%';
+        msg = '<strong style="color:var(--accent-2)">⚠️ 已进入过度优化</strong>：代理奖励仍在上升（奖励模型分数看起来一切健康），但真实奖励' + drop +
+          '——这就是 Goodhart 定律：「当一个衡量指标成为目标，它就不再是个好指标。」';
       }
-      msg += '<br><span style="color:var(--fg-muted);font-size:.85em">提示：KL 懲罰讓训练收斂在 d = α/2λ；試着把 λ 調到等于 β（= ' + fmt(b) + '），標线会恰好停在最佳停止點。</span>';
+      msg += '<br><span style="color:var(--fg-muted);font-size:.85em">提示：KL 惩罚让训练收敛在 d = α/2λ；试着把 λ 调到等于 β（= ' + fmt(b) + '），标线会恰好停在最佳停止点。</span>';
       readout.innerHTML = msg;
     }
     function drawAll() { drawStatic(); drawPos(); }
 
-    // ---- 播放训练动畫 ----
+    // ---- 播放训练动画 ----
     function stopAnim() {
       if (state.raf) { cancelAnimationFrame(state.raf); state.raf = 0; }
       playBtn.textContent = '▶ 播放训练';
@@ -226,8 +226,8 @@
   }
 
   window.ChapterWidget = {
-    title: '獎勵过度优化模擬器（Goodhart 定律）',
-    intro: '對照本章图 41／42：橫軸是优化距離 d = √KL(π‖π₀)。代理獎勵（獎勵模型分数）一路上升，真实獎勵（金標）卻先升后降。调整 α、β 觀察曲线形狀，调整 KL 懲罰係数 λ 看训练会停在哪裡，再按「播放训练」体验「分数还在漲、模型卻变差」的瞬间。',
+    title: '奖励过度优化模拟器（Goodhart 定律）',
+    intro: '对照本章图 41／42：横轴是优化距离 d = √KL(π‖π₀)。代理奖励（奖励模型分数）一路上升，真实奖励（金标）却先升后降。调整 α、β 观察曲线形状，调整 KL 惩罚系数 λ 看训练会停在哪里，再按「播放训练」体验「分数还在涨、模型却变差」的瞬间。',
     render: render
   };
 })();

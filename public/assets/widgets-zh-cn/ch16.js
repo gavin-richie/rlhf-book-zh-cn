@@ -1,4 +1,4 @@
-/* 第 16 章：评估 —— 「这个分数差是真的吗？」评估雜訊模擬器 */
+/* 第 16 章：评估 —— 「这个分数差是真的吗？」评估噪声模拟器 */
 (function () {
   'use strict';
 
@@ -51,9 +51,9 @@
   }
 
   window.ChapterWidget = {
-    title: '这个分数差是真的吗？—— 评估雜訊模擬器',
-    intro: '同一顆模型、同一个基準，重跑一次評測分数就会不一样。拖动兩个模型的真实能力与評測集題数，' +
-      '按「跑 50 次評測」看看：排行榜上的分数差，有多少其实只是采样雜訊（呼應 16.2「为何許多外部评估比較不可靠」与附录 C）。',
+    title: '这个分数差是真的吗？—— 评估噪声模拟器',
+    intro: '同一颗模型、同一个基准，重跑一次评测分数就会不一样。拖动两个模型的真实能力与评测集题数，' +
+      '按「跑 50 次评测」看看：排行榜上的分数差，有多少其实只是采样噪声（呼应 16.2「为何许多外部评估比较不可靠」与附录 C）。',
 
     render: function (root) {
       // ---------- 控制面板 ----------
@@ -63,7 +63,7 @@
       var pALabel = h('span', { style: 'font-weight:600;color:var(--accent);min-width:3.2em;display:inline-block;' });
       var pBLabel = h('span', { style: 'font-weight:600;color:var(--accent-2);min-width:3.2em;display:inline-block;' });
       var nLabel = h('span', { style: 'font-weight:600;color:var(--fg);' });
-      var runBtn = h('button', { text: '🎲 跑 50 次評測' });
+      var runBtn = h('button', { text: '🎲 跑 50 次评测' });
 
       function mkCtl(labelText, slider, valueEl) {
         var wrap = h('div', { style: 'flex:1 1 210px;min-width:200px;' });
@@ -74,18 +74,18 @@
         return wrap;
       }
       var presetRow = h('div', { style: 'display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.6rem;' });
-      presetRow.appendChild(h('span', { text: '預設基準规模：', style: 'font-size:.85rem;color:var(--fg-muted);' }));
+      presetRow.appendChild(h('span', { text: '预设基准规模：', style: 'font-size:.85rem;color:var(--fg-muted);' }));
       PRESETS.forEach(function (p) {
-        var b = h('button', { className: 'secondary', text: p.name + '（' + p.n.toLocaleString() + ' 題）' });
+        var b = h('button', { className: 'secondary', text: p.name + '（' + p.n.toLocaleString() + ' 题）' });
         b.addEventListener('click', function () { state.n = p.n; nSlider.value = nToSlider(p.n); update(true); });
         presetRow.appendChild(b);
       });
 
       var ctlPanel = h('div', { className: 'widget-panel' });
       var ctlRow = h('div', { className: 'widget-row' });
-      ctlRow.appendChild(mkCtl('模型 A 真实能力 p_A（每題答對概率）', pASlider, pALabel));
+      ctlRow.appendChild(mkCtl('模型 A 真实能力 p_A（每题答对概率）', pASlider, pALabel));
       ctlRow.appendChild(mkCtl('模型 B 真实能力 p_B', pBSlider, pBLabel));
-      ctlRow.appendChild(mkCtl('評測集題数 n（對数刻度）', nSlider, nLabel));
+      ctlRow.appendChild(mkCtl('评测集题数 n（对数刻度）', nSlider, nLabel));
       ctlPanel.appendChild(ctlRow);
       ctlPanel.appendChild(presetRow);
       ctlPanel.appendChild(h('div', { style: 'margin-top:.7rem;' }, runBtn));
@@ -96,7 +96,7 @@
       chartPanel.appendChild(svgRoot);
       var statRow = h('div', { style: 'display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.8rem;' });
       var statEls = {};
-      [['overlap', '兩分布重疊比例'], ['wins', 'A 贏 B 的次数'], ['seA', 'σ_A（標準誤）'], ['seB', 'σ_B（標準誤）'], ['seDiff', '分差的雜訊尺度 σ_diff']].forEach(function (d) {
+      [['overlap', '两分布重叠比例'], ['wins', 'A 赢 B 的次数'], ['seA', 'σ_A（标准误）'], ['seB', 'σ_B（标准误）'], ['seDiff', '分差的噪声尺度 σ_diff']].forEach(function (d) {
         var tile = h('div', { style: 'flex:1 1 120px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:.55rem .7rem;' });
         tile.appendChild(h('div', { text: d[1], style: 'font-size:.72rem;color:var(--fg-muted);' }));
         statEls[d[0]] = h('div', { style: 'font-size:1.05rem;font-weight:700;color:var(--fg);margin-top:.15rem;' });
@@ -105,7 +105,7 @@
       });
       chartPanel.appendChild(statRow);
 
-      // ---------- 动態解读 ----------
+      // ---------- 动态解读 ----------
       var verdict = h('div', {
         className: 'widget-panel',
         style: 'margin-top:1rem;border-left:3px solid var(--accent);background:var(--accent-soft);'
@@ -114,7 +114,7 @@
       verdict.appendChild(h('div', { text: '📖 怎么解读？', style: 'font-weight:700;margin-bottom:.3rem;color:var(--fg);' }));
       verdict.appendChild(verdictText);
 
-      // ---------- 繪图 ----------
+      // ---------- 绘图 ----------
       function draw() {
         while (svgRoot.firstChild) svgRoot.removeChild(svgRoot.firstChild);
         var all = state.scoresA.concat(state.scoresB, [state.pA * 100, state.pB * 100]);
@@ -124,7 +124,7 @@
         var X0 = 46, X1 = 706, HY = 168; // 直方图基线
         function x(v) { return X0 + (v - lo) / (hi - lo) * (X1 - X0); }
 
-        // 直方图（兩色半透明疊加）
+        // 直方图（两色半透明叠加）
         var bins = 26, bw = (hi - lo) / bins, cA = [], cB = [], i, idx;
         for (i = 0; i < bins; i++) { cA.push(0); cB.push(0); }
         state.scoresA.forEach(function (v) { idx = Math.min(bins - 1, Math.floor((v - lo) / bw)); cA[idx]++; });
@@ -135,21 +135,21 @@
           if (cA[i]) s('rect', { x: bx, y: HY - cA[i] / maxC * 130, width: bwPx, height: cA[i] / maxC * 130, fill: 'var(--accent)', 'fill-opacity': '0.45' }, svgRoot);
           if (cB[i]) s('rect', { x: bx, y: HY - cB[i] / maxC * 130, width: bwPx, height: cB[i] / maxC * 130, fill: 'var(--accent-2)', 'fill-opacity': '0.45' }, svgRoot);
         }
-        // 真实能力虛线
+        // 真实能力虚线
         [[state.pA, 'var(--accent)', '真实 A'], [state.pB, 'var(--accent-2)', '真实 B']].forEach(function (d, j) {
           var px = x(d[0] * 100);
           s('line', { x1: px, y1: 18, x2: px, y2: 268, stroke: d[1], 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }, svgRoot);
           s('text', { x: px + 4, y: 26 + j * 13, fill: d[1], 'font-size': 11, text: d[2] + ' = ' + (d[0] * 100).toFixed(0) + '%' }, svgRoot);
         });
-        // 座標軸与刻度
+        // 座标轴与刻度
         s('line', { x1: X0, y1: HY, x2: X1, y2: HY, stroke: 'var(--border)', 'stroke-width': 1 }, svgRoot);
         var span = hi - lo, step = [1, 2, 5, 10, 20][[1, 2, 5, 10, 20].findIndex(function (t) { return span / t <= 8; })] || 20;
         for (var t = Math.ceil(lo / step) * step; t <= hi; t += step) {
           s('line', { x1: x(t), y1: HY, x2: x(t), y2: HY + 4, stroke: 'var(--fg-muted)' }, svgRoot);
           s('text', { x: x(t), y: HY + 16, fill: 'var(--fg-muted)', 'font-size': 10, 'text-anchor': 'middle', text: t + '%' }, svgRoot);
         }
-        s('text', { x: X1, y: HY + 30, fill: 'var(--fg-muted)', 'font-size': 10, 'text-anchor': 'end', text: '單次評測分数（答對率 %）' }, svgRoot);
-        // 抖动散點（每模型一條带）
+        s('text', { x: X1, y: HY + 30, fill: 'var(--fg-muted)', 'font-size': 10, 'text-anchor': 'end', text: '单次评测分数（答对率 %）' }, svgRoot);
+        // 抖动散点（每模型一条带）
         [[state.scoresA, 205, 'var(--accent)', '模型 A'], [state.scoresB, 245, 'var(--accent-2)', '模型 B']].forEach(function (d) {
           s('text', { x: 4, y: d[1] + 4, fill: d[2], 'font-size': 11, 'font-weight': 700, text: d[3] }, svgRoot);
           s('line', { x1: X0, y1: d[1], x2: X1, y2: d[1], stroke: 'var(--border)', 'stroke-dasharray': '2 4' }, svgRoot);
@@ -192,42 +192,42 @@
         statEls.seB.textContent = '±' + seB.toFixed(2) + ' 分';
         statEls.seDiff.textContent = '±' + seDiff.toFixed(2) + ' 分';
 
-        var name = bn ? bn + '（' + state.n.toLocaleString() + ' 題）' : '这个 ' + state.n.toLocaleString() + ' 題的評測集';
+        var name = bn ? bn + '（' + state.n.toLocaleString() + ' 题）' : '这个 ' + state.n.toLocaleString() + ' 题的评测集';
         var msg;
         if (gap < 0.005) {
-          msg = '兩模型真实能力完全相同，但 50 次重跑中 A 仍「贏」了 ' + wins + ' 次——排行榜上任何名次差异在此都純屬雜訊。';
+          msg = '两模型真实能力完全相同，但 50 次重跑中 A 仍「赢」了 ' + wins + ' 次——排行榜上任何名次差异在此都纯属噪声。';
         } else if (gap < seDiff) {
-          msg = '真实差距只有 ' + gap.toFixed(1) + ' 分，远小于分差的雜訊尺度 ±' + seDiff.toFixed(1) + ' 分（1σ）。' +
-            name + ' 根本分不出誰強：兩分布幾乎疊在一起，勝負接近擲硬幣（A 贏 ' + wins + '/' + RUNS + '）。';
+          msg = '真实差距只有 ' + gap.toFixed(1) + ' 分，远小于分差的噪声尺度 ±' + seDiff.toFixed(1) + ' 分（1σ）。' +
+            name + ' 根本分不出谁强：两分布几乎叠在一起，胜负接近掷硬币（A 赢 ' + wins + '/' + RUNS + '）。';
         } else if (gap < 2 * seDiff) {
           msg = '真实差距 ' + gap.toFixed(1) + ' 分落在 1σ～2σ 的灰色地带（σ_diff ≈ ' + seDiff.toFixed(1) + ' 分）。' +
-            '單跑一次經常翻盤（A 贏 ' + wins + '/' + RUNS + '）——需要多次重跑取平均，或換更大的評測集，結论才站得住。';
+            '单跑一次经常翻盘（A 赢 ' + wins + '/' + RUNS + '）——需要多次重跑取平均，或换更大的评测集，结论才站得住。';
         } else {
           msg = '真实差距 ' + gap.toFixed(1) + ' 分已超过 2σ（σ_diff ≈ ' + seDiff.toFixed(1) + ' 分），' +
-            '單次評測大致可信：A 在 50 次中贏了 ' + wins + ' 次。題数夠多时，約 1 分的差距才开始有统计意義。';
+            '单次评测大致可信：A 在 50 次中赢了 ' + wins + ' 次。题数够多时，约 1 分的差距才开始有统计意义。';
         }
-        var rule = '經验法則：在 ' + name + ' 上，小于 ±' + (2 * seDiff).toFixed(1) + ' 分（2σ）的分数差應一律視为雜訊。';
-        if (state.n <= 50) rule += ' AIME 只有 30 題——錯一題就是 3.3 分，±2 分内的差异完全是雜訊。';
+        var rule = '经验法则：在 ' + name + ' 上，小于 ±' + (2 * seDiff).toFixed(1) + ' 分（2σ）的分数差应一律视为噪声。';
+        if (state.n <= 50) rule += ' AIME 只有 30 题——错一题就是 3.3 分，±2 分内的差异完全是噪声。';
         verdictText.innerHTML = msg + '<br>' + rule +
-          '<br><span style="color:var(--fg-muted);font-size:.85em;">这还只是「同一套評測流程」下的采样变异；' +
-          '各实验室未公开的客制提示、取样參数与可能的数据污染（contamination），会讓跨新聞稿的比較誤差更大（见 16.2、16.4；Olmo 3 实測多数后训练评估的標準差在 0.25～1.5 分之间）。</span>';
+          '<br><span style="color:var(--fg-muted);font-size:.85em;">这还只是「同一套评测流程」下的采样变异；' +
+          '各实验室未公开的客制提示、取样参数与可能的数据污染（contamination），会让跨新闻稿的比较误差更大（见 16.2、16.4；Olmo 3 实测多数后训练评估的标准差在 0.25～1.5 分之间）。</span>';
       }
 
-      // ---------- 附带展示：评估格式對照 ----------
+      // ---------- 附带展示：评估格式对照 ----------
       var FORMATS = {
         fewshot: {
-          label: 'few-shot 對数似然（log-likelihood）評分',
-          prompt: '### Example 1\nQ: A right triangle has legs of lengths 3 and 4.\n   What is the length of its hypotenuse?\n(A) 5  (B) 6  (C) 7  (D) 8\nCorrect Answer: (A)\n\n### Now answer the new question in the same style:\nQ: Which theorem states that ... ?\n(A) ...  (B) ...  (C) ...  (D) ...\nCorrect Answer: ␣   ← 只比較下一个 token 是 (A)～(D) 的對数概率',
-          desc: '模型不生成回答：評測程式直接讀取下一个 token 的對数概率，看正確答案字母是否概率最高。结果是確定性的（忽略微小数值差异），常用于预训练评估——因为此时模型还缺乏精確匹配所需的问答格式（见 16.1.1）。'
+          label: 'few-shot 对数似然（log-likelihood）评分',
+          prompt: '### Example 1\nQ: A right triangle has legs of lengths 3 and 4.\n   What is the length of its hypotenuse?\n(A) 5  (B) 6  (C) 7  (D) 8\nCorrect Answer: (A)\n\n### Now answer the new question in the same style:\nQ: Which theorem states that ... ?\n(A) ...  (B) ...  (C) ...  (D) ...\nCorrect Answer: ␣   ← 只比较下一个 token 是 (A)～(D) 的对数概率',
+          desc: '模型不生成回答：评测程式直接读取下一个 token 的对数概率，看正确答案字母是否概率最高。结果是确定性的（忽略微小数值差异），常用于预训练评估——因为此时模型还缺乏精确匹配所需的问答格式（见 16.1.1）。'
         },
         cot: {
-          label: 'CoT 生成＋精確匹配（exact match）',
+          label: 'CoT 生成＋精确匹配（exact match）',
           prompt: 'Answer the following multiple-choice question ...\nProvide CONCISE reasoning, and make sure to finish\nthe response with "Therefore, the answer is\n(ANSWER_LETTER)" where (ANSWER_LETTER) is one of\n(A), (B), (C), (D), (E), etc.\n\nQuestion: {question}\n(A) {choice_A}  (B) {choice_B}  ...',
-          desc: '模型先寫出思維鏈（CoT）推理，再由正規表示式從生成文本中抓出「Therefore, the answer is (X)」。为了最佳性能幾乎总是使用大于零的溫度——取样本身就引入隨机性，正是上方模擬器展示的雜訊来源之一（见 16.1.2、16.1.4，Tülu 3 的 MMLU 提示）。'
+          desc: '模型先写出思维链（CoT）推理，再由正规表示式从生成文本中抓出「Therefore, the answer is (X)」。为了最佳性能几乎总是使用大于零的温度——取样本身就引入随机性，正是上方模拟器展示的噪声来源之一（见 16.1.2、16.1.4，Tülu 3 的 MMLU 提示）。'
         }
       };
       var fmtPanel = h('div', { className: 'widget-panel', style: 'margin-top:1rem;' });
-      fmtPanel.appendChild(h('div', { text: '同一題，兩種评估格式：分数怎么会不一样？', style: 'font-weight:700;margin-bottom:.5rem;color:var(--fg);' }));
+      fmtPanel.appendChild(h('div', { text: '同一题，两种评估格式：分数怎么会不一样？', style: 'font-weight:700;margin-bottom:.5rem;color:var(--fg);' }));
       var fmtSelect = h('select', {});
       fmtSelect.appendChild(h('option', { value: 'fewshot', text: FORMATS.fewshot.label }));
       fmtSelect.appendChild(h('option', { value: 'cot', text: FORMATS.cot.label }));
@@ -244,10 +244,10 @@
       fmtPanel.appendChild(fmtDesc);
       fmtPanel.appendChild(h('div', {
         style: 'margin-top:.7rem;font-size:.85rem;color:var(--fg);border-left:3px solid var(--accent-2);padding-left:.7rem;line-height:1.7;',
-        text: '格式不同，同一个模型的分数可以差很多：格式不匹配甚至能讓表現從 60% 掉到接近 0。训练数据的答案格式也会互相衝突——NuminaMath 用 \\boxed{XYZ}、MetaMath 用 The answer is: XYZ，同时训练反而可能更差（见 16.2）。'
+        text: '格式不同，同一个模型的分数可以差很多：格式不匹配甚至能让表现从 60% 掉到接近 0。训练数据的答案格式也会互相冲突——NuminaMath 用 \\boxed{XYZ}、MetaMath 用 The answer is: XYZ，同时训练反而可能更差（见 16.2）。'
       }));
 
-      // ---------- 掛載与事件 ----------
+      // ---------- 挂载与事件 ----------
       root.appendChild(ctlPanel);
       root.appendChild(chartPanel);
       root.appendChild(verdict);

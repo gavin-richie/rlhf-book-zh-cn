@@ -1,16 +1,16 @@
-/* 第 8 章交互元件：DPO 损失探索器 */
+/* 第 8 章互动元件：DPO 损失探索器 */
 (function () {
   'use strict';
 
-  // ---------- 数學工具 ----------
+  // ---------- 数学工具 ----------
   const sigmoid = (x) => 1 / (1 + Math.exp(-x));
-  const softplus = (x) => (x > 30 ? x : Math.log1p(Math.exp(x))); // 数值穩定
+  const softplus = (x) => (x > 30 ? x : Math.log1p(Math.exp(x))); // 数值稳定
   const dpoLoss = (beta, dz) => softplus(-beta * dz);             // -log σ(β·Δz)
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const fmt = (v, d) => (Object.is(v, -0) ? 0 : v).toFixed(d == null ? 3 : d);
   const fmtBeta = (b) => (b < 0.1 ? b.toFixed(3) : b < 1 ? b.toFixed(2) : b.toFixed(1));
 
-  // β 滑桿使用對数刻度：t ∈ [0,100] → β ∈ [0.01, 5]
+  // β 滑杆使用对数刻度：t ∈ [0,100] → β ∈ [0.01, 5]
   const B_MIN = 0.01, B_MAX = 5;
   const tToBeta = (t) => B_MIN * Math.pow(B_MAX / B_MIN, t / 100);
   const betaToT = (b) => 100 * Math.log(b / B_MIN) / Math.log(B_MAX / B_MIN);
@@ -37,7 +37,7 @@
     else node.textContent = src;
   }
 
-  // ---------- 图表座標 ----------
+  // ---------- 图表座标 ----------
   const W = 560, H = 300, PAD = { l: 46, r: 14, t: 14, b: 40 };
   const X_MIN = -10, X_MAX = 10, Y_MAX = 5;
   const sx = (x) => PAD.l + ((x - X_MIN) / (X_MAX - X_MIN)) * (W - PAD.l - PAD.r);
@@ -56,7 +56,7 @@
   // ---------- 元件本体 ----------
   window.ChapterWidget = {
     title: 'DPO 损失探索器',
-    intro: '拖动 β 与被选／被拒回复的 log-ratio，觀察隱含獎勵差（margin）、DPO 损失与梯度权重 σ(−margin) 如何变化。曲线显示不同 β 之下损失對 (z_c − z_r) 的形狀。',
+    intro: '拖动 β 与被选／被拒回复的 log-ratio，观察隐含奖励差（margin）、DPO 损失与梯度权重 σ(−margin) 如何变化。曲线显示不同 β 之下损失对 (z_c − z_r) 的形状。',
     render(root) {
       const state = { beta: 0.1, zc: 0.5, zr: -0.5 };
 
@@ -69,7 +69,7 @@
         'w = \\sigma(-\\text{margin})');
       const eqPanel = el('div', { class: 'widget-panel', style: 'overflow-x:auto;' }, [eqMain, eqNow]);
 
-      // --- 滑桿列 ---
+      // --- 滑杆列 ---
       function makeSlider(labelHTML, min, max, step, value, oninput) {
         const lab = el('label', { style: 'flex:1 1 200px; min-width:180px; font-size:.9rem;' });
         const head = el('div', { style: 'display:flex; justify-content:space-between; margin-bottom:.15rem;' });
@@ -81,10 +81,10 @@
         lab.appendChild(head); lab.appendChild(input);
         return { lab, input, val };
       }
-      const sBeta = makeSlider('β（KL 約束強度，log 刻度）', 0, 100, 0.5, betaToT(state.beta), (t) => { state.beta = tToBeta(t); });
+      const sBeta = makeSlider('β（KL 约束强度，log 刻度）', 0, 100, 0.5, betaToT(state.beta), (t) => { state.beta = tToBeta(t); });
       const sZc = makeSlider('被选 z<sub>c</sub> = log(π/π<sub>ref</sub>)(y<sub>c</sub>)', -5, 5, 0.05, state.zc, (v) => { state.zc = v; });
       const sZr = makeSlider('被拒 z<sub>r</sub> = log(π/π<sub>ref</sub>)(y<sub>r</sub>)', -5, 5, 0.05, state.zr, (v) => { state.zr = v; });
-      const resetBtn = el('button', { type: 'button', text: '重置預設值（β=0.1, z_c=0.5, z_r=−0.5）' });
+      const resetBtn = el('button', { type: 'button', text: '重设预设值（β=0.1, z_c=0.5, z_r=−0.5）' });
       resetBtn.addEventListener('click', () => {
         state.beta = 0.1; state.zc = 0.5; state.zr = -0.5;
         sBeta.input.value = betaToT(0.1); sZc.input.value = 0.5; sZr.input.value = -0.5;
@@ -103,7 +103,7 @@
         ]);
         return { box, v };
       }
-      const stMargin = statBox('隱含獎勵差 margin = β(z_c − z_r)');
+      const stMargin = statBox('隐含奖励差 margin = β(z_c − z_r)');
       const stLoss = statBox('DPO 损失 −log σ(margin)');
       const stW = statBox('梯度权重 σ(−margin)');
       const rewardLine = el('div', { style: 'margin-top:.5rem; font-size:.85rem; color:var(--fg-muted); font-variant-numeric:tabular-nums;' });
@@ -113,7 +113,7 @@
 
       // --- SVG 曲线图 ---
       const svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, style: 'width:100%; height:auto; display:block; touch-action:none; cursor:crosshair;' });
-      // 格线与座標軸
+      // 格线与座标轴
       for (let x = X_MIN; x <= X_MAX; x += 5) {
         svg.appendChild(svgEl('line', { x1: sx(x), y1: sy(0), x2: sx(x), y2: sy(Y_MAX), stroke: 'var(--border)', 'stroke-width': x === 0 ? 1.5 : 1 }));
         const t = svgEl('text', { x: sx(x), y: H - PAD.b + 16, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--fg-muted)' });
@@ -128,7 +128,7 @@
       xLab.textContent = 'z_c − z_r（log-ratio 差）'; svg.appendChild(xLab);
       const yLab = svgEl('text', { x: 14, y: sy(Y_MAX / 2), 'font-size': 12, fill: 'var(--fg)', transform: 'rotate(-90 14 ' + sy(Y_MAX / 2) + ')', 'text-anchor': 'middle' });
       yLab.textContent = 'DPO 损失'; svg.appendChild(yLab);
-      // 對照虛线（β 固定組）＋当前曲线＋操作點
+      // 对照虚线（β 固定组）＋当前曲线＋操作点
       const REF_BETAS = [0.05, 0.5, 2];
       const refGroup = svgEl('g'); svg.appendChild(refGroup);
       const mainPath = svgEl('path', { fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2.5 }); svg.appendChild(mainPath);
@@ -143,13 +143,13 @@
         REF_BETAS.forEach((b) => {
           if (Math.abs(Math.log(b / state.beta)) < 0.12) return; // 与当前 β 太接近就略过
           refGroup.appendChild(svgEl('path', { d: curvePath(b), fill: 'none', stroke: 'var(--fg-muted)', 'stroke-width': 1.3, 'stroke-dasharray': '5 4', opacity: 0.65 }));
-          const lx = clamp(-Math.log(Math.expm1(Y_MAX * 0.78)) / b, X_MIN + 0.6, X_MAX - 1.4); // 標注放在曲线約 0.78·Y_MAX 高度處
+          const lx = clamp(-Math.log(Math.expm1(Y_MAX * 0.78)) / b, X_MIN + 0.6, X_MAX - 1.4); // 标注放在曲线约 0.78·Y_MAX 高度处
           const t = svgEl('text', { x: sx(lx) + 6, y: sy(dpoLoss(b, lx)) - 6, 'font-size': 11, fill: 'var(--fg-muted)' });
           t.textContent = 'β=' + fmtBeta(b); refGroup.appendChild(t);
         });
       }
 
-      // 拖动／hover：以 Δz 對稱设置 z_c = Δz/2、z_r = −Δz/2
+      // 拖动／hover：以 Δz 对称设定 z_c = Δz/2、z_r = −Δz/2
       function eventDz(ev) {
         const r = svg.getBoundingClientRect();
         return clamp(invX((ev.clientX - r.left) * (W / r.width)), X_MIN, X_MAX);
@@ -167,7 +167,7 @@
         const loss = dpoLoss(state.beta, dz);
         hoverDot.setAttribute('cx', sx(dz)); hoverDot.setAttribute('cy', sy(loss));
         hoverText.setAttribute('x', clamp(sx(dz) + 8, PAD.l, W - 150)); hoverText.setAttribute('y', clamp(sy(loss) - 8, 24, H - PAD.b));
-        hoverText.textContent = 'Δz=' + fmt(dz, 2) + '，损失=' + fmt(loss, 3) + '（点击/拖动移动操作點）';
+        hoverText.textContent = 'Δz=' + fmt(dz, 2) + '，损失=' + fmt(loss, 3) + '（点击/拖动移动操作点）';
         hoverDot.setAttribute('visibility', 'visible'); hoverText.setAttribute('visibility', 'visible');
       });
       svg.addEventListener('pointerleave', () => { hoverDot.setAttribute('visibility', 'hidden'); hoverText.setAttribute('visibility', 'hidden'); });
@@ -183,7 +183,7 @@
         sBeta.val.textContent = 'β = ' + fmtBeta(beta);
         sZc.val.textContent = fmt(zc, 2); sZr.val.textContent = fmt(zr, 2);
         stMargin.v.textContent = fmt(margin); stLoss.v.textContent = fmt(loss); stW.v.textContent = fmt(w);
-        rewardLine.textContent = '隱含獎勵：r_c = βz_c = ' + fmt(beta * zc) + '，r_r = βz_r = ' + fmt(beta * zr) + '；z_c − z_r = ' + fmt(dz, 2);
+        rewardLine.textContent = '隐含奖励：r_c = βz_c = ' + fmt(beta * zc) + '，r_r = βz_r = ' + fmt(beta * zr) + '；z_c − z_r = ' + fmt(dz, 2);
         tex(eqNow, '\\text{目前：}\\ \\text{margin} = ' + fmtBeta(beta) + '\\times(' + fmt(zc, 2) + ' - (' + fmt(zr, 2) + ')) = ' + fmt(margin) +
           ',\\quad \\mathcal{L}_{\\mathrm{DPO}} = ' + fmt(loss) + ',\\quad w = \\sigma(-\\text{margin}) = ' + fmt(w));
         mainPath.setAttribute('d', curvePath(beta));
@@ -193,17 +193,17 @@
         const tagX = clamp(-1.1 / beta, X_MIN + 0.5, -0.8);
         betaTag.setAttribute('x', sx(tagX) - 6); betaTag.setAttribute('y', sy(dpoLoss(beta, tagX)) - 8);
         betaTag.textContent = 'β=' + fmtBeta(beta) + '（当前）';
-        // 动態解读
+        // 动态解读
         let mMsg;
-        if (margin > 2) mMsg = 'margin 已为正且大：模型早已把这對样本排對、差距充分，梯度权重 σ(−margin) ≈ ' + fmt(w) + '，这筆样本的梯度貢獻趨近 0，优化器会把力气留給其他还沒排對的样本。';
-        else if (margin > 0.2) mMsg = 'margin 为正：策略已偏好被选回复，但差距尚未拉开，梯度权重 ' + fmt(w) + ' 仍会温和地推动繼續擴大被选与被拒的相對對数概率差。';
-        else if (margin >= -0.2) mMsg = 'margin ≈ 0：策略對兩个回复幾乎不分軒輊（相對參考模型的偏移相同），梯度权重約 0.5，损失約 log 2 ≈ 0.693——这正是训练起點的典型状态。';
-        else if (margin >= -2) mMsg = 'margin 为負：隱含獎勵把被拒回复排在前面（排序错误），梯度权重 ' + fmt(w) + ' > 0.5，这筆样本会收到較大的更新，拉高 y_c、壓低 y_r 的似然。';
-        else mMsg = 'margin 为負且大：獎勵估计嚴重错误，梯度权重 σ(−margin) ≈ ' + fmt(w) + '，接近上限 1——正如式 82：估计越錯，权重越大，更新越猛。';
+        if (margin > 2) mMsg = 'margin 已为正且大：模型早已把这对样本排对、差距充分，梯度权重 σ(−margin) ≈ ' + fmt(w) + '，这笔样本的梯度贡献趋近 0，优化器会把力气留给其他还没排对的样本。';
+        else if (margin > 0.2) mMsg = 'margin 为正：策略已偏好被选回复，但差距尚未拉开，梯度权重 ' + fmt(w) + ' 仍会温和地推动继续扩大被选与被拒的相对对数概率差。';
+        else if (margin >= -0.2) mMsg = 'margin ≈ 0：策略对两个回复几乎不分轩轾（相对参考模型的偏移相同），梯度权重约 0.5，损失约 log 2 ≈ 0.693——这正是训练起点的典型状态。';
+        else if (margin >= -2) mMsg = 'margin 为负：隐含奖励把被拒回复排在前面（排序错误），梯度权重 ' + fmt(w) + ' > 0.5，这笔样本会收到较大的更新，拉高 y_c、压低 y_r 的似然。';
+        else mMsg = 'margin 为负且大：奖励估计严重错误，梯度权重 σ(−margin) ≈ ' + fmt(w) + '，接近上限 1——正如式 82：估计越错，权重越大，更新越猛。';
         let bMsg;
-        if (beta >= 1) bMsg = '目前 β = ' + fmtBeta(beta) + ' 相当大：同样的 log-ratio 差会被放大成很大的 margin，损失曲线陡峭，模型偏離參考模型的懲罰越強（KL 約束緊），些微偏移就足以飽和。';
-        else if (beta >= 0.05) bMsg = '目前 β = ' + fmtBeta(beta) + '（DPO 论文預設約 0.1）：曲线斜率適中，需要可觀的 log-ratio 差才能把损失壓低，在「排對偏好」与「不要偏離參考模型太远」之间取得平衡。';
-        else bMsg = '目前 β = ' + fmtBeta(beta) + ' 非常小：KL 約束鬆，曲线平緩，策略得大幅偏離參考模型才能降低损失——自由度高，但也更容易过度优化。';
+        if (beta >= 1) bMsg = '目前 β = ' + fmtBeta(beta) + ' 相当大：同样的 log-ratio 差会被放大成很大的 margin，损失曲线陡峭，模型偏离参考模型的惩罚越强（KL 约束紧），些微偏移就足以饱和。';
+        else if (beta >= 0.05) bMsg = '目前 β = ' + fmtBeta(beta) + '（DPO 论文预设约 0.1）：曲线斜率适中，需要可观的 log-ratio 差才能把损失压低，在「排对偏好」与「不要偏离参考模型太远」之间取得平衡。';
+        else bMsg = '目前 β = ' + fmtBeta(beta) + ' 非常小：KL 约束松，曲线平缓，策略得大幅偏离参考模型才能降低损失——自由度高，但也更容易过度优化。';
         interp.innerHTML = '<strong>解读：</strong>' + mMsg + '<br><strong>β 的角色：</strong>' + bMsg;
       }
 

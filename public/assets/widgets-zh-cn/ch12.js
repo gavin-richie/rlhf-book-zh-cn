@@ -1,10 +1,10 @@
-/* 第 12 章交互元件：知識蒸餾軟標籤实验室 */
+/* 第 12 章互动元件：知识蒸馏软标签实验室 */
 (function () {
   'use strict';
 
   var SVGNS = 'http://www.w3.org/2000/svg';
-  var TOKENS = ['玉山', '雪山', '秀姑巒山', '合欢山', '阿里山', '喜马拉雅山', '富士山', '台北101'];
-  var LOGITS = [6.0, 3.6, 2.8, 2.0, 1.8, 0.2, -0.2, -1.8]; // 教師 logits（寫死）
+  var TOKENS = ['玉山', '雪山', '秀姑峦山', '合欢山', '阿里山', '喜马拉雅山', '富士山', '台北101'];
+  var LOGITS = [6.0, 3.6, 2.8, 2.0, 1.8, 0.2, -0.2, -1.8]; // 教师 logits（写死）
   var CORRECT = 0; // 玉山
   var STEPS = 60, LR = 0.9;
 
@@ -48,12 +48,12 @@
   }
   function resetStudent() {
     if (state.timer) { clearInterval(state.timer); state.timer = null; }
-    state.studentLogits = TOKENS.map(function () { return 0; }); // 均勻分布
+    state.studentLogits = TOKENS.map(function () { return 0; }); // 均匀分布
     state.losses = [];
     state.trained = false;
   }
 
-  /* ---------- 條狀图 ---------- */
+  /* ---------- 条状图 ---------- */
   function drawBars() {
     var svg = ui.barSvg;
     while (svg.firstChild) svg.removeChild(svg.firstChild);
@@ -74,7 +74,7 @@
       var hq = (base - top) * Math.min(1, q[i] / yMax);
       var hp = (base - top) * Math.min(1, p[i] / yMax);
       svg.appendChild(svgEl('rect', { x: cx - 22, y: base - hq, width: 44, height: Math.max(hq, 0.5), rx: 3, fill: 'var(--accent)', opacity: 0.9 })); // 训练目标
-      svg.appendChild(svgEl('rect', { x: cx - 12, y: base - hp, width: 24, height: Math.max(hp, 0.5), rx: 3, fill: 'var(--accent-2)', opacity: 0.55, stroke: 'var(--accent-2)', 'stroke-width': 1 })); // 學生
+      svg.appendChild(svgEl('rect', { x: cx - 12, y: base - hp, width: 24, height: Math.max(hp, 0.5), rx: 3, fill: 'var(--accent-2)', opacity: 0.55, stroke: 'var(--accent-2)', 'stroke-width': 1 })); // 学生
       if (q[i] >= 0.005) {
         g = svgEl('text', { x: cx, y: base - hq - 4, 'text-anchor': 'middle', 'font-size': 10, fill: 'var(--fg-muted)' });
         g.textContent = (q[i] * 100) < 1 ? (q[i] * 100).toFixed(1) + '%' : (q[i] * 100).toFixed(0) + '%';
@@ -101,7 +101,7 @@
     svg.appendChild(ly);
     if (state.losses.length < 2) {
       var hint = svgEl('text', { x: (x0 + x1) / 2, y: (y0 + y1) / 2, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--fg-muted)' });
-      hint.textContent = '按「训练學生」开始最小化 KL(q‖p)';
+      hint.textContent = '按「训练学生」开始最小化 KL(q‖p)';
       svg.appendChild(hint);
       return;
     }
@@ -120,22 +120,22 @@
     ui.tauVal.textContent = 'τ = ' + state.tau.toFixed(1);
     var t;
     if (state.mode === 'hard') {
-      t = '<strong>硬標籤：</strong>one-hot 只告訴學生「正解是玉山」，其他七个选项一律得 0——' +
-        '教師知道「雪山远比台北101 合理」这件事完全沒有傳遞出去，溫度 τ 此时也不起作用。';
+      t = '<strong>硬标签：</strong>one-hot 只告诉学生「正解是玉山」，其他七个选项一律得 0——' +
+        '教师知道「雪山远比台北101 合理」这件事完全没有传递出去，温度 τ 此时也不起作用。';
     } else if (state.tau <= 0.4) {
-      t = '<strong>軟標籤（τ 低）：</strong>分布趨近 one-hot，幾乎退化成硬標籤，次要选项的信息被壓掉了。';
+      t = '<strong>软标签（τ 低）：</strong>分布趋近 one-hot，几乎退化成硬标签，次要选项的信息被压掉了。';
     } else if (state.tau >= 2) {
-      t = '<strong>軟標籤（τ 高）：</strong>「暗知識」顯現——雪山、秀姑巒山等次要选项的相對概率被放大，' +
-        '學生能學到教師對相似选项的排序，而干擾项台北101 依然墊底。';
+      t = '<strong>软标签（τ 高）：</strong>「暗知识」显现——雪山、秀姑峦山等次要选项的相对概率被放大，' +
+        '学生能学到教师对相似选项的排序，而干扰项台北101 依然垫底。';
     } else {
-      t = '<strong>軟標籤：</strong>教師分布傳遞了對相似选项的相對判斷（雪山＞合欢山＞富士山＞台北101）——' +
-        '这正是蒸餾比單純模仿正解更有效的原因。試着調高 τ 讓暗知識更明顯。';
+      t = '<strong>软标签：</strong>教师分布传递了对相似选项的相对判断（雪山＞合欢山＞富士山＞台北101）——' +
+        '这正是蒸馏比单纯模仿正解更有效的原因。试着调高 τ 让暗知识更明显。';
     }
     ui.interp.innerHTML = t;
     var q = targetDist(), kl = klQP(q, studentDist());
     ui.klVal.innerHTML = '目前 KL(q‖p) = <strong>' + kl.toFixed(4) + '</strong>' +
       (state.mode === 'hard' ? '（one-hot 时即 −log p(玉山)）' : '') +
-      (state.trained && !state.timer ? '　學生已收斂到训练目标。' : '');
+      (state.trained && !state.timer ? '　学生已收敛到训练目标。' : '');
   }
   function redraw() { drawBars(); drawLoss(); updateText(); }
 
@@ -182,16 +182,16 @@
     state.tau = 1.0; state.mode = 'soft';
 
     var lab = el('div'); lab.className = 'widget-panel';
-    lab.appendChild(el('div', 'font-size:.85em;color:var(--fg-muted);margin-bottom:.2rem;', '玩具情境：教師模型的下一个 token 分布'));
-    lab.appendChild(el('div', 'font-weight:600;margin-bottom:.6rem;', '「台灣最高的山是＿」（8 个候选 token，教師 logits 固定）'));
+    lab.appendChild(el('div', 'font-size:.85em;color:var(--fg-muted);margin-bottom:.2rem;', '玩具情境：教师模型的下一个 token 分布'));
+    lab.appendChild(el('div', 'font-weight:600;margin-bottom:.6rem;', '「台湾最高的山是＿」（8 个候选 token，教师 logits 固定）'));
 
     var row = el('div'); row.className = 'widget-row';
     row.style.cssText = 'display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.5rem;';
-    row.appendChild(el('span', 'font-size:.9em;', '溫度'));
+    row.appendChild(el('span', 'font-size:.9em;', '温度'));
     var slider = document.createElement('input');
     slider.type = 'range'; slider.min = '0.1'; slider.max = '5'; slider.step = '0.1'; slider.value = '1';
     slider.style.flex = '1 1 120px';
-    slider.setAttribute('aria-label', '溫度 τ');
+    slider.setAttribute('aria-label', '温度 τ');
     slider.addEventListener('input', function () {
       state.tau = parseFloat(slider.value);
       if (state.trained || state.timer) resetStudent();
@@ -201,27 +201,27 @@
     row.appendChild(slider);
     ui.tauVal = el('span', 'font-variant-numeric:tabular-nums;min-width:4.5em;font-size:.9em;');
     row.appendChild(ui.tauVal);
-    ui.softBtn = document.createElement('button'); ui.softBtn.textContent = '軟標籤（教師分布）';
-    ui.hardBtn = document.createElement('button'); ui.hardBtn.textContent = '硬標籤（one-hot）';
+    ui.softBtn = document.createElement('button'); ui.softBtn.textContent = '软标签（教师分布）';
+    ui.hardBtn = document.createElement('button'); ui.hardBtn.textContent = '硬标签（one-hot）';
     ui.softBtn.addEventListener('click', function () { setMode('soft'); });
     ui.hardBtn.addEventListener('click', function () { setMode('hard'); });
     row.appendChild(ui.softBtn); row.appendChild(ui.hardBtn);
     lab.appendChild(row);
 
-    ui.barSvg = svgEl('svg', { viewBox: '0 0 640 208', width: '100%', role: 'img', 'aria-label': '训练目标与學生分布條狀图' });
+    ui.barSvg = svgEl('svg', { viewBox: '0 0 640 208', width: '100%', role: 'img', 'aria-label': '训练目标与学生分布条状图' });
     lab.appendChild(ui.barSvg);
     var legend = el('div', 'display:flex;gap:1rem;flex-wrap:wrap;font-size:.82em;color:var(--fg-muted);margin:.25rem 0 .5rem;');
-    legend.appendChild(el('span', '', '<span style="display:inline-block;width:.85em;height:.85em;border-radius:3px;background:var(--accent);vertical-align:-.1em;"></span> 训练目标 q（軟標籤时为 softmax(z/τ)）'));
-    legend.appendChild(el('span', '', '<span style="display:inline-block;width:.85em;height:.85em;border-radius:3px;background:var(--accent-2);opacity:.55;vertical-align:-.1em;"></span> 學生分布 p（初始均勻）'));
-    legend.appendChild(el('span', '', 'y 軸自动缩放'));
+    legend.appendChild(el('span', '', '<span style="display:inline-block;width:.85em;height:.85em;border-radius:3px;background:var(--accent);vertical-align:-.1em;"></span> 训练目标 q（软标签时为 softmax(z/τ)）'));
+    legend.appendChild(el('span', '', '<span style="display:inline-block;width:.85em;height:.85em;border-radius:3px;background:var(--accent-2);opacity:.55;vertical-align:-.1em;"></span> 学生分布 p（初始均匀）'));
+    legend.appendChild(el('span', '', 'y 轴自动缩放'));
     lab.appendChild(legend);
     ui.interp = el('div', 'font-size:.9em;border-left:3px solid var(--accent);background:var(--panel-2);border-radius:6px;padding:.5rem .75rem;margin-bottom:.6rem;');
     lab.appendChild(ui.interp);
 
     var trainRow = el('div', 'display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;');
-    ui.trainBtn = document.createElement('button'); ui.trainBtn.textContent = '训练學生（60 步梯度下降）';
+    ui.trainBtn = document.createElement('button'); ui.trainBtn.textContent = '训练学生（60 步梯度下降）';
     ui.trainBtn.addEventListener('click', train);
-    var resetBtn = document.createElement('button'); resetBtn.textContent = '重置學生';
+    var resetBtn = document.createElement('button'); resetBtn.textContent = '重设学生';
     resetBtn.addEventListener('click', function () { resetStudent(); ui.trainBtn.disabled = false; redraw(); });
     trainRow.appendChild(ui.trainBtn); trainRow.appendChild(resetBtn);
     ui.klVal = el('span', 'font-size:.88em;color:var(--fg-muted);');
@@ -233,7 +233,7 @@
 
     /* 公式面板（对齐式 127–130） */
     var fPanel = el('div'); fPanel.className = 'widget-panel';
-    fPanel.appendChild(el('div', 'font-weight:600;margin-bottom:.3rem;', '这个实验最小化的目标（式 127／129–130 的單一位置版本）'));
+    fPanel.appendChild(el('div', 'font-weight:600;margin-bottom:.3rem;', '这个实验最小化的目标（式 127／129–130 的单一位置版本）'));
     var eq1 = el('div', 'overflow-x:auto;');
     tex(eq1, '\\mathcal{L}_{\\text{KD}} = H(q,p) = -\\sum_{k=1}^{|\\mathcal{V}|} q(u_j = k \\mid s, u_{<j})\\,\\log p(u_j = k \\mid s, u_{<j}),\\qquad q = \\mathrm{softmax}(z/\\tau)');
     fPanel.appendChild(eq1);
@@ -241,37 +241,37 @@
     tex(eq2, 'H(q,p) = H(q) + D_{\\text{KL}}(q \\,\\|\\, p)');
     fPanel.appendChild(eq2);
     fPanel.appendChild(el('div', 'font-size:.88em;color:var(--fg-muted);',
-      '教師分布 q 固定时，H(q) 是常量，最小化交叉熵等價于最小化前向 KL：D<sub>KL</sub>(q‖p)——' +
-      '这正是離线 KD 与 SFT 式训练所用的 KL 方向；动畫中的梯度就是 ∂H(q,p)/∂w = p − q。' +
-      '若換成硬標籤（q 为 one-hot），损失退化为一般的交叉熵 −log p(玉山)。'));
+      '教师分布 q 固定时，H(q) 是常量，最小化交叉熵等价于最小化前向 KL：D<sub>KL</sub>(q‖p)——' +
+      '这正是离线 KD 与 SFT 式训练所用的 KL 方向；动画中的梯度就是 ∂H(q,p)/∂w = p − q。' +
+      '若换成硬标签（q 为 one-hot），损失退化为一般的交叉熵 −log p(玉山)。'));
     rootEl.appendChild(fPanel);
 
-    /* 離线 vs on-policy 概念卡（12.3.2） */
+    /* 离线 vs on-policy 概念卡（12.3.2） */
     var card = el('div'); card.className = 'widget-panel';
-    card.appendChild(el('div', 'font-weight:600;margin-bottom:.5rem;', '概念卡：離线蒸餾 vs on-policy 蒸餾（OPD）'));
+    card.appendChild(el('div', 'font-weight:600;margin-bottom:.5rem;', '概念卡：离线蒸馏 vs on-policy 蒸馏（OPD）'));
     var grid = el('div', 'display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.6rem;');
-    grid.appendChild(cardCol('離线 KD（WORD-KD／SEQ-KD）', 'var(--accent)', [
-      ['誰生成序列', '教師：训练前就先产生好序列 u ∼ π<sub>T</sub>，屬前向 KL D<sub>KL</sub>(π<sub>T</sub>‖π<sub>θ</sub>)。'],
-      ['优點', '数据可事先产生并重複使用，实现简單、训练穩定，銜接 SFT 流程。'],
-      ['缺點', '训练与推理的前綴分布不匹配；前向 KL 可能讓學生高估教師的低概率區域，誤差沿长序列累積可達 O(εL²)。']
+    grid.appendChild(cardCol('离线 KD（WORD-KD／SEQ-KD）', 'var(--accent)', [
+      ['谁生成序列', '教师：训练前就先产生好序列 u ∼ π<sub>T</sub>，属前向 KL D<sub>KL</sub>(π<sub>T</sub>‖π<sub>θ</sub>)。'],
+      ['优点', '数据可事先产生并重复使用，实现简单、训练稳定，衔接 SFT 流程。'],
+      ['缺点', '训练与推理的前缀分布不匹配；前向 KL 可能让学生高估教师的低概率区域，误差沿长序列累积可达 O(εL²)。']
     ]));
-    grid.appendChild(cardCol('on-policy 蒸餾（OPD）', 'var(--accent-2)', [
-      ['誰生成序列', '學生：训练中即时取样 a ∼ π<sub>θ</sub>，教師在學生造訪的状态上給分布監督，屬反向 KL D<sub>KL</sub>(π<sub>θ</sub>‖π<sub>T</sub>)。'],
-      ['优點', '學生面對自己的错误、學会恢复行为，誤差累積降至 O(εL)；逐 token 的教師訊號稠密。'],
-      ['缺點', '需要线上取样与 RL 式基礎設施，训练成本較高、实现較複雜。']
+    grid.appendChild(cardCol('on-policy 蒸馏（OPD）', 'var(--accent-2)', [
+      ['谁生成序列', '学生：训练中即时取样 a ∼ π<sub>θ</sub>，教师在学生造访的状态上给分布监督，属反向 KL D<sub>KL</sub>(π<sub>θ</sub>‖π<sub>T</sub>)。'],
+      ['优点', '学生面对自己的错误、学会恢复行为，误差累积降至 O(εL)；逐 token 的教师信号稠密。'],
+      ['缺点', '需要线上取样与 RL 式基础设施，训练成本较高、实现较复杂。']
     ]));
     card.appendChild(grid);
     card.appendChild(el('div', 'font-size:.88em;margin-top:.6rem;border-left:3px solid var(--accent-2);background:var(--panel-2);border-radius:6px;padding:.5rem .75rem;',
-      '<strong>曝露偏差（exposure bias）一句話：</strong>學生训练时只看过教師寫的前綴，推理时卻要面對自己（可能出錯）生成的前綴——训练与测试的状态造訪分布不一致。'));
+      '<strong>曝露偏差（exposure bias）一句话：</strong>学生训练时只看过教师写的前缀，推理时却要面对自己（可能出错）生成的前缀——训练与测试的状态造访分布不一致。'));
     rootEl.appendChild(card);
 
     setMode('soft');
   }
 
   window.ChapterWidget = {
-    title: '知識蒸餾軟標籤实验室',
-    intro: '以「台灣最高的山是＿」的下一个 token 分布为玩具情境：调整溫度 τ 觀察教師軟標籤中的「暗知識」，' +
-      '對照硬標籤（one-hot）与軟標籤兩種训练目标，再按下「训练學生」，看學生分布如何以梯度下降最小化前向 KL 收斂到教師分布。',
+    title: '知识蒸馏软标签实验室',
+    intro: '以「台湾最高的山是＿」的下一个 token 分布为玩具情境：调整温度 τ 观察教师软标签中的「暗知识」，' +
+      '对照硬标签（one-hot）与软标签两种训练目标，再按下「训练学生」，看学生分布如何以梯度下降最小化前向 KL 收敛到教师分布。',
     render: render
   };
 })();

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hans">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -42,7 +42,7 @@ RLHF 及其相关方法都非常新。我们回顾这段历史，是为了呈现
 
 这个领域近年随着深度强化学习（Deep Reinforcement Learning）的兴起而普及，并发展成许多大型科技公司对 LLM 应用的更广泛研究。尽管如此，今日使用的许多技术，仍与早期「从偏好中进行 RL」文献中的核心技术有着深刻的关联。
 
-最早采用与现代 RLHF 相似方法的论文之一是 *TAMER*。*TAMER: Training an Agent Manually via Evaluative Reinforcement* 提出了一种方法：由人类反复为代理人（agent）的行动评分，以学习一个奖励模型（reward model），再用该模型来学习行动策略（action policy）[34]。另有与其同期或稍晚的研究提出了一种演员-评论家（actor-critic）算法 COACH，利用人类回馈（包含正向与负向）来调整优势函数（advantage function）[35]。
+最早采用与现代 RLHF 相似方法的论文之一是 *TAMER*。*TAMER: Training an Agent Manually via Evaluative Reinforcement* 提出了一种方法：由人类反复为代理人（agent）的行动评分，以学习一个奖励模型（reward model），再用该模型来学习行动策略（action policy）[34]。另有与其同期或稍晚的研究提出了一种演员-评论家（actor-critic）演算法 COACH，利用人类回馈（包含正向与负向）来调整优势函数（advantage function）[35]。
 
 最主要的参考文献 Christiano et al. 2017，则是将 RLHF 应用于 Atari 游戏中代理人轨迹（trajectories）之间偏好的研究 [1]。这项引入 RLHF 的工作，紧接在 DeepMind 关于深度 Q 网路（Deep Q-Networks, DQN）强化学习的开创性研究之后——后者展示了 RL 代理人可以从零开始学会玩热门电子游戏。该研究显示，在某些领域中，让人类在轨迹之间做选择，可能比直接与环境互动更有效。这其中用到了一些巧妙的设定条件，但成果依然令人印象深刻。
 
@@ -73,7 +73,7 @@ ChatGPT 发布时的公告，非常明确地说明了 RLHF 在其训练中扮演
 
 自那之后，RLHF 已被广泛用于各个领先的语言模型。众所周知，它被用于 Anthropic 为 Claude 打造的宪法式 AI（Constitutional AI）[24]、Meta 的 Llama 2 [49] 与 Llama 3 [29]、Nvidia 的 Nemotron [30]、Ai2 的 Tülu 3 [6] 等等。
 
-如今，RLHF 正在成长为一个更广泛的偏好微调（preference fine-tuning, PreFT）领域，包括一些新的应用，例如：针对中间推理步骤的过程奖励（process rewards）[50]，于第 5 章介绍；受直接偏好优化（Direct Preference Optimization, DPO）[25] 启发的直接对齐算法（direct alignment algorithms），于第 8 章介绍；从程序码或数学的执行回馈中学习 [51], [52]，以及其他受 OpenAI 的 o1 [53] 启发的线上推理方法，于第 7 章介绍。
+如今，RLHF 正在成长为一个更广泛的偏好微调（preference fine-tuning, PreFT）领域，包括一些新的应用，例如：针对中间推理步骤的过程奖励（process rewards）[50]，于第 5 章介绍；受直接偏好优化（Direct Preference Optimization, DPO）[25] 启发的直接对齐演算法（direct alignment algorithms），于第 8 章介绍；从程式码或数学的执行回馈中学习 [51], [52]，以及其他受 OpenAI 的 o1 [53] 启发的线上推理方法，于第 7 章介绍。
 
 </script>
 <script src="../assets/marked.min.js"></script>

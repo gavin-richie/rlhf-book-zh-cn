@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hans">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -89,7 +89,7 @@ $$
 
   其中 $\tau \sim \pi_\theta$ 表示依循策略 $\pi_\theta$ 取样得到的轨迹，$T$ 是有限时域（finite horizon）。
 
-- **同策略（On-policy）**：在 RLHF 中，特别是在强化学习与直接对齐算法（Direct Alignment Algorithms）的论辩里，经常讨论**同策略（on-policy）**资料。在强化学习文献中，on-policy 指资料*恰好*由代理人当前形式的模型所生成；但在一般的偏好微调（preference-tuning）文献中，on-policy 的意义被扩大为「由该版本模型生成」——例如在进行任何偏好微调之前的指令微调检查点（instruction-tuned checkpoint）。在此脉络下，off-policy 可以指由后训练（post-training）过程中所使用的任何其他语言模型生成的资料。
+- **同策略（On-policy）**：在 RLHF 中，特别是在强化学习与直接对齐演算法（Direct Alignment Algorithms）的论辩里，经常讨论**同策略（on-policy）**资料。在强化学习文献中，on-policy 指资料*恰好*由代理人当前形式的模型所生成；但在一般的偏好微调（preference-tuning）文献中，on-policy 的意义被扩大为「由该版本模型生成」——例如在进行任何偏好微调之前的指令微调检查点（instruction-tuned checkpoint）。在此脉络下，off-policy 可以指由后训练（post-training）过程中所使用的任何其他语言模型生成的资料。
 - **策略（Policy，$\pi$）**：在 RLHF 中也称为**策略模型（policy model）**。在强化学习中，策略是代理人用来决定在给定状态下采取何种动作的策略或规则：$\pi(a \mid s)$。
 - **依策略而定的数值（Policy-conditioned Values，$[]^{\pi(\cdot)}$）**：在各种强化学习的推导与实作中，一个关键环节是收集依附于（conditioned on）特定策略的资料或数值。本书中我们会在较简洁的价值函数记号（$V, A, Q, G$）与其对应的策略条件版本（$V^\pi, A^\pi, Q^\pi$）之间切换。此外，在计算期望值时，另一个关键是从依附于特定策略的资料 $d$ 中取样，记作 $d_\pi$（例如在估计 $\mathbb{E}_{s \sim d_\pi,\, a \sim \pi(\cdot \mid s)}[A^\pi(s, a)]$ 时，$s \sim d_\pi$ 且 $a \sim \pi(\cdot \mid s)$）。
 - **Q 函数（Q-Function，$Q$）**：估计在给定状态下采取特定动作后，期望累积奖励的函数：$Q(s, a) = \mathbb{E}\left[\sum_{t=0}^{\infty} \gamma^t r_t \mid s_0 = s, a_0 = a\right]$。

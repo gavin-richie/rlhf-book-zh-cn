@@ -1,4 +1,4 @@
-/* 第 9 章：拒绝采样模擬器（Rejection Sampling Simulator） */
+/* 第 9 章：拒绝采样模拟器（Rejection Sampling Simulator） */
 (function () {
   'use strict';
 
@@ -24,7 +24,7 @@
   function fmt(v, d) { return v.toFixed(d == null ? 2 : d); }
   function mean(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return a.length ? s / a.length : 0; }
 
-  /* E[max of N 个標準常態样本]，以蒙地卡羅（前綴最大值）估计一次，之后查表 */
+  /* E[max of N 个标准常态样本]，以蒙地卡罗（前缀最大值）估计一次，之后查表 */
   var EMAX = (function () {
     var trials = 4000, tbl = new Float64Array(MAX_N + 1);
     for (var t = 0; t < trials; t++) {
@@ -32,7 +32,7 @@
       for (var n = 1; n <= MAX_N; n++) { var z = gauss(); if (z > m) m = z; tbl[n] += m; }
     }
     for (var i = 1; i <= MAX_N; i++) tbl[i] /= trials;
-    tbl[1] = 0; // E[max of 1] = 0（理论值），去除取样雜訊
+    tbl[1] = 0; // E[max of 1] = 0（理论值），去除取样噪声
     return tbl;
   })();
 
@@ -48,7 +48,7 @@
     }
   }
 
-  /* 依当前 N、M、σ 取出獎勵矩陣与选取结果 */
+  /* 依当前 N、M、σ 取出奖励矩阵与选取结果 */
   function compute() {
     var R = [], flat = [];
     for (var i = 0; i < state.M; i++) {
@@ -66,14 +66,14 @@
         for (var q = 1; q < state.N; q++) if (R[p][q] > R[p][best]) best = q;
         chosen[p + ',' + best] = true;
       }
-    } else { // 整体前 M 名：攤平后取 K = M 个最大值
+    } else { // 整体前 M 名：摊平后取 K = M 个最大值
       flat.slice().sort(function (a, b) { return b.r - a.r; }).slice(0, state.M)
         .forEach(function (c) { chosen[c.i + ',' + c.j] = true; });
     }
     return { R: R, flat: flat, chosen: chosen };
   }
 
-  function axis(svg, x0, x1, y0, y1) { // 底部与左侧軸线
+  function axis(svg, x0, x1, y0, y1) { // 底部与左侧轴线
     svgEl('line', { x1: x0, y1: y1, x2: x1, y2: y1, stroke: 'var(--border)' }, svg);
     svgEl('line', { x1: x0, y1: y0, x2: x0, y2: y1, stroke: 'var(--border)' }, svg);
   }
@@ -99,7 +99,7 @@
       label(svg, L - 6, yy + 4, fmt(rv, 1), 'end', 10);
     }
     for (var i = 0; i < state.M; i++) label(svg, L + (i + 0.5) * (W - L - R0) / state.M, H - B + 16, '提示 ' + (i + 1), 'middle', 10);
-    label(svg, L + (W - L - R0) / 2, H - 2, '提示編號 i（每欄 N 个补全的 reward）', 'middle', 11);
+    label(svg, L + (W - L - R0) / 2, H - 2, '提示编号 i（每栏 N 个补全的 reward）', 'middle', 11);
     d.flat.forEach(function (c) {
       var x = sx(c.i, c.j), y = sy(c.r);
       if (d.chosen[c.i + ',' + c.j]) {
@@ -138,9 +138,9 @@
     var mx = function (r) { return L + (r - lo) / (hi - lo) * (W - L - R0); };
     svgEl('line', { x1: mx(mAll), y1: T, x2: mx(mAll), y2: H - B, stroke: 'var(--fg-muted)', 'stroke-dasharray': '4 3' }, svg);
     svgEl('line', { x1: mx(mSel), y1: T, x2: mx(mSel), y2: H - B, stroke: 'var(--accent)', 'stroke-dasharray': '4 3' }, svg);
-    label(svg, L, T - 10, '全部样本（灰）均值 ' + fmt(mAll) + ' ｜ 被选中（強調色）均值 ' + fmt(mSel) + ' ｜ 位移 +' + fmt(mSel - mAll), 'start', 11)
+    label(svg, L, T - 10, '全部样本（灰）均值 ' + fmt(mAll) + ' ｜ 被选中（强调色）均值 ' + fmt(mSel) + ' ｜ 位移 +' + fmt(mSel - mAll), 'start', 11)
       .setAttribute('fill', 'var(--fg)');
-    label(svg, L + (W - L - R0) / 2, H - 4, 'reward 分布（各自的相對頻率）', 'middle', 11);
+    label(svg, L + (W - L - R0) / 2, H - 4, 'reward 分布（各自的相对频率）', 'middle', 11);
     for (var g = 0; g <= 4; g++) label(svg, mx(lo + (hi - lo) * g / 4), H - B + 14, fmt(lo + (hi - lo) * g / 4, 1), 'middle', 10);
     return mSel - mAll;
   }
@@ -166,13 +166,13 @@
     svgEl('circle', { cx: cx, cy: cy, r: 5, fill: 'var(--accent)' }, svg);
     label(svg, Math.min(cx + 8, W - 90), cy - 8, 'N=' + state.N + '（+' + fmt(EMAX[state.N] * state.sigma) + '）', cx > W - 170 ? 'end' : 'start', 11)
       .setAttribute('fill', 'var(--fg)');
-    label(svg, L, T - 10, 'Best-of-N 期望提升 E[max]−μ ≈ σ·E[max of N 標準常態]', 'start', 11);
+    label(svg, L, T - 10, 'Best-of-N 期望提升 E[max]−μ ≈ σ·E[max of N 标准常态]', 'start', 11);
     label(svg, L + (W - L - R0) / 2, H - 4, '每提示样本数 N', 'middle', 11);
   }
 
   window.ChapterWidget = {
-    title: '拒绝采样模擬器',
-    intro: '模擬「生成 N 个补全、用獎勵模型評分、只留最好的」流程：比較 9.1.2 節的兩種选取函数（每提示取最佳 vs 整体前 M 名），并觀察 Best-of-N 的報酬遞減。',
+    title: '拒绝采样模拟器',
+    intro: '模拟「生成 N 个补全、用奖励模型评分、只留最好的」流程：比较 9.1.2 节的两种选取函数（每提示取最佳 vs 整体前 M 名），并观察 Best-of-N 的报酬递减。',
     render: function (root) {
       root.innerHTML = '';
       var panel = div('widget-panel', root);
@@ -190,7 +190,7 @@
       }
       slider('每提示样本数 N', 1, MAX_N, 1, 'N', function (v) { return v; });
       slider('提示数 M', 4, MAX_M, 1, 'M', function (v) { return v; });
-      slider('獎勵標準差 σ', 0.2, 1.5, 0.05, 'sigma', function (v) { return fmt(v); });
+      slider('奖励标准差 σ', 0.2, 1.5, 0.05, 'sigma', function (v) { return fmt(v); });
 
       var row2 = div('widget-row', panel);
       row2.style.marginTop = '.6rem';
@@ -200,7 +200,7 @@
       sel.addEventListener('change', function () { state.mode = sel.value; redraw(); });
       row2.appendChild(sel);
       var btn = document.createElement('button');
-      btn.textContent = '重新採样';
+      btn.textContent = '重新采样';
       btn.addEventListener('click', function () { resample(); redraw(); });
       row2.appendChild(btn);
       var formula = document.createElement('span');
@@ -231,16 +231,16 @@
         var nCov = Object.keys(covered).length;
         var txt = '目前 N = ' + state.N + '：被选中样本的平均 reward 比全体高 ' + fmt(shift) + '。';
         if (n2 > state.N) {
-          txt += '理论上把 N 從 ' + state.N + ' 加倍到 ' + n2 + '，期望最大值只再提升約 ' + fmt(gainDouble) +
-            '（對照：N 從 1→2 就提升了 ' + fmt(gainFirst) + '）——報酬遞減，这正是实务上 N 取 10～30 即已足夠的原因。';
+          txt += '理论上把 N 从 ' + state.N + ' 加倍到 ' + n2 + '，期望最大值只再提升约 ' + fmt(gainDouble) +
+            '（对照：N 从 1→2 就提升了 ' + fmt(gainFirst) + '）——报酬递减，这正是实务上 N 取 10～30 即已足够的原因。';
         } else {
-          txt += 'N 已達上限 64；曲线后段幾乎平坦——再加倍样本数也換不到多少期望提升，報酬遞減。';
+          txt += 'N 已达上限 64；曲线后段几乎平坦——再加倍样本数也换不到多少期望提升，报酬递减。';
         }
         if (state.mode === 'overall') {
           txt += ' 整体前 M 名模式下，' + state.M + ' 个提示只有 ' + nCov + ' 个被覆盖' +
-            (nCov < state.M ? '：高 μ 的提示壟斷名額，低 μ 的提示可能一个补全都选不上，训练数据会偏向「容易拿高獎勵」的提示。' : '，本次恰好每个提示都有补全入选。');
+            (nCov < state.M ? '：高 μ 的提示垄断名额，低 μ 的提示可能一个补全都选不上，训练数据会偏向「容易拿高奖励」的提示。' : '，本次恰好每个提示都有补全入选。');
         } else {
-          txt += ' 每提示取最佳模式保證每个提示各留一个补全，数据覆盖均勻。';
+          txt += ' 每提示取最佳模式保证每个提示各留一个补全，数据覆盖均匀。';
         }
         note.textContent = txt;
       }

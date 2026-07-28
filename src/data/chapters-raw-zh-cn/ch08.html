@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hans">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>第 8 章　直接对齐算法 — RLHF 中文版</title>
+<title>第 8 章　直接对齐演算法 — RLHF 中文版</title>
 <link rel="stylesheet" href="../assets/katex/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
 <header class="topbar">
   <a class="brand" href="../index.html">RLHF 中文版<span>从人类回馈中强化学习</span></a>
-  <nav class="chapnav"><a href="ch07.html">← 第 7 章</a><span class="chapnav-current">第 8 章　直接对齐算法</span><a href="ch09.html">第 9 章 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
+  <nav class="chapnav"><a href="ch07.html">← 第 7 章</a><span class="chapnav-current">第 8 章　直接对齐演算法</span><a href="ch09.html">第 9 章 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
 </header>
 <div class="layout">
   <aside class="sidebar"><nav id="toc" class="toc"><h2>本章目录</h2></nav></aside>
@@ -27,11 +27,11 @@
   </main>
 </div>
 <script type="text/markdown" id="chapter-md">
-# 第 8 章　直接对齐算法（Direct-Alignment Algorithms）
+# 第 8 章　直接对齐演算法（Direct-Alignment Algorithms）
 
 > 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 105–116 页。
 
-直接对齐算法（Direct Alignment Algorithms, DAAs）让我们得以在完全不训练中介奖励模型（reward model）、也不使用强化学习优化器的情况下，更新模型以求解相同的 RLHF 目标。DAAs 求解的是我们一直在研究的同一个偏好学习问题（甚至使用一模一样的资料！），目的是让语言模型更对齐、更聪明、更容易使用。由于不需要奖励模型与线上优化，DAAs 的实作远为简单，能降低训练期间的运算开销，也让实验变得更容易。本章详述推导这些算法所需的复杂数学，并展示这些有时颇为繁琐的推导，最终如何化为简洁的实作。
+直接对齐演算法（Direct Alignment Algorithms, DAAs）让我们得以在完全不训练中介奖励模型（reward model）、也不使用强化学习优化器的情况下，更新模型以求解相同的 RLHF 目标。DAAs 求解的是我们一直在研究的同一个偏好学习问题（甚至使用一模一样的资料！），目的是让语言模型更对齐、更聪明、更容易使用。由于不需要奖励模型与线上优化，DAAs 的实作远为简单，能降低训练期间的运算开销，也让实验变得更容易。本章详述推导这些演算法所需的复杂数学，并展示这些有时颇为繁琐的推导，最终如何化为简洁的实作。
 
 最着名的 DAA——同时也是催化了整个语言模型对齐学术运动的方法——是直接偏好优化（Direct Preference Optimization, DPO）[25]。就其核心而言，DPO 使用梯度上升（gradient ascent）来求解同一个带约束的 RLHF 目标（见第 3 章）：
 
@@ -39,7 +39,7 @@ $$
 \max_{\pi} \mathbb{E}_{x \sim \mathcal{D}} \mathbb{E}_{y \sim \pi(y|x)} \left[ r_\theta(x, y) \right] - \beta \mathcal{D}_{\mathrm{KL}} \left( \pi(y|x) \| \pi_{\mathrm{ref}}(y|x) \right) \tag{79}
 $$
 
-自 2023 年 5 月发表以来——经过一段短暂的延迟，社区才摸索出使用 DPO 的正确资料与超参数（hyperparameters）（具体来说，是出乎意料低的学习率）——许多热门模型都使用了 DPO 或其变体，从 2023 年 10 月率先采用的 Zephyr-$\beta$ [26]、Llama 3 Instruct [29]、Tülu 2 [27] 与 3 [6]、Nemotron 4 340B [30]，以及其他模型。严格说来，序列似然校准（Sequence Likelihood Calibration, SLiC-HF）才是最早发表的现代直接对齐算法 [189]，但由于多种因素的综合影响，它并未流行起来（要解开研究方法被采用与否的来龙去脉，向来是件棘手的事）。
+自 2023 年 5 月发表以来——经过一段短暂的延迟，社区才摸索出使用 DPO 的正确资料与超参数（hyperparameters）（具体来说，是出乎意料低的学习率）——许多热门模型都使用了 DPO 或其变体，从 2023 年 10 月率先采用的 Zephyr-$\beta$ [26]、Llama 3 Instruct [29]、Tülu 2 [27] 与 3 [6]、Nemotron 4 340B [30]，以及其他模型。严格说来，序列似然校准（Sequence Likelihood Calibration, SLiC-HF）才是最早发表的现代直接对齐演算法 [189]，但由于多种因素的综合影响，它并未流行起来（要解开研究方法被采用与否的来龙去脉，向来是件棘手的事）。
 
 DPO 与 DAAs 最具影响力之处，在于降低了实验语言模型后训练（post-training）的入门门槛——它使用较少的运算资源、从零开始实作更容易，而且无论是玩具范例还是生产环境的案例都更容易跑起来。
 
@@ -47,7 +47,7 @@ DPO 与 DAAs 最具影响力之处，在于降低了实验语言模型后训练�
 
 ## 8.1 直接偏好优化（Direct Preference Optimization）
 
-这里我们先解释 DPO 运作原理的直觉，再完整地重新推导其核心方程序。
+这里我们先解释 DPO 运作原理的直觉，再完整地重新推导其核心方程式。
 
 ### 8.1.1 DPO 的运作原理（How DPO Works）
 
@@ -85,7 +85,7 @@ $$
 
 核心直觉是：DPO 正在拟合一个隐式奖励模型，而其对应的最适策略可以用闭合解（closed form）的形式提取出来（式 96，这要归功于梯度下降与我们的机器学习工具）。由于 DPO 损失可以直接微分，计算精确梯度是直截了当的，而不需要透过训练奖励模型、再抽样补全来评分的方式去估计它。经常被误解的一点是：DPO 的核心其实是在学习一个奖励模型——这正是其论文副标题 *Your Language Model is Secretly a Reward Model*（你的语言模型其实是个奖励模型）的由来。这一点很容易与「DPO 目标直接训练策略」混淆，因此研读下方的推导有助于完整理解。
 
-透过隐式奖励模型的学习，DPO 是在「资料集中的资料」与「目标函数中特定的 KL 约束 $\beta$」给定的条件下，产生 RLHF 目标的最适解。在这里，DPO 之所以能针对特定的 KL 散度求解出精确的策略，是因为其生成过程不像策略梯度算法那样是线上（online）的——这是它与用于偏好调整的 RL 方法的核心差异。在许多方面，这使得 DPO 的 $\beta$ 值比线上 RL 方法更容易调整，但关键且符合直觉的是，最适值取决于被训练的模型以及训练它的资料。
+透过隐式奖励模型的学习，DPO 是在「资料集中的资料」与「目标函数中特定的 KL 约束 $\beta$」给定的条件下，产生 RLHF 目标的最适解。在这里，DPO 之所以能针对特定的 KL 散度求解出精确的策略，是因为其生成过程不像策略梯度演算法那样是线上（online）的——这是它与用于偏好调整的 RL 方法的核心差异。在许多方面，这使得 DPO 的 $\beta$ 值比线上 RL 方法更容易调整，但关键且符合直觉的是，最适值取决于被训练的模型以及训练它的资料。
 
 对于每一批偏好资料——由许多补全配对 $y_{chosen} \succ y_{rejected}$ 组成——DPO 直接朝最适解采取梯度步。它远比策略梯度方法简单。
 
@@ -216,7 +216,7 @@ $$
 r^*(x, y) = \beta \log \frac{\pi^*(y \mid x)}{\pi_{\mathrm{ref}}(y \mid x)} + \beta \log Z(x) \tag{101}
 $$
 
-接着，我们可以把这个奖励代入式 97 所示的 Bradley-Terry 方程序，得到：
+接着，我们可以把这个奖励代入式 97 所示的 Bradley-Terry 方程式，得到：
 
 $$
 p^*(y_1 \succ y_2 \mid x) = \frac{\exp\left( \beta \log \frac{\pi^*(y_1|x)}{\pi_{\mathrm{ref}}(y_1|x)} + \beta \log Z(x) \right)}{\exp\left( \beta \log \frac{\pi^*(y_1|x)}{\pi_{\mathrm{ref}}(y_1|x)} + \beta \log Z(x) \right) + \exp\left( \beta \log \frac{\pi^*(y_2|x)}{\pi_{\mathrm{ref}}(y_2|x)} + \beta \log Z(x) \right)} \tag{102}
@@ -259,7 +259,7 @@ $$
 \nabla_\theta \mathcal{L}_{\mathrm{DPO}}(\pi_\theta; \pi_{\mathrm{ref}}) = -\nabla_\theta \mathbb{E}_{(x, y_c, y_r) \sim \mathcal{D}} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_c|x)}{\pi_{\mathrm{ref}}(y_c|x)} - \beta \log \frac{\pi_\theta(y_r|x)}{\pi_{\mathrm{ref}}(y_r|x)} \right) \right] \tag{107}
 $$
 
-首先，上式可以被改写。我们知道 sigmoid 函数的导数为 $\frac{d}{dx} \sigma(x) = \sigma(x)(1 - \sigma(x))$、对数的导数为 $\frac{d}{dx} \log x = \frac{1}{x}$，以及 sigmoid 的性质 $\sigma(-x) = 1 - \sigma(x)$，因此我们可以重整上面的方程序。
+首先，上式可以被改写。我们知道 sigmoid 函数的导数为 $\frac{d}{dx} \sigma(x) = \sigma(x)(1 - \sigma(x))$、对数的导数为 $\frac{d}{dx} \log x = \frac{1}{x}$，以及 sigmoid 的性质 $\sigma(-x) = 1 - \sigma(x)$，因此我们可以重整上面的方程式。
 
 首先，令 $u = \beta \log \frac{\pi_\theta(y_c|x)}{\pi_{\mathrm{ref}}(y_c|x)} - \beta \log \frac{\pi_\theta(y_r|x)}{\pi_{\mathrm{ref}}(y_r|x)}$（即 sigmoid 内部的表达式）。那么，我们有
 
@@ -275,7 +275,7 @@ $$
 
 ## 8.2 数值考量、弱点与替代方案（Numerical Concerns, Weaknesses, and Alternatives）
 
-为了解决 DPO 的弱点，人们提出了许多 DPO 算法的变体。举例来说，在没有 rollout（推演）让奖励模型为生成结果评分的情况下，DPO 对每一对偏好资料一视同仁。而实际上，如第 11 章「偏好资料」所示，有许多方式可以撷取到比二元标签更丰富的偏好资料。已有多种算法被提出，用来重新平衡优化过程，使其不再对每一对资料等量齐观。
+为了解决 DPO 的弱点，人们提出了许多 DPO 演算法的变体。举例来说，在没有 rollout（推演）让奖励模型为生成结果评分的情况下，DPO 对每一对偏好资料一视同仁。而实际上，如第 11 章「偏好资料」所示，有许多方式可以撷取到比二元标签更丰富的偏好资料。已有多种演算法被提出，用来重新平衡优化过程，使其不再对每一对资料等量齐观。
 
 - **基于相对奖励回归的 RL（REgression to RElative REward Based RL, REBEL）** 加入来自奖励模型的讯号，以被选与被拒回应之间的差距（margin）形式呈现，而非仅依靠成对偏好资料，从而更准确地求解 RLHF 问题 [190]。
 - **保守 DPO（Conservative DPO, cDPO）与恒等偏好优化（Identity Preference Optimization, IPO）** 透过假设偏好资料中存在杂讯来处理过度拟合。cDPO 假设有 N% 的资料标记错误 [25]；IPO 则改变优化方式，将偏好机率软化，而非直接依标签进行优化 [191]。实务上，IPO 将偏好机率改为一个非线性函数，脱离 Bradley-Terry 假设，使用 $\Psi(q) = \log\left( \frac{q}{1-q} \right)$。
@@ -293,7 +293,7 @@ DPO 一个*显而易见*的核心问题是：其优化只朝着「扩大被选�
 
 另一个被提出、用以解释 DPO 类方法性能天花板低于线上（基于 RL 的）RLHF 方法的主要原因是：其训练讯号来自先前模型或其他模型产生的补全。DPO 的线上变体透过在训练时生成新的补全并纳入偏好讯号，缓解了这些限制。**线上 DPO（Online DPO）**[199] 从当前模型抽样生成结果，而**判别器引导的 DPO（Discriminator-Guided DPO, D2PO）**[200] 则使用奖励模型重新标记，即时建立新的偏好资料——此外还存在许多其他变体。
 
-其他 DAA 变体还有一长串，例如直接纳许优化（Direct Nash Optimization, DNO）[201] 或二元分类器优化（Binary Classifier Optimization, BCO）[202]，但算法的选择远不如初始模型与所用资料重要 [6] [203] [204]。
+其他 DAA 变体还有一长串，例如直接纳许优化（Direct Nash Optimization, DNO）[201] 或二元分类器优化（Binary Classifier Optimization, BCO）[202]，但演算法的选择远不如初始模型与所用资料重要 [6] [203] [204]。
 
 ## 8.3 实作细节（Implementation Details）
 
@@ -320,7 +320,7 @@ rejected_rewards = beta * (policy_rejected_logps - reference_rejected_logps).det
 
 在大多数面向上，DAAs 更简单、也是一种生活品质的提升，但它们也带来一组不同的考量。
 
-1. **KL 散度是静态的**：在 DPO 与其他算法中，KL 散度是由 $\beta$ 参数显式设定的，该参数为优化过程平衡了距离惩罚。这是因为 DPO 是在给定资料下，朝 RLHF 目标的*最适*解采取梯度步——它精确地步向由 $\beta$ 项所设定的解。另一方面，基于 RL 的优化器则是根据批次与近期资料来采取梯度步。
+1. **KL 散度是静态的**：在 DPO 与其他演算法中，KL 散度是由 $\beta$ 参数显式设定的，该参数为优化过程平衡了距离惩罚。这是因为 DPO 是在给定资料下，朝 RLHF 目标的*最适*解采取梯度步——它精确地步向由 $\beta$ 项所设定的解。另一方面，基于 RL 的优化器则是根据批次与近期资料来采取梯度步。
 2. **快取对数机率**：DPO 的简单实作为了损失函数计算的方便，会同时对策略模型与参考模型做前向传递。然而，这会使记忆体用量翻倍，并导致 GPU 使用量增加。要避免这一点，可以先在训练资料集上计算参考模型的对数机率，然后在逐批计算损失与更新参数时，重复使用这些快取的参考对数机率，将峰值记忆体用量降低 50%。
 
 ## 8.4 使用合成偏好资料的 DAAs（DAAs with Synthetic Preference Data）
@@ -331,21 +331,21 @@ rejected_rewards = beta * (policy_rejected_logps - reference_rejected_logps).det
 
 整体而言，考量到实作的简单性，以及相对于基于强化学习的偏好微调方法的强劲表现，以 DAAs 在合成偏好资料上训练模型，是多数实务工作者应该起步的地方。使用大量合成偏好资料时还存在其他次要问题，例如评判补全的模型自身的偏误。鉴于 GPT-4 等前沿模型已知具有长度偏误（length bias）[79]，并偏好与自身相符的输出 [207]（详见第 12 章），资料集中「被选」部分的文本略微更有可能来自 OpenAI 的模型，或另一个风格与其相似的强大模型。
 
-在本节的最后，我们将说明这些方法如何改变被训练模型的生成结果的直觉。从高层次来看，多数 DAAs 的优化目标是扩大「被选」与「被拒」补全机率之间的差距（某些较不流行的算法会刻意稍微改变这些动态，但核心不变）。如本章先前所讨论的（见图 27），这通常意味着两者的机率都会下降，但被拒回应下降的幅度更大。序列中的每个 token 会依据其对整体偏好差距的贡献程度，收到不同的梯度（包括大小与方向），使优化器能辨识出哪些 token 对结果最重要。
+在本节的最后，我们将说明这些方法如何改变被训练模型的生成结果的直觉。从高层次来看，多数 DAAs 的优化目标是扩大「被选」与「被拒」补全机率之间的差距（某些较不流行的演算法会刻意稍微改变这些动态，但核心不变）。如本章先前所讨论的（见图 27），这通常意味着两者的机率都会下降，但被拒回应下降的幅度更大。序列中的每个 token 会依据其对整体偏好差距的贡献程度，收到不同的梯度（包括大小与方向），使优化器能辨识出哪些 token 对结果最重要。
 
 ## 8.5 DAAs 与 RL 的比较：线上与离线资料（DAAs vs. RL: Online vs. Offline Data）
 
 概括来说，这场争论可以归结为一个问题：要用 RLHF 对齐语言模型，我们是否需要强化学习的内部机制——价值函数（value functions）、策略梯度等等？和多数以这种方式表述的问题一样，这样问过于简化。当然，两种方法都已相当成熟，但阐明其根本差异与性能版图（performance manifolds）所在，仍然很重要。
 
-多份报告的结论是：基于策略梯度的方法与 RL 方法优于 DPO 及其变体。这些论证有不同形式：有的是在受控资料下以不同算法训练模型 [125] [165]，有的是研究 RL 优化回圈中 on-policy 资料的角色 [208]。在所有这些案例中，DPO 算法都稍微落后一步。
+多份报告的结论是：基于策略梯度的方法与 RL 方法优于 DPO 及其变体。这些论证有不同形式：有的是在受控资料下以不同演算法训练模型 [125] [165]，有的是研究 RL 优化回圈中 on-policy 资料的角色 [208]。在所有这些案例中，DPO 演算法都稍微落后一步。
 
-即便存在这样的性能差距，DAAs 因其简单性仍被领先的模型广泛使用。DAAs 提供了一个受控的环境，能快速迭代训练资料与其他配置；而鉴于资料往往远比算法重要，使用 DPO 可以是很好的选择。
+即便存在这样的性能差距，DAAs 因其简单性仍被领先的模型广泛使用。DAAs 提供了一个受控的环境，能快速迭代训练资料与其他配置；而鉴于资料往往远比演算法重要，使用 DPO 可以是很好的选择。
 
 随着以 RL 为主要训练方式的推理模型（reasoning models）兴起，更多投资将回流到以 RL 进行偏好调整。长期来看，这将提升 RL 基础设施的稳健性，并巩固 RL 相对于 DAAs 在「从人类回馈进行优化」上的这道优势差距。
 
 ## 8.6 建议实验（Suggested Experiments）
 
-随附程序码 `code/direct_alignment/` 会在偏好资料上训练 DPO 与数种相关损失。这是开始实验偏好调整最容易上手的地方，因为整个设定是离线的：不需要奖励模型服务器，也不需要 rollout 回圈。
+随附程式码 `code/direct_alignment/` 会在偏好资料上训练 DPO 与数种相关损失。这是开始实验偏好调整最容易上手的地方，因为整个设定是离线的：不需要奖励模型服务器，也不需要 rollout 回圈。
 
 1. **在 UltraFeedback 上训练一个小型 DPO。**
 
@@ -375,7 +375,7 @@ rejected_rewards = beta * (policy_rejected_logps - reference_rejected_logps).det
    uv run python -m direct_alignment.train --config direct_alignment/configs/orpo.yaml
    ```
 
-4. **先改变资料，再改变损失。** 固定损失不动，改变 `--max_samples`、`--max_length` 或偏好资料集。如果结果的变动比在不同 DPO 类目标之间切换还大，这就是偏好调整领域一个核心主题的经验性提醒：资料通常比小幅的算法差异更具决定性。
+4. **先改变资料，再改变损失。** 固定损失不动，改变 `--max_samples`、`--max_length` 或偏好资料集。如果结果的变动比在不同 DPO 类目标之间切换还大，这就是偏好调整领域一个核心主题的经验性提醒：资料通常比小幅的演算法差异更具决定性。
 
 </script>
 <script src="../assets/marked.min.js"></script>

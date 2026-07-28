@@ -1,67 +1,67 @@
 (function () {
   'use strict';
 
-  // 流水线项目依序排列：偶数索引为节点（阶段），奇数索引为箭头（数据流）
+  // 流水线项目依次排列：偶数索引为节点（阶段），奇数索引为箭头（数据流）
   var ITEMS = [
     { kind: 'node', name: '基础模型', en: 'Base Model',
-      what: '經过大规模自回归预训练（下一token預測）的语言模型。它只会「補完文本」，还不会以问答格式响应使用者。',
-      input: '以網页为主的大规模预训练数据（数兆token）', output: '蘊藏知識与潛力、但沒有助理行为的基础模型',
-      chapter: '第 1 章 1.4 節（后训练的直覺）、第 3 章（训练概觀）',
-      insight: '引出詮釋：基础模型就像 F1 賽車的底盤，決定了最終模型絕大部分的潛力；后训练的工作是把潛力全部引出来。' },
+      what: '经过大规模自回归预训练（下一token预测）的语言模型。它只会「补完文本」，还不会以问答格式回应用户。',
+      input: '以网页为主的大规模预训练数据（数兆token）', output: '蕴藏知识与潜力、但没有助理行为的基础模型',
+      chapter: '第 1 章 1.4 节（后训练的直觉）、第 3 章（训练概览）',
+      insight: '引出解释：基础模型就像 F1 赛车的底盘，决定了最终模型绝大部分的潜力；后训练的工作是把潜力全部引出来。' },
     { kind: 'edge', name: '指令数据 ~10K',
-      what: '餵入精心打造的问答格式示例。模型「只」看到问答格式的数据，因此從補完文本轉为以助理人格回答查詢。',
-      input: '約 1 萬筆（~10K）高品质指令—响应對', output: '训练訊號：下一token預測损失',
+      what: '输入精心设计的问答格式示例。模型「只」看到问答格式的数据，因此从补完文本转为以助理人格回答查询。',
+      input: '约 1 万笔（~10K）高品质指令—回应对', output: '训练信号：下一token预测损失',
       chapter: '第 4 章（指令微调）、第 12 章（合成数据）',
-      insight: '量級小但品质关鍵：幾千到上萬筆样本就能大幅改变模型的格式与人格，但这不代表「指令微调就足以实现对齐」。' },
+      insight: '量级小但质量关键：几千到上万笔样本就能大幅改变模型的格式与人格，但这不代表「指令微调就足以实现对齐」。' },
     { kind: 'node', name: 'SFT 模型', en: 'SFT Model',
-      what: '指令微调／監督式微调（IFT/SFT）：用同样的下一token預測损失在问答数据上训练，教导模型格式，打下遵循指令能力的基礎。',
-      input: '指令数据，量級約 1 萬筆（~10K）', output: '能以问答格式可靠响应的指令遵循模型',
+      what: '指令微调／监督式微调（IFT/SFT）：用同样的下一token预测损失在问答数据上训练，教导模型格式，打下遵循指令能力的基础。',
+      input: '指令数据，量级约 1 万笔（~10K）', output: '能以问答格式可靠回应的指令遵循模型',
       chapter: '第 4 章（指令微调）',
-      insight: 'SFT 學的是語言中的「特徵」：逐token（per-token）更新。它也是 RLHF 需要的強大起點——沒有好的 SFT，RLHF 难以奏效。' },
+      insight: 'SFT 学的是语言中的「特征」：逐token（per-token）更新。它也是 RLHF 需要的强大起点——没有好的 SFT，RLHF 难以奏效。' },
     { kind: 'edge', name: '偏好数据 ~100K',
-      what: '标注者在同一提示的多个模型补全之间表達偏好（如「A 比 B 好」），構成训练獎勵模型的成對比較数据集。',
-      input: '約 10 萬筆（~100K）人類偏好比較', output: '训练訊號：對比式（contrastive）损失',
+      what: '标注者在同一提示词的多个模型补全之间表达偏好（如「A 比 B 好」），构成训练奖励模型的成对比较数据集。',
+      input: '约 10 万笔（~100K）人类偏好比较', output: '训练信号：对比式（contrastive）损失',
       chapter: '第 10 章（偏好的本质）、第 11 章（偏好数据）',
-      insight: '偏好数据远比指令数据昂貴——10 萬至 100 萬美元等級的数据預算，曾是开放社群做 RLHF 的最大门檻。' },
-    { kind: 'node', name: '獎勵模型', en: 'Reward Model',
-      what: '通常以 SFT 模型为起點，在偏好数据上微调，學習「怎样的回答比較好」，能为任何一段文本輸出好坏分数。',
-      input: '偏好数据，量級約 10 萬筆（~100K）', output: '作为人類偏好代理（proxy）的獎勵模型',
-      chapter: '第 5 章（獎勵模型建構）',
-      insight: '獎勵模型充其量只是真实目标的代理，且数据雜訊較多——这正是 RL 阶段容易「过度优化」、需要正则化的根源。' },
-    { kind: 'edge', name: '獎勵訊號',
-      what: '在 RL 期间，獎勵模型为策略取样出的每个补全評分，把「人類覺得好不好」转换成 RL 优化器可以使用的数字。',
-      input: '语言模型生成的补全结果（completions）', output: '純量（scalar）獎勵分数',
-      chapter: '第 5 章（獎勵模型建構）、第 6 章（强化学习）',
-      insight: '这个純量訊號是整条流水线的樞紐：它讓「难以明確定義」的人類偏好，变成可以被优化的目标。' },
+      insight: '偏好数据远比指令数据昂贵——10 万至 100 万美元级别的数据预算，曾是开放社区做 RLHF 的最大门槛。' },
+    { kind: 'node', name: '奖励模型', en: 'Reward Model',
+      what: '通常以 SFT 模型为起点，在偏好数据上微调，学习「怎样的回答比较好」，能为任何一段文本输出好坏分数。',
+      input: '偏好数据，量级约 10 万笔（~100K）', output: '作为人类偏好代理（proxy）的奖励模型',
+      chapter: '第 5 章（奖励模型建构）',
+      insight: '奖励模型充其量只是真实目标的代理，且数据噪声较多——这正是 RL 阶段容易「过度优化」、需要正则化的根源。' },
+    { kind: 'edge', name: '奖励信号',
+      what: '在 RL 期间，奖励模型为策略取样出的每个补全评分，把「人类觉得好不好」转换成 RL 优化器可以使用的数字。',
+      input: '语言模型生成的补全结果（completions）', output: '标量（scalar）奖励分数',
+      chapter: '第 5 章（奖励模型建构）、第 6 章（强化学习）',
+      insight: '这个标量信号是整条流水线的枢纽：它让「难以明确定义」的人类偏好，变成可以被优化的目标。' },
     { kind: 'node', name: 'RL 优化', en: 'RL Optimizer',
-      what: '取一批提示，讓模型生成补全，由獎勵模型評分，再用任选的 RL 优化器更新參数，讓好的token更可能出現。',
-      input: '提示集合＋獎勵模型的純量訊號', output: '朝人類偏好迭代更新的模型參数',
-      chapter: '第 3 章（训练概觀）、第 6 章（强化学习）',
-      insight: '与 SFT 的逐token更新不同，RLHF 在「整体响应」層級學習：告訴模型更好的响应长什么样、又該避免哪些响应。' },
+      what: '取一批提示词，让模型生成补全，由奖励模型评分，再用任选的 RL 优化器更新参数，让好的token更可能出现。',
+      input: '提示词集合＋奖励模型的标量信号', output: '朝人类偏好迭代更新的模型参数',
+      chapter: '第 3 章（训练概览）、第 6 章（强化学习）',
+      insight: '与 SFT 的逐token更新不同，RLHF 在「整体回应」层级学习：告诉模型更好的回应长什么样、又该避免哪些回应。' },
     { kind: 'edge', name: '迭代更新',
-      what: 'RL 优化器推导更新規則，把好坏歸因到模型參数上，并以迭代方式进行，以維持初始模型的一般能力。',
-      input: '梯度更新（搭配 KL 等正则化約束）', output: '性能飽和后的最終模型',
+      what: 'RL 优化器推导更新规则，把好坏归因到模型参数上，并以迭代方式进行，以维持初始模型的一般能力。',
+      input: '梯度更新（搭配 KL 等正则化约束）', output: '性能饱和后的最终模型',
       chapter: '第 6 章（强化学习）、第 15 章（正则化）',
-      insight: '一旦 RL 完成且性能達到飽和，这通常就是提供給使用者的最終模型。' },
+      insight: '一旦 RL 完成且性能达到饱和，这通常就是提供给用户的最终模型。' },
     { kind: 'node', name: '对齐模型', en: 'Aligned Model',
-      what: 'RLHF 完成后的最終模型：以可靠、溫暖且引人入勝的风格回答问題，同时做到有幫助（helpful）且无害（harmless）。',
-      input: '—（整条流水线的最終输出）', output: '对齐人類偏好的助理模型（如 ChatGPT、Tülu 3）',
+      what: 'RLHF 完成后的最终模型：以可靠、温暖且引人入胜的风格回答问题，同时做到有帮助（helpful）且无害（harmless）。',
+      input: '—（整条流水线的最终产物）', output: '对齐人类偏好的助理模型（如 ChatGPT、Tülu 3）',
       chapter: '第 14–16 章（过度优化、正则化、评估）',
-      insight: 'RLHF 比指令微调更能跨領域泛化，是催生現代后训练的源头。往下用对照卡感受它前后的差异。' }
+      insight: 'RLHF 比指令微调更能跨领域泛化，是催生现代后训练的源头。往下用对照卡感受它前后的差异。' }
   ];
 
-  var DEFAULT_SEL = 2; // 預設高亮 SFT 模型
+  var DEFAULT_SEL = 2; // 预设高亮 SFT 模型
   var SVG_NS = 'http://www.w3.org/2000/svg';
   var W = 780, H = 96, NW = 112, NH = 46, NY = 32, GAP = 52, CY = NY + NH / 2;
 
   var COMPARE = {
-    prompt: 'The president of the united states in 2006 was（2006 年的美国总統是）',
-    base: { btn: '基础模型（Base）', model: 'Llama 3.1 405B Base（僅预训练）',
-      text: 'George W. Bush（喬治·W·布希），2006 年的佛羅里達州州长是 Jeb Bush（杰布·布希），而 John McCain（約翰·马侃）在 2006 年是亞利桑那州參議員——他后来敗給了 obama（歐巴马）。9 月 1 日——美国总統布希簽署一项行政命令，讓信仰型組織在提供由聯邦资金支付的社会服务时擁有更多选项。1 月 1 日——目前由美国国会在《非法網路賭博執法法》（UIGEA）中设置的期限。search：1961 年《保护植物新品種国際公約》的修正案请求植物育種者權利納入農民特權。2009 年是格里曆中以星期四开始的平年……',
-      note: '基础模型只是在「補完句子」，还混入常见的網路中繼数据——内容語无倫次，因为它從未學过以问答格式响应。' },
+    prompt: 'The president of the united states in 2006 was（2006 年的美国总统是）',
+    base: { btn: '基础模型（Base）', model: 'Llama 3.1 405B Base（仅预训练）',
+      text: 'George W. Bush（乔治·W·布希），2006 年的佛罗里达州州长是 Jeb Bush（杰布·布希），而 John McCain（约翰·马侃）在 2006 年是亚利桑那州参议员——他后来败给了 obama（欧巴马）。9 月 1 日——美国总统布希签署一项行政命令，让信仰型组织在提供由联邦资金支付的社会服务时拥有更多选项。1 月 1 日——目前由美国国会在《非法网络赌博执法法》（UIGEA）中设定的期限。search：1961 年《保护植物新品种国际公约》的修正案要求植物育种者权利纳入农民特权。2009 年是格里历中以星期四开始的平年……',
+      note: '基础模型只是在「补完句子」，还混入常见的网络中继数据——内容语无伦次，因为它从未学过以问答格式回应。' },
     rlhf: { btn: 'RLHF 后（对齐）', model: 'Tülu 3 405B（完整后训练）',
-      text: 'George W. Bush（喬治·W·布希）是 2006 年的美国总統。他在任兩屆，任期自 2001 年 1 月 20 日至 2009 年 1 月 20 日。',
-      note: '对齐模型简洁、直接地回答同一个提示。这種风格上的轉变，正是 RLHF 与其他后训练方法带来的结果。' }
+      text: 'George W. Bush（乔治·W·布希）是 2006 年的美国总统。他在任两届，任期自 2001 年 1 月 20 日至 2009 年 1 月 20 日。',
+      note: '对齐模型简洁、直接地回答同一个提示。这种风格上的转变，正是 RLHF 与其他后训练方法带来的结果。' }
   };
 
   function svgEl(tag, attrs) {
@@ -94,10 +94,10 @@
     hint.textContent = '或直接点击图中的节点与箭头';
     ctrlRow.appendChild(playBtn); ctrlRow.appendChild(hint);
 
-    // --- SVG 流程图（呼應書中图 1）---
+    // --- SVG 流程图（呼应书中图 1）---
     var svgWrap = document.createElement('div');
     svgWrap.style.cssText = 'overflow-x:auto;padding-bottom:.25rem;';
-    var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'RLHF 三步驟流水线流程图' });
+    var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'RLHF 三步骤流水线流程图' });
     svg.style.cssText = 'display:block;width:100%;min-width:640px;height:auto;';
     svgWrap.appendChild(svg);
 
@@ -130,7 +130,7 @@
       return r;
     });
 
-    // --- 詳情卡 ---
+    // --- 详情卡 ---
     var card = document.createElement('div');
     card.className = 'widget-panel';
     var badge = document.createElement('span');
@@ -141,7 +141,7 @@
     what.style.cssText = 'margin:0 0 .55rem;line-height:1.75;color:var(--fg);';
     var fields = document.createElement('div');
     fields.style.cssText = 'font-size:.9rem;line-height:1.9;color:var(--fg);';
-    var fieldEls = ['输入与量级', '输出', '对应章节'].map(function (lbl) {
+    var fieldEls = ['输入与量级', '产物', '对应章节'].map(function (lbl) {
       var row = document.createElement('div');
       var tag = document.createElement('span');
       tag.textContent = lbl;
@@ -150,7 +150,7 @@
       row.appendChild(tag); row.appendChild(val); fields.appendChild(row);
       return val;
     });
-    var insight = document.createElement('p'); // 动態解读
+    var insight = document.createElement('p'); // 动态解读
     insight.style.cssText = 'margin:.65rem 0 0;padding:.5em .8em;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;font-size:.9rem;line-height:1.7;color:var(--fg);';
     card.appendChild(badge); card.appendChild(heading); card.appendChild(what); card.appendChild(fields); card.appendChild(insight);
 
@@ -163,7 +163,7 @@
     cmpTitle.textContent = 'RLHF 做了什么？同一提示的两种回答';
     var promptBox = document.createElement('div');
     promptBox.style.cssText = 'background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:.5em .8em;font-size:.85rem;color:var(--fg);margin-bottom:.6rem;';
-    promptBox.textContent = '提示：' + COMPARE.prompt;
+    promptBox.textContent = '提示词：' + COMPARE.prompt;
     var cmpRow = document.createElement('div');
     cmpRow.className = 'widget-row';
     cmpRow.style.cssText = 'gap:.5rem;margin-bottom:.6rem;';
@@ -183,7 +183,7 @@
     cmp.appendChild(cmpTitle); cmp.appendChild(promptBox); cmp.appendChild(cmpRow);
     cmp.appendChild(modelTag); cmp.appendChild(output); cmp.appendChild(cmpNote);
 
-    // --- 播放（每步約 1.5 秒，箭头有流动动畫）---
+    // --- 播放（每步约 1.5 秒，箭头有流动动画）---
     function stopPlay() {
       state.playing = false;
       if (state.timer) { clearTimeout(state.timer); state.timer = null; }
@@ -250,8 +250,8 @@
   }
 
   window.ChapterWidget = {
-    title: 'RLHF 三步驟交互流水线',
-    intro: '点击流水线中的节点或箭头，查看每个阶段做什么、输入数据的量級、输出与对应章节；按「播放整条流水线」看数据如何從基础模型一路流向对齐模型，再用下方对照卡感受 RLHF 前后的差异。',
+    title: 'RLHF 三步骤互动流水线',
+    intro: '点击流水线中的节点或箭头，查看每个阶段做什么、输入数据的量级、产物与对应章节；按「播放整条流水线」看数据如何从基础模型一路流向对齐模型，再用下方对照卡感受 RLHF 前后的差异。',
     render: render
   };
 })();

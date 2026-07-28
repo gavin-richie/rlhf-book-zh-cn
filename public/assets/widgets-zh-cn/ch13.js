@@ -1,4 +1,4 @@
-/* 第 13 章交互元件：工具呼叫流程模擬器 */
+/* 第 13 章互动元件：工具呼叫流程模拟器 */
 (function () {
   'use strict';
 
@@ -54,16 +54,16 @@
     '    messages.append({role:"tool",...})'
   ];
 
-  /* 各步驟類型對應的迴圈状态与虛擬码行 */
+  /* 各步骤类型对应的回圈状态与虚拟码行 */
   var PHASE = {
     thinking: { state: '模型生成中（推理）', line: 2 },
-    call:     { state: '等待工具结果（編排器执行中）', line: 6 },
-    result:   { state: '结果寫回 messages，模型繼續', line: 7 },
-    final:    { state: '无 tool_calls → 迴圈結束', line: 4 }
+    call:     { state: '等待工具结果（编排器执行中）', line: 6 },
+    result:   { state: '结果写回 messages，模型继续', line: 7 },
+    final:    { state: '无 tool_calls → 回圈结束', line: 4 }
   };
 
   var SYSTEM_PROMPT = '你是一个函数调用 AI 模型。可用工具：get_weather(location)、' +
-    'calculator(expression)。不要臆測要代入函式的引数值。';
+    'calculator(expression)。不要臆测要代入函式的引数值。';
 
   function weather(loc, temp, cond) {
     return { location: loc, temp_c: temp, condition: cond };
@@ -71,62 +71,62 @@
 
   var SCENARIOS = [
     {
-      label: '情境 1｜查天气：「东京現在幾度？」（單步工具）',
-      user: '东京現在幾度？',
+      label: '情境 1｜查天气：「东京现在几度？」（单步工具）',
+      user: '东京现在几度？',
       steps: [
         { type: 'thinking',
-          text: '使用者问的是「現在」的气溫——我的权重来自过往数据，沒有即时信息。應該呼叫 get_weather 而不是憑記憶亂猜。',
-          note: '模型在推理中判斷「需要外部信息」→ 停止一般生成，準備发出結構化呼叫。' },
+          text: '用户问的是「现在」的气温——我的权重来自过往数据，没有即时信息。应该呼叫 get_weather 而不是凭记忆乱猜。',
+          note: '模型在推理中判断「需要外部信息」→ 停止一般生成，准备发出结构化呼叫。' },
         { type: 'call', id: 'call_1',
           json: { name: 'get_weather', arguments: { location: 'Tokyo' } },
-          note: '这段 JSON 是模型生成的特殊token：工具名稱 + 符合 schema 的引数。編排器攔截它并暫停生成。' },
+          note: '这段 JSON 是模型生成的特殊token：工具名称 + 符合 schema 的引数。编排器拦截它并暂停生成。' },
         { type: 'result', id: 'call_1', json: weather('Tokyo', 31, '晴'),
-          note: '工具輸出以 role:"tool" 附加进 messages——训练时这些token会從损失函数中被遮蔽。' },
-        { type: 'final', text: '东京目前約 31°C，天气晴朗。',
-          note: '模型讀到工具结果后繼續自回归生成；这次沒有 tool_calls，迴圈返回最終文本。' }
+          note: '工具输出以 role:"tool" 附加进 messages——训练时这些token会从损失函数中被遮蔽。' },
+        { type: 'final', text: '东京目前约 31°C，天气晴朗。',
+          note: '模型读到工具结果后继续自回归生成；这次没有 tool_calls，回圈返回最终文本。' }
       ]
     },
     {
-      label: '情境 2｜計算：「37 × 89 − 12 = ?」（calculator）',
+      label: '情境 2｜计算：「37 × 89 − 12 = ?」（calculator）',
       user: '37 × 89 − 12 = ?',
       steps: [
         { type: 'thinking',
-          text: '这是需要精確答案的算术。与其用概率式生成「背」出数字并冒着幻覺风險，不如交給 calculator 工具。',
-          note: '工具讓模型繞过其概率式、生成式的天性，取得精確答案（對應書中圓周率的例子）。' },
+          text: '这是需要精确答案的算术。与其用概率式生成「背」出数字并冒着幻觉风险，不如交给 calculator 工具。',
+          note: '工具让模型绕过其概率式、生成式的天性，取得精确答案（对应书中圆周率的例子）。' },
         { type: 'call', id: 'call_1',
           json: { name: 'calculator', arguments: { expression: '37 * 89 - 12' } },
-          note: '函数调用：引数必須符合宣告式 schema，剖析与验证才得以可靠进行。' },
+          note: '函数调用：引数必须符合宣告式 schema，剖析与验证才得以可靠进行。' },
         { type: 'result', id: 'call_1', json: { expression: '37 * 89 - 12', result: 37 * 89 - 12 },
-          note: '編排器执行 execute_tool(call.name, call.args)，把確定性的計算结果注入序列。' },
+          note: '编排器执行 execute_tool(call.name, call.args)，把确定性的计算结果注入序列。' },
         { type: 'final', text: '37 × 89 − 12 = ' + (37 * 89 - 12) + '。',
-          note: '模型把工具结果納入响应——它學到的是「何时該呼叫、如何引用结果」，而非硬背算术。' }
+          note: '模型把工具结果纳入回应——它学到的是「何时该呼叫、如何引用结果」，而非硬背算术。' }
       ]
     },
     {
-      label: '情境 3｜多步推理：「台北比东京暖幾度？」（兩次 get_weather）',
-      user: '台北比东京暖幾度？',
+      label: '情境 3｜多步推理：「台北比东京暖几度？」（两次 get_weather）',
+      user: '台北比东京暖几度？',
       steps: [
         { type: 'thinking',
-          text: '要比較兩地气溫，我需要兩筆即时数据。先查台北，再查东京，最后相減。',
-          note: 'ReAct 式交錯：推理軌跡幫模型擬定多步行动計畫，动作則負責蒐集外部信息。' },
+          text: '要比较两地气温，我需要两笔即时数据。先查台北，再查东京，最后相减。',
+          note: 'ReAct 式交错：推理轨迹帮模型拟定多步行动计划，动作则负责收集外部信息。' },
         { type: 'call', id: 'call_1',
           json: { name: 'get_weather', arguments: { location: 'Taipei' } },
-          note: '第一次工具呼叫：模型一次只发出計畫中的一步，等结果回来再決定下一步。' },
-        { type: 'result', id: 'call_1', json: weather('Taipei', 34, '多雲'),
-          note: '第一筆觀測 o₁ 回到上下文。單靠这筆还无法回答——迴圈將再跑一輪。' },
+          note: '第一次工具呼叫：模型一次只发出计划中的一步，等结果回来再决定下一步。' },
+        { type: 'result', id: 'call_1', json: weather('Taipei', 34, '多云'),
+          note: '第一笔观测 o₁ 回到上下文。单靠这笔还无法回答——回圈将再跑一轮。' },
         { type: 'thinking',
-          text: '台北 34°C，已知。还缺东京的气溫，再发一次 get_weather。',
-          note: '模型讀取先前的工具结果后更新行动計畫——这就是多步驟工具推理的核心。' },
+          text: '台北 34°C，已知。还缺东京的气温，再发一次 get_weather。',
+          note: '模型读取先前的工具结果后更新行动计划——这就是多步骤工具推理的核心。' },
         { type: 'call', id: 'call_2',
           json: { name: 'get_weather', arguments: { location: 'Tokyo' } },
-          note: '第二次工具呼叫：同一个工具、不同引数。編排迴圈對每輪一視同仁。' },
+          note: '第二次工具呼叫：同一个工具、不同引数。编排回圈对每轮一视同仁。' },
         { type: 'result', id: 'call_2', json: weather('Tokyo', 31, '晴'),
-          note: '兩筆数据都在 messages 裡了。接下来模型可以純靠上下文推理，不需再呼叫工具。' },
+          note: '两笔数据都在 messages 里了。接下来模型可以纯靠上下文推理，不需再呼叫工具。' },
         { type: 'thinking',
-          text: '34 − 31 = 3。信息齊全，可以直接回答。',
-          note: '模型在推理中判斷「不再需要外部信息」→ 这輪生成不会发出 tool_calls。' },
-        { type: 'final', text: '台北（34°C）比东京（31°C）暖約 3°C。',
-          note: '完整軌跡：兩次「动作→觀測」交替后才得出答案——正是图 40 描述的多步 rollout。' }
+          text: '34 − 31 = 3。信息齐全，可以直接回答。',
+          note: '模型在推理中判断「不再需要外部信息」→ 这轮生成不会发出 tool_calls。' },
+        { type: 'final', text: '台北（34°C）比东京（31°C）暖约 3°C。',
+          note: '完整轨迹：两次「动作→观测」交替后才得出答案——正是图 40 描述的多步 rollout。' }
       ]
     }
   ];
@@ -168,7 +168,7 @@
     row.appendChild(sel); row.appendChild(btnNext); row.appendChild(btnReplay);
     row.appendChild(counter);
 
-    /* 主体：messages 視覺化 + 側欄 */
+    /* 主体：messages 视觉化 + 侧栏 */
     var main = el('div', 'c13-main');
     var msgs = el('div', 'c13-msgs');
     var side = el('div', 'c13-side widget-panel');
@@ -179,7 +179,7 @@
       pc.appendChild(d);
       return d;
     });
-    side.appendChild(el('p', 'c13-sidehead', '編排迴圈状态'));
+    side.appendChild(el('p', 'c13-sidehead', '编排回圈状态'));
     side.appendChild(status);
     side.appendChild(pc);
     main.appendChild(msgs); main.appendChild(side);
@@ -188,8 +188,8 @@
     rootEl.appendChild(wrap);
 
     var scen = SCENARIOS[0];
-    var idx = 0;      /* 下一个要播放的步驟 */
-    var loopK = 0;    /* 第幾次呼叫 model()（迴圈第 k 步） */
+    var idx = 0;      /* 下一个要播放的步骤 */
+    var loopK = 0;    /* 第几次呼叫 model()（回圈第 k 步） */
 
     function highlight(line) {
       pcRows.forEach(function (r, i) { r.classList.toggle('c13-hl', i === line); });
@@ -223,7 +223,7 @@
       msgs.appendChild(usr);
       setStatus(0, '尚未开始，按「下一步」播放', 0);
       btnNext.disabled = false;
-      counter.textContent = '步驟 0 / ' + scen.steps.length;
+      counter.textContent = '步骤 0 / ' + scen.steps.length;
       msgs.scrollTop = 0;
     }
 
@@ -250,7 +250,7 @@
           { tool_call_id: step.id, content: step.json }, null, 2);
         card.appendChild(pre2);
       } else {
-        card = makeCard('assistant', 'assistant · 最終回答');
+        card = makeCard('assistant', 'assistant · 最终回答');
         card.appendChild(el('div', null, step.text));
       }
 
@@ -262,7 +262,7 @@
       setStatus(loopK, ph.state, ph.line);
 
       idx += 1;
-      counter.textContent = '步驟 ' + idx + ' / ' + scen.steps.length;
+      counter.textContent = '步骤 ' + idx + ' / ' + scen.steps.length;
       if (idx >= scen.steps.length) btnNext.disabled = true;
     }
 
@@ -273,10 +273,10 @@
   }
 
   window.ChapterWidget = {
-    title: '工具呼叫流程模擬器',
-    intro: '逐步播放语言模型如何在生成中交錯工具呼叫：模型推理 → 发出結構化 tool call → ' +
-      '編排器执行工具并把结果寫回 messages → 模型繼續生成，直到不再需要工具为止。' +
-      '側欄同步標示書中「編排迴圈」虛擬码目前执行到哪一行。',
+    title: '工具呼叫流程模拟器',
+    intro: '逐步播放语言模型如何在生成中交错工具呼叫：模型推理 → 发出结构化 tool call → ' +
+      '编排器执行工具并把结果写回 messages → 模型继续生成，直到不再需要工具为止。' +
+      '侧栏同步标示书中「编排回圈」虚拟码目前执行到哪一行。',
     render: render
   };
 })();

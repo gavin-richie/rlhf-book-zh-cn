@@ -1,4 +1,4 @@
-/* 第 15 章交互元件：KL 散度探索器（前向 vs 反向） */
+/* 第 15 章互动元件：KL 散度探索器（前向 vs 反向） */
 (function () {
   'use strict';
 
@@ -28,7 +28,7 @@
     '  letter-spacing:.08em;display:block;margin-bottom:.15rem;}'
   ].join('\n');
 
-  /* ---- 数值核心：固定網格上的密度与 KL 積分 ---- */
+  /* ---- 数值核心：固定网格上的密度与 KL 积分 ---- */
   var XMIN = -7, XMAX = 7, DX = 0.02, NPTS = Math.round((XMAX - XMIN) / DX) + 1;
   var GRID = new Array(NPTS);
   for (var gi = 0; gi < NPTS; gi++) GRID[gi] = XMIN + gi * DX;
@@ -51,7 +51,7 @@
     for (i = 0; i < NPTS; i++) a[i] /= s;
     return a;
   }
-  /* KL(p‖q) = Σ p·log(p/q)·Δx，離散黎曼和 */
+  /* KL(p‖q) = Σ p·log(p/q)·Δx，离散黎曼和 */
   function klOf(p, q) {
     var s = 0;
     for (var i = 0; i < NPTS; i++) {
@@ -59,7 +59,7 @@
     }
     return Math.max(0, s * DX);
   }
-  /* 參考模型 π_ref：雙峰＝0.7·N(−3,0.5²)＋0.3·N(3,0.7²)；單峰＝N(0,1) */
+  /* 参考模型 π_ref：双峰＝0.7·N(−3,0.5²)＋0.3·N(3,0.7²)；单峰＝N(0,1) */
   function makeRef(bimodal) {
     if (!bimodal) return normalize(gaussArr(0, 1));
     var a = gaussArr(-3, 0.5), b = gaussArr(3, 0.7);
@@ -83,7 +83,7 @@
     return n;
   }
 
-  /* ---- 繪图座標（畫 |x|≤6 的范围） ---- */
+  /* ---- 绘图座标（画 |x|≤6 的范围） ---- */
   var W = 720, H = 280, PL = 36, PR = 14, PT = 20, PB = 32, PXMIN = -6, PXMAX = 6;
   function xPx(x) { return PL + (x - PXMIN) / (PXMAX - PXMIN) * (W - PL - PR); }
   function yPx(d, ymax) { return PT + (1 - d / ymax) * (H - PT - PB); }
@@ -109,7 +109,7 @@
 
     var wrap = el('div', 'c15-wrap');
 
-    /* KL 数值卡（含 KaTeX 定義式） */
+    /* KL 数值卡（含 KaTeX 定义式） */
     function klCard(headTxt, texSrc, fbTxt, tagTxt) {
       var card = el('div', 'widget-panel c15-klcard');
       card.appendChild(el('div', 'c15-klhead', headTxt));
@@ -124,17 +124,17 @@
     var fwdCard = klCard('前向 KL｜SFT ≈ 模式涵盖（mass-covering）',
       '\\mathrm{KL}(\\pi_{\\mathrm{ref}}\\,\\|\\,\\pi_\\theta)=\\mathbb{E}_{y\\sim\\pi_{\\mathrm{ref}}}\\!\\left[\\log\\pi_{\\mathrm{ref}}(y)-\\log\\pi_\\theta(y)\\right]',
       'KL(π_ref‖π_θ) = E_{y~π_ref}[log π_ref(y) − log π_θ(y)]',
-      '從目标 π_ref 取样：π_θ 漏掉 π_ref 的任何一峰都会被重罰。');
-    var revCard = klCard('反向 KL｜RL ≈ 模式尋求（mode-seeking）',
+      '从目标 π_ref 取样：π_θ 漏掉 π_ref 的任何一峰都会被重罚。');
+    var revCard = klCard('反向 KL｜RL ≈ 模式寻求（mode-seeking）',
       '\\mathrm{KL}(\\pi_\\theta\\,\\|\\,\\pi_{\\mathrm{ref}})=\\mathbb{E}_{y\\sim\\pi_\\theta}\\!\\left[\\log\\pi_\\theta(y)-\\log\\pi_{\\mathrm{ref}}(y)\\right]',
       'KL(π_θ‖π_ref) = E_{y~π_θ}[log π_θ(y) − log π_ref(y)]',
-      '從自己 π_θ 取样：只有把质量放到 π_ref 幾乎为零的地方才会被重罰。');
+      '从自己 π_θ 取样：只有把质量放到 π_ref 几乎为零的地方才会被重罚。');
     klrow.appendChild(fwdCard.card); klrow.appendChild(revCard.card);
 
     /* SVG 图 */
     var svgPanel = el('div', 'widget-panel c15-svgbox');
     var svg = svgEl('svg', { 'class': 'c15-svg', viewBox: '0 0 ' + W + ' ' + H,
-      role: 'img', 'aria-label': '參考模型与目前策略的概率密度曲线' });
+      role: 'img', 'aria-label': '参考模型与目前策略的概率密度曲线' });
     var axis = svgEl('g', {});
     axis.appendChild(svgEl('line', { x1: PL, y1: H - PB, x2: W - PR, y2: H - PB,
       stroke: 'var(--border)', 'stroke-width': 1 }));
@@ -152,14 +152,14 @@
     var muLine = svgEl('line', { stroke: 'var(--accent)', 'stroke-dasharray': '4 4',
       'stroke-width': 1, opacity: 0.65 });
     var modeLbls = svgEl('g', { 'font-size': 11.5, fill: 'var(--fg-muted)', 'text-anchor': 'middle' });
-    var oldLbl = svgEl('text', {}); oldLbl.textContent = '「旧」模式（先验知識）';
+    var oldLbl = svgEl('text', {}); oldLbl.textContent = '「旧」模式（先验知识）';
     var newLbl = svgEl('text', {}); newLbl.textContent = '「新」模式（目标任务）';
     modeLbls.appendChild(oldLbl); modeLbls.appendChild(newLbl);
     var legend = svgEl('g', { 'font-size': 12 });
     legend.appendChild(svgEl('rect', { x: W - 190, y: 8, width: 14, height: 10,
       fill: 'var(--fg-muted)', 'fill-opacity': 0.4 }));
     var lg1 = svgEl('text', { x: W - 172, y: 17.5, fill: 'var(--fg-muted)' });
-    lg1.textContent = 'π_ref 參考模型'; legend.appendChild(lg1);
+    lg1.textContent = 'π_ref 参考模型'; legend.appendChild(lg1);
     legend.appendChild(svgEl('rect', { x: W - 190, y: 26, width: 14, height: 10,
       fill: 'var(--accent)', 'fill-opacity': 0.5 }));
     var lg2 = svgEl('text', { x: W - 172, y: 35.5, fill: 'var(--accent)' });
@@ -168,7 +168,7 @@
     svg.appendChild(muLine); svg.appendChild(modeLbls); svg.appendChild(legend);
     svgPanel.appendChild(svg);
 
-    /* 控制列：π_ref 形狀 + μ、σ 滑桿 */
+    /* 控制列：π_ref 形状 + μ、σ 滑杆 */
     function slider(min, max, step, val) {
       var s = el('input'); s.type = 'range';
       s.min = String(min); s.max = String(max); s.step = String(step); s.value = String(val);
@@ -176,8 +176,8 @@
     }
     var ctl = el('div', 'c15-ctl');
     var sel = el('select');
-    var op1 = el('option', null, 'π_ref：雙峰（旧模式＋新模式）'); op1.value = 'bi';
-    var op2 = el('option', null, 'π_ref：單峰 N(0,1)'); op2.value = 'uni';
+    var op1 = el('option', null, 'π_ref：双峰（旧模式＋新模式）'); op1.value = 'bi';
+    var op2 = el('option', null, 'π_ref：单峰 N(0,1)'); op2.value = 'uni';
     sel.appendChild(op1); sel.appendChild(op2);
     var muSl = slider(MU_MIN, MU_MAX, 0.05, state.mu);
     var sigSl = slider(SIG_MIN, SIG_MAX, 0.02, state.sigma);
@@ -186,11 +186,11 @@
     var slSig = el('div', 'c15-sl'); slSig.appendChild(sigLbl); slSig.appendChild(sigSl);
     ctl.appendChild(sel); ctl.appendChild(slMu); ctl.appendChild(slSig);
 
-    /* 按鈕列 */
+    /* 按钮列 */
     var btnRow = el('div', 'widget-row');
     var btnFwd = el('button', null, '▶ 最小化前向 KL（SFT）');
     var btnRev = el('button', null, '▶ 最小化反向 KL（RL）');
-    var btnReset = el('button', null, '重置');
+    var btnReset = el('button', null, '重设');
     btnRow.appendChild(btnFwd); btnRow.appendChild(btnRev); btnRow.appendChild(btnReset);
 
     /* 解读面板 */
@@ -222,21 +222,21 @@
                    lastDone === 'rev' ? '梯度下降完成（反向 KL）。' : '';
       if (!state.bimodal) {
         if (Math.abs(mu) < 0.5 && Math.abs(sg - 1) < 0.3)
-          return prefix + 'π_θ 与單峰 π_ref 幾乎重合，兩个 KL 都趨近 0。單峰情境下前向与反向殊途同歸——切回雙峰，才能看到兩个方向分道揚鑣。';
-        return prefix + '參考模型只有一个峰：不论最小化哪个方向的 KL，最优解都是同一个峰，差异只在收斂路徑与 σ 錯配时的懲罰不對稱（σ 偏大时反向 KL 罰得更重）。';
+          return prefix + 'π_θ 与单峰 π_ref 几乎重合，两个 KL 都趋近 0。单峰情境下前向与反向殊途同归——切回双峰，才能看到两个方向分道扬镳。';
+        return prefix + '参考模型只有一个峰：不论最小化哪个方向的 KL，最优解都是同一个峰，差异只在收敛路径与 σ 错配时的惩罚不对称（σ 偏大时反向 KL 罚得更重）。';
       }
       var hugOld = Math.abs(mu + 3) < 0.7 && sg < 1.2;
       var hugNew = Math.abs(mu - 3) < 0.7 && sg < 1.2;
       if (hugOld || hugNew)
-        return prefix + 'π_θ 貼住「' + (hugOld ? '旧' : '新') + '」模式（mode-seeking）：反向 KL 很低，前向 KL 卻爆高——因为另一峰完全沒被覆盖。这正是本章 15.2.2 的核心：RL 只在自己有质量的區域更新、不去拉扯另一峰；' +
-          '反向 KL 的 mode-seeking 是「RL 遺忘較少」的关鍵直覺（RL’s Razor）：在眾多高獎勵解中，on-policy 方法天生偏向 KL 上離參考策略較近的解。';
+        return prefix + 'π_θ 贴住「' + (hugOld ? '旧' : '新') + '」模式（mode-seeking）：反向 KL 很低，前向 KL 却爆高——因为另一峰完全没被覆盖。这正是本章 15.2.2 的核心：RL 只在自己有质量的区域更新、不去拉扯另一峰；' +
+          '反向 KL 的 mode-seeking 是「RL 遗忘较少」的关键直觉（RL’s Razor）：在众多高奖励解中，on-policy 方法天生偏向 KL 上离参考策略较近的解。';
       if (sg > 2.2 && mu > -2.6 && mu < 0.8)
-        return prefix + 'π_θ 拉成一个涵盖兩峰的寬分布（mass-covering／mean-seeking）：前向 KL 低，但大量质量落在兩峰之间 π_ref 幾乎为零的谷地，反向 KL 因此偏高。这對應 SFT：为了涵盖目标的所有模式而拉伸策略、從「旧」模式抽走概率质量——造成遺忘。';
+        return prefix + 'π_θ 拉成一个涵盖两峰的宽分布（mass-covering／mean-seeking）：前向 KL 低，但大量质量落在两峰之间 π_ref 几乎为零的谷地，反向 KL 因此偏高。这对应 SFT：为了涵盖目标的所有模式而拉伸策略、从「旧」模式抽走概率质量——造成遗忘。';
       if (sg < 1.0 && Math.abs(mu) < 1.6)
-        return prefix + 'π_θ 集中在兩峰之间的低概率谷地：兩个 KL 同时偏高——前向 KL 重罰「漏掉的峰」，反向 KL 重罰「放錯地方的质量」。試着按兩个按鈕，看兩種目标分別把它推向何方。';
+        return prefix + 'π_θ 集中在两峰之间的低概率谷地：两个 KL 同时偏高——前向 KL 重罚「漏掉的峰」，反向 KL 重罚「放错地方的质量」。试着按两个按钮，看两种目标分别把它推向何方。';
       return prefix + (klF > klR
-        ? '目前前向 KL 較大：π_ref 有可觀质量的區域沒被 π_θ 覆盖（SFT 目标会強拉 π_θ 去涵盖所有峰）。'
-        : '目前反向 KL 較大：π_θ 把质量放在 π_ref 概率極低的區域（RL 的 KL 懲罰会把它推回參考分布附近）。');
+        ? '目前前向 KL 较大：π_ref 有可观质量的区域没被 π_θ 覆盖（SFT 目标会强拉 π_θ 去涵盖所有峰）。'
+        : '目前反向 KL 较大：π_θ 把质量放在 π_ref 概率极低的区域（RL 的 KL 惩罚会把它推回参考分布附近）。');
     }
 
     function redraw(runningMsg) {
@@ -279,7 +279,7 @@
       btnFwd.disabled = btnRev.disabled = true;
       muSl.disabled = sigSl.disabled = sel.disabled = true;
       var frame = 0, FRAMES = 60;
-      var name = dir === 'fwd' ? '前向 KL（SFT 視角）' : '反向 KL（RL 視角）';
+      var name = dir === 'fwd' ? '前向 KL（SFT 视角）' : '反向 KL（RL 视角）';
       timer = setInterval(function () {
         frame++;
         gdStep(dir); gdStep(dir); /* 每格 2 步，共 120 步梯度下降 */
@@ -318,10 +318,10 @@
 
   window.ChapterWidget = {
     title: 'KL 散度探索器：前向 vs 反向',
-    intro: '拖动滑桿调整目前策略 π_θ（單峰高斯）的 μ 与 σ，觀察它對雙峰參考模型 π_ref 的前向与反向 KL' +
-      '（固定網格数值積分）。按下兩个最小化按鈕跑梯度下降动畫：前向 KL（SFT）收斂到涵盖兩峰的寬分布' +
-      '（mass-covering），反向 KL（RL）收斂到貼住單一峰（mode-seeking）——對應 15.2.2「SFT 記憶、' +
-      'RL 遺忘較少」与 RL’s Razor 的核心直覺。',
+    intro: '拖动滑杆调整目前策略 π_θ（单峰高斯）的 μ 与 σ，观察它对双峰参考模型 π_ref 的前向与反向 KL' +
+      '（固定网格数值积分）。按下两个最小化按钮跑梯度下降动画：前向 KL（SFT）收敛到涵盖两峰的宽分布' +
+      '（mass-covering），反向 KL（RL）收敛到贴住单一峰（mode-seeking）——对应 15.2.2「SFT 记忆、' +
+      'RL 遗忘较少」与 RL’s Razor 的核心直觉。',
     render: render
   };
 })();

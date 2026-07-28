@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hans">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -46,7 +46,7 @@
 $$P(i > j) = \frac{p_i}{p_i + p_j}. \tag{12}$$
 
 ![图](../webapp/assets/figures/fig-p038-1.png)
-*图 11：RLHF 中的奖励模型扮演标准 RL 中回传奖励的环境组件角色。关键差异在于：在 RLHF 中，我们得以控制这个奖励函数，并从人类偏好中学习它，而不是由环境固定给定。*
+*图 11：RLHF 中的奖励模型扮演标准 RL 中回传奖励的环境元件角色。关键差异在于：在 RLHF 中，我们得以控制这个奖励函数，并从人类偏好中学习它，而不是由环境固定给定。*
 
 Bradley-Terry 模型假设每个项目都有一个潜在强度（latent strength）$p_i > 0$，而观察到的偏好是这些底层强度带有杂讯的反映。常见做法是以无界分数重新参数化 Bradley-Terry 模型，令 $p_i = e^{r_i}$，得到以下形式：
 
@@ -117,7 +117,7 @@ rewards_rejected = model(**inputs_rejected)
 loss = -nn.functional.logsigmoid(rewards_chosen - rewards_rejected).mean()
 ```
 
-就更大的图景而言，这通常位于一个因果语言模型（causal language model，即由左至右生成 token、以所有先前 token 为条件预测每个 token 的模型）之内，该模型加上（并以上述损失学习）一个额外的头，将最终隐藏状态转换为输入的分数。程序码接收标准的 transformer 输入——`input_ids`（分词后的文本）与 `attention_mask`（标记哪些是真实 token、哪些是填充 token）——并在最后一个真实 token 处撷取隐藏状态（模型对输入的内部表示），再通过一个线性层产生纯量奖励。这个模型的结构如下：
+就更大的图景而言，这通常位于一个因果语言模型（causal language model，即由左至右生成 token、以所有先前 token 为条件预测每个 token 的模型）之内，该模型加上（并以上述损失学习）一个额外的头，将最终隐藏状态转换为输入的分数。程式码接收标准的 transformer 输入——`input_ids`（分词后的文本）与 `attention_mask`（标记哪些是真实 token、哪些是填充 token）——并在最后一个真实 token 处撷取隐藏状态（模型对输入的内部表示），再通过一个线性层产生纯量奖励。这个模型的结构如下：
 
 ```python
 import torch
@@ -218,9 +218,9 @@ $$P(\sigma^i \mid s^i, a_0^i, a_1^i, \ldots, a_{K-1}^i) = \prod_{k=0}^{K-1} \fra
 
 $$\mathcal{L}_{\text{CE}}(\theta) = -\mathbb{E}_{(s, r) \sim \mathcal{D}}\left[r \log p_\theta(s) + (1 - r)\log\left(1 - p_\theta(s)\right)\right] \tag{22}$$
 
-其中 $r \in \{0, 1\}$ 是二元标签，1 对应给定提示的正确答案、0 对应错误答案，而 $p_\theta(s)$ 是与被训练模型所预测的正确机率成比例的纯量。在程序码中，这个结果标签会被复制到每个补全 token 上，而提示 token 以 `-100` 遮罩，因此不会对损失有所贡献。
+其中 $r \in \{0, 1\}$ 是二元标签，1 对应给定提示的正确答案、0 对应错误答案，而 $p_\theta(s)$ 是与被训练模型所预测的正确机率成比例的纯量。在程式码中，这个结果标签会被复制到每个补全 token 上，而提示 token 以 `-100` 遮罩，因此不会对损失有所贡献。
 
-实作结果奖励模型（以及其他类型，如我们稍后在过程奖励模型中会看到的）需要根据补全是否为正确样本，以逐 token 的方式套用交叉熵损失。这远比较接近语言建模损失——它不需要标准 Bradley-Terry 奖励模型那种结构化的 chosen-rejected 性质。在下面简化的 ORM 训练设定中，我们不会取样新的 token，也不会以下一个 token 预测来训练 LLM；我们将固定的提示—补全序列喂入骨干网路（backbone），并训练 ORM 头来预测正确性标签。
+实作结果奖励模型（以及其他类型，如我们稍后在过程奖励模型中会看到的）需要根据补全是否为正确样本，以逐 token 的方式套用交叉熵损失。这远比较接近语言建模损失——它不需要标准 Bradley-Terry 奖励模型那种结构化的 chosen-rejected 性质。在下面简化的 ORM 训练设定中，我们不会取样新的 token，也不会以下一个 token 预测来训练 LLM；我们将固定的提示—补全序列输入骨干网路（backbone），并训练 ORM 头来预测正确性标签。
 
 模型结构可以如下：
 
@@ -272,7 +272,7 @@ class OutcomeRewardModel(nn.Module):
 损失的简化版本如下：
 
 ```python
-# 将完整的提示+补全序列一次喂入；此处不进行任何 token 取样。
+# 将完整的提示+补全序列一次输入；此处不进行任何 token 取样。
 # 假设模型已具备：model.lm（骨干网路）+ model.head
 hidden = model.lm(**inputs, output_hidden_states=True).hidden_states[-1]
 logits_per_token = model.head(hidden).squeeze(-1)  # (batch, seq_len)
@@ -504,7 +504,7 @@ for a tie.
 
 ## 5.10 建议实验（Suggested Experiments）
 
-配套程序码储存库的 `code/reward_models/` 中包含小型奖励模型训练脚本。这些是作为学习练习之用，而非调校完善的参考配方。请从干净的 `code/` 环境以 `uv sync` 开始，然后一次执行一个实验。
+配套程式码储存库的 `code/reward_models/` 中包含小型奖励模型训练脚本。这些是作为学习练习之用，而非调校完善的参考配方。请从干净的 `code/` 环境以 `uv sync` 开始，然后一次执行一个实验。
 
 1. **在 UltraFeedback 上训练 Bradley-Terry 偏好奖励模型。** 执行：
 
