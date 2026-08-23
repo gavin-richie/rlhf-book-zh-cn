@@ -20,11 +20,11 @@ export default function HeroSection({ locale }: HeroSectionProps) {
 
   const communityName = isZhTw
     ? `Twinkle AI Community  `
-    : `Twinkle AI Community  `;
+    : `Gavin-Richie  `;
 
   const communityDesc = isZhTw
     ? `翻譯維護的非官方社群翻譯版本。`
-    : `翻译维护的非官方社群翻译版本。`;
+    : `翻译维护的非官方个人翻译版本。`;
 
   const sections = isZhTw
     ? [

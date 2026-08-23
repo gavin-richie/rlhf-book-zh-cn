@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>附录 C　实务议题 — RLHF 中文版</title>
+<title>附录 C　实践议题 — RLHF 中文版</title>
 <link rel="stylesheet" href="../assets/katex/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="../index.html">RLHF 中文版<span>从人类回馈中强化学习</span></a>
-  <nav class="chapnav"><a href="appb.html">← 附录 B</a><span class="chapnav-current">附录 C　实务议题</span><a href="bibliography.html">参考文献 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
+  <a class="brand" href="../index.html">RLHF 中文版<span>从人类反馈中强化学习</span></a>
+  <nav class="chapnav"><a href="appb.html">← 附录 B</a><span class="chapnav-current">附录 C　实践议题</span><a href="bibliography.html">参考文献 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
 </header>
 <div class="layout">
   <aside class="sidebar"><nav id="toc" class="toc"><h2>本章目录</h2></nav></aside>
@@ -23,15 +23,14 @@
       <div id="lab-root"></div>
     </section>
     <nav class="pager"><a class="prev" href="appb.html"><span class="dir">← 上一章</span><div class="ttl">附录 B　不只是「风格」</div></a><a class="next" href="bibliography.html"><span class="dir">下一章 →</span><div class="ttl">参考文献　参考文献</div></a></nav>
-    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（台湾）的<strong>非官方社区翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
   </main>
 </div>
 <script type="text/markdown" id="chapter-md">
-# 附录 C　实务议题（Practical Issues）
+# 附录 C　实践议题（Practical Issues）
 
 > 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 236–238 页。
 
-本附录涵盖大规模执行后训练（post-training）实验时的实务考量。内容采取经验教训清单的形式，而非一篇连贯的叙事。
+本附录涵盖大规模执行后训练（post-training）实验时的实践考量。内容采取经验教训清单的形式，而非一篇连贯的叙事。
 
 ## C.1 后训练的运算成本（Compute Costs of Post-Training）
 
@@ -43,7 +42,7 @@
 
 > 后训练遵循一种不同的作业模式：我们会将每个阶段执行多次，扫描（sweep）学习率（learning rate）与其他超参数（hyperparameters）。后训练——尤其是强化学习（RL）——的理论尚不成熟，因此我们必须执行多次实验，才能为给定的基础模型找出最佳超参数。我们希望在未来的工作中解决这个问题。
 >
-> 在后训练期间，检查点（checkpoint）评估消耗了较大比例的运算资源，部分原因是推理模型（reasoning models）在核心基准测试（benchmark）上会产生很长的生成内容。在监督式微调（SFT）方面，我们扫描了四个候选学习率，每个都使用 256 颗 GPU，平行执行 36 小时。接着大约花了 12 小时进行评估、合并与检查点确认，总计约两天。直接偏好优化（DPO）训练每次执行所需时间较短（每项任务在 64 颗 GPU 上完成完整学习率扫描约需 18 小时），但实务上因丛集不稳定而延长到好几天。初版 Olmo 3 Think 32B 的最终 RL 训练执行历时约 5 天，其中至少有一天的训练时间因稳定性问题而损失。在 Olmo 3 首次发布之后，我们将表现最佳的 RL 训练在 224 颗 GPU 上又持续执行了 21 天，产出 Olmo 3.1 Think 32B。
+> 在后训练期间，检查点（checkpoint）评估消耗了较大比例的运算资源，部分原因是推理模型（reasoning models）在核心基准测试（benchmark）上会产生很长的生成内容。在监督式微调（SFT）方面，我们扫描了四个候选学习率，每个都使用 256 颗 GPU，平行执行 36 小时。接着大约花了 12 小时进行评估、合并与检查点确认，总计约两天。直接偏好优化（DPO）训练每次执行所需时间较短（每项任务在 64 颗 GPU 上完成完整学习率扫描约需 18 小时），但实践上因丛集不稳定而延长到好几天。初版 Olmo 3 Think 32B 的最终 RL 训练执行历时约 5 天，其中至少有一天的训练时间因稳定性问题而损失。在 Olmo 3 首次发布之后，我们将表现最佳的 RL 训练在 224 颗 GPU 上又持续执行了 21 天，产出 Olmo 3.1 Think 32B。
 
 随着扩展强化学习规模逐渐成为更标准的做法，这种情况将再次改变 [17]。延续上面的例子：原本 Olmo 3 32B Think 的后训练只花了几周，但为了发布改进版的 Olmo 3.1 32B Think 模型，团队需要以可验证奖励的强化学习（RLVR, Reinforcement Learning with Verifiable Rewards）额外训练 3.5 周。这在*时间*上是相当可观的成本，更甚于总运算量。
 
@@ -53,7 +52,7 @@
 
 在 Olmo 3 的开发期间，团队追踪了用于评估推理模型的各项评估的变异数。下表列出各评估的标准差（standard deviation），计算方式为 14 个模型各执行 3 次的标准差平均值（先取每个模型的变异，再对每项评估取平均）：
 
-表 9：评估基准测试在多次推论执行之间的标准差，依稳定性分类（资料来自 Olmo 3）。
+表 9：评估基准测试在多次推论执行之间的标准差，依稳定性分类（数据来自 Olmo 3）。
 
 | 类别 | 基准测试 | 标准差 |
 | --- | --- | --- |
@@ -82,17 +81,17 @@
 
 前一节聚焦在*评估*杂讯，而更棘手的杂讯来源是训练的不确定性。评估杂讯可以透过对给定检查点执行更多测试来管理（一致地降低杂讯），但模型只会被训练一次，因此可以从正向的离群值（outlier）中*受益*。
 
-实务上，训练团队会采取许多步骤，以便从训练配方中榨取最大可能的价值：
+实践上，训练团队会采取许多步骤，以便从训练配方中榨取最大可能的价值：
 
 1. 对每一次最终模型的训练执行，扫描学习率、批次大小等核心优化数值。例如，面对一个新的基础模型，我会建议先在宽广的区间内跑 10 个学习率，确定自己落在最佳范围内，然后再于更窄的最佳视窗内重新执行。
 2. 在表现最好的几组设定上跑多个随机种子。随机种子可能对最终模型产生实质影响，值得为此投入运算资源。
-3. 模型合并（model merging）已确立为打造强大模型的关键工具。合并有很多种做法，从合并同一份资料上训练的不同检查点，到合并针对特定领域的专门模型都有。整体而言，合并被视为最终配方中强大而简单的工具，但对于如何在配方中预先准备一个模型以供后续合并，尚未建立明确的最佳实务 [409]。
+3. 模型合并（model merging）已确立为打造强大模型的关键工具。合并有很多种做法，从合并同一份数据上训练的不同检查点，到合并针对特定领域的专门模型都有。整体而言，合并被视为最终配方中强大而简单的工具，但对于如何在配方中预先准备一个模型以供后续合并，尚未建立明确的最佳实践 [409]。
 
 ## C.4 辨识异常的训练任务（Identifying Bad Training Jobs）
 
-训练模型时，有一个重要且必须建立的简单直觉：模型问题有不同的类型。你希望把大部分时间花在「目前的资料、演算法或配方就是不够好」这类问题上。另一方面，在建置新配方的过程中，也有很多时候某些方法根本就是坏掉的。
+训练模型时，有一个重要且必须建立的简单直觉：模型问题有不同的类型。你希望把大部分时间花在「目前的数据、算法或配方就是不够好」这类问题上。另一方面，在建置新配方的过程中，也有很多时候某些方法根本就是坏掉的。
 
-理解这一点的最佳方式，是在一套大致固定的评估套件上评估许多模型。如此一来，你会逐渐培养出直觉，知道哪些测试很难被后训练介入手段撼动（通常是知识密集型的评估，例如 MMLU）。当后训练设定中有东西非常、*非常*严重地坏掉时，这些大致稳定的评估在一次训练任务中往往会掉 10 到 20 分。这是开发工具链时最有用的讯号之一！
+理解这一点的最佳方式，是在一套大致固定的评估套件上评估许多模型。如此一来，你会逐渐培养出直觉，知道哪些测试很难被后训练介入手段撼动（通常是知识密集型的评估，例如 MMLU）。当后训练设定中有东西非常、*非常*严重地坏掉时，这些大致稳定的评估在一次训练任务中往往会掉 10 到 20 分。这是开发工具链时最有用的信号之一！
 
 </script>
 <script src="../assets/marked.min.js"></script>

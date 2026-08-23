@@ -29,7 +29,6 @@ export default async function ChapterPageRoute({
   const { html, toc } = await getChapterContentFn(slug);
   return (
     <>
-      <link rel="stylesheet" href="/assets/katex/katex.min.css" />
       {slug === "bibliography" && <ScrollToHash />}
       <ChapterLayout meta={meta} toc={toc} html={html} chapterId={slug} locale={locale} />
     </>

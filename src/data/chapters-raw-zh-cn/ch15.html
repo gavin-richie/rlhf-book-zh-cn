@@ -9,7 +9,7 @@
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="../index.html">RLHF 中文版<span>从人类回馈中强化学习</span></a>
+  <a class="brand" href="../index.html">RLHF 中文版<span>从人类反馈中强化学习</span></a>
   <nav class="chapnav"><a href="ch14.html">← 第 14 章</a><span class="chapnav-current">第 15 章　正则化</span><a href="ch16.html">第 16 章 →</a><a class="gh-star" href="https://github.com/ai-twinkle/rlhf-book-zh-tw" target="_blank" rel="noopener" data-gh-repo="ai-twinkle/rlhf-book-zh-tw"><span class="star-ico">★</span><span class="gh-label">Star</span><b class="gh-count" hidden></b></a></nav>
 </header>
 <div class="layout">
@@ -23,7 +23,6 @@
       <div id="lab-root"></div>
     </section>
     <nav class="pager"><a class="prev" href="ch14.html"><span class="dir">← 上一章</span><div class="ttl">第 14 章　过度优化</div></a><a class="next" href="ch16.html"><span class="dir">下一章 →</span><div class="ttl">第 16 章　评估</div></a></nav>
-    <footer class="pagefoot">本站为 <a href="https://github.com/ai-twinkle">Twinkle AI Community</a>（台湾）的<strong>非官方社区翻译</strong>（unofficial community translation）· 译自 Nathan Lambert,《Reinforcement Learning from Human Feedback》（<a href="https://rlhfbook.com">rlhfbook.com</a>）· 依 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hant">CC BY-NC-SA 4.0</a> 授权，仅供学习研究、不得作商业用途。</footer>
   </main>
 </div>
 <script type="text/markdown" id="chapter-md">
@@ -31,11 +30,11 @@
 
 > 译自 Nathan Lambert, *Reinforcement Learning from Human Feedback*（rlhfbook.com），2026-07-01 版，原文第 175–183 页。
 
-在本书中，我们已经学到许多修改模型的工具，让模型能从人类偏好、可验证奖励（verifiable rewards）以及其他有价值的讯号中学习。我们使用的所有方法都非常强大，可能导致模型相对于前一个训练阶段那个强大、通用的模型（通常称为参考模型（reference model））改变过多。当模型从某个给定的奖励中学得太多，造成分布外（out-of-distribution）表现下降时，这就称为「过度优化」（over-optimization）（如前一章所讨论）。
+在本书中，我们已经学到许多修改模型的工具，让模型能从人类偏好、可验证奖励（verifiable rewards）以及其他有价值的信号中学习。我们使用的所有方法都非常强大，可能导致模型相对于前一个训练阶段那个强大、通用的模型（通常称为参考模型（reference model））改变过多。当模型从某个给定的奖励中学得太多，造成分布外（out-of-distribution）表现下降时，这就称为「过度优化」（over-optimization）（如前一章所讨论）。
 
 在整个 RLHF 优化过程中，会使用许多正则化步骤来防止对奖励模型的过度优化。在这些情境中，过度优化看起来就像是输出无意义文本的模型。一些优化「脱轨」的例子包括：模型输出看似可依循的数学推理、答案却错得离谱，或是重复文本、切换语言、出现过多特殊字符。本章涵盖用来控制模型优化的各种方法。
 
-截至 2026 年，大多数 RLHF 实作所采用的最流行变体，是在生成样本上计算从目前策略到参考策略的 KL 距离（KL distance）。「KL 距离」是在训练过程中表达*优化距离*（optimization distance）的口语说法，尽管 KL 散度（KL divergence）——用来衡量两个机率分布之间差异的底层数学方法——并不满足真正距离度量（distance metric）所需的形式性质（把这个数字称为距离，只是比称它为分布差异的数值度量来得方便）。许多其他正则化技术曾在文献中出现，随后又在该研究路线的下一次模型迭代中消失。也就是说，核心的生成 KL 距离之外的正则化，通常是用来稳定实验设定，而这些设定在下一代往往可以被简化。尽管如此，理解在 RLHF 中约束优化的工具仍然很重要。
+截至 2026 年，大多数 RLHF 实现所采用的最流行变体，是在生成样本上计算从目前策略到参考策略的 KL 距离（KL distance）。「KL 距离」是在训练过程中表达*优化距离*（optimization distance）的口语说法，尽管 KL 散度（KL divergence）——用来衡量两个机率分布之间差异的底层数学方法——并不满足真正距离度量（distance metric）所需的形式性质（把这个数字称为距离，只是比称它为分布差异的数值度量来得方便）。许多其他正则化技术曾在文献中出现，随后又在该研究路线的下一次模型迭代中消失。也就是说，核心的生成 KL 距离之外的正则化，通常是用来稳定实验设定，而这些设定在下一代往往可以被简化。尽管如此，理解在 RLHF 中约束优化的工具仍然很重要。
 
 *本章中，我们用 $x$ 表示提示（prompt）、$y$ 表示补全（completion）。这种记号在语言模型文献中很常见，因为这些方法是作用于完整的提示–补全对，而非个别词元（token）。*
 
@@ -43,7 +42,7 @@
 
 $$r = r_\theta - \lambda r_{\text{reg.}} \tag{138}$$
 
-其参考实作为：
+其参考实现为：
 
 $$r = r_\theta - \lambda_{\text{KL}} \mathcal{D}_{\text{KL}} \left( \pi_{\text{RL}}(y \mid x) \,\|\, \pi_{\text{ref}}(y \mid x) \right) \tag{139}$$
 
@@ -53,21 +52,21 @@ $$r = r_\theta - \lambda_{\text{KL}} \mathcal{D}_{\text{KL}} \left( \pi_{\text{R
 
 $$\mathcal{D}_{\text{KL}}(P\|Q) = \sum_{x \in \mathcal{X}} P(x) \log\left(\frac{P(x)}{Q(x)}\right) \tag{140}$$
 
-在 RLHF 中，我们关心的两个分布通常是新模型版本的分布（例如 $P(x)$）与参考策略的分布（例如 $Q(x)$）。不同的优化器会使用不同的 KL 方向。本书通篇使用的最常见「KL 惩罚」（KL Penalty），称为对参考策略的反向 KL（reverse KL）。实务上，这可以简化为一个蒙地卡罗估计（Monte Carlo estimate）：从 RL 模型取样词元，再由参考模型计算其机率。直观来说，这种反向 KL 具有一个数值性质：当新模型 $P$（或 $\pi_{\text{RL}}$）将大量机率质量放在原始参考模型指派低机率的区域时，就会施加很大的惩罚。
+在 RLHF 中，我们关心的两个分布通常是新模型版本的分布（例如 $P(x)$）与参考策略的分布（例如 $Q(x)$）。不同的优化器会使用不同的 KL 方向。本书通篇使用的最常见「KL 惩罚」（KL Penalty），称为对参考策略的反向 KL（reverse KL）。实践上，这可以简化为一个蒙地卡罗估计（Monte Carlo estimate）：从 RL 模型取样词元，再由参考模型计算其机率。直观来说，这种反向 KL 具有一个数值性质：当新模型 $P$（或 $\pi_{\text{RL}}$）将大量机率质量放在原始参考模型指派低机率的区域时，就会施加很大的惩罚。
 
-另一个 KL 方向在机器学习中仍然常被使用，例如某些 RL 演算法内部的信赖区域（trust region）计算。这种惩罚直观上惩罚的是：新模型的更新*没有*将机率指派给 $Q$（或 $\pi_{\text{ref}}$）中的高概度（high-likelihood）区域。这更接近于蒸馏（distillation）或行为复制（behavioral cloning）所使用的目标。
+另一个 KL 方向在机器学习中仍然常被使用，例如某些 RL 算法内部的信赖区域（trust region）计算。这种惩罚直观上惩罚的是：新模型的更新*没有*将机率指派给 $Q$（或 $\pi_{\text{ref}}$）中的高概度（high-likelihood）区域。这更接近于蒸馏（distillation）或行为复制（behavioral cloning）所使用的目标。
 
 ### 15.1.1 参考模型到生成内容（Reference Model to Generations）
 
-KL 惩罚最常见的实作方式，是比较训练期间生成的词元与一个静态参考模型之间的距离。其直觉是：你所训练的出发模型具有一种你希望保持接近的风格。这个参考模型通常是指令微调（instruction tuned）模型，但也可以是先前的 RL 检查点（checkpoint）。透过简单的代换，我们取样的模型就变成 $\pi_{\text{RL}}(x)$ 与 $\pi_{\text{ref}}(x)$，如上方公式 139 所示（在标准定义中通常写作 $P$ 与 $Q$，套用于 RL 的 KL 惩罚时）。这样的 KL 散度惩罚早在大型语言模型流行之前，就已被应用于对话代理人（dialogue agents）[354]，而 KL 控制也很快确立为微调预训练模型的核心技术 [355]。
+KL 惩罚最常见的实现方式，是比较训练期间生成的词元与一个静态参考模型之间的距离。其直觉是：你所训练的出发模型具有一种你希望保持接近的风格。这个参考模型通常是指令微调（instruction tuned）模型，但也可以是先前的 RL 检查点（checkpoint）。透过简单的代换，我们取样的模型就变成 $\pi_{\text{RL}}(x)$ 与 $\pi_{\text{ref}}(x)$，如上方公式 139 所示（在标准定义中通常写作 $P$ 与 $Q$，套用于 RL 的 KL 惩罚时）。这样的 KL 散度惩罚早在大型语言模型流行之前，就已被应用于对话代理人（dialogue agents）[354]，而 KL 控制也很快确立为微调预训练模型的核心技术 [355]。
 
-### 15.1.2 实作范例（Implementation Example）
+### 15.1.2 实现示例（Implementation Example）
 
-实务上，KL 散度的实作经常采用近似 [126]，使实作简单许多。根据上述定义，当直接从分布 $P$ 取样时，KL 的加总可以转换为期望值（这里的 $x$ 是样本空间上的一般随机变数，而非本书其他地方使用的提示记号）。在这种情况下，$P$ 是目前正在训练之模型的生成分布（也就是说，不是参考模型）。此时，KL 散度的计算改为如下：
+实践上，KL 散度的实现经常采用近似 [126]，使实现简单许多。根据上述定义，当直接从分布 $P$ 取样时，KL 的加总可以转换为期望值（这里的 $x$ 是样本空间上的一般随机变数，而非本书其他地方使用的提示记号）。在这种情况下，$P$ 是目前正在训练之模型的生成分布（也就是说，不是参考模型）。此时，KL 散度的计算改为如下：
 
 $$\mathcal{D}_{\text{KL}}(P \,\|\, Q) = \mathbb{E}_{x \sim P} \left[ \log P(x) - \log Q(x) \right]. \tag{141}$$
 
-这种基于样本的形式在实作上简单得多，特别是在直接处理语言模型训练中频繁使用的对数机率（log probabilities）时。
+这种基于样本的形式在实现上简单得多，特别是在直接处理语言模型训练中频繁使用的对数机率（log probabilities）时。
 
 ```python
 # 步骤 1：generate() 以自回归方式逐词元取样出完整序列
@@ -93,15 +92,15 @@ kl_approx = seq_logprob - ref_seq_logprob
 kl_full   = F.kl_div(ref_logprobs, logprobs, reduction='batchmean')
 ```
 
-一些实作范例包括 TRL 以及 Hamish Ivison 的 Jax 程式码。
+一些实现示例包括 TRL 以及 Hamish Ivison 的 Jax 程式码。
 
 ## 15.2 隐式正则化（Implicit Regularization）
 
-本章其他小节描述的是*显式*（explicit）正则化：KL 惩罚、预训练梯度（pretraining gradients）与间距损失（margin losses），这些都是实务工作者刻意加入训练目标的项目。愈来愈多的实证研究显示，基于 RL 的后训练（post-training）也提供了*隐式*（implicit）正则化——一种对记忆化（memorization）与灾难性遗忘（catastrophic forgetting）的内建抵抗力，源自 on-policy 优化本身的结构。这是损失更新的本质使然，即使不使用任何用来控制 RL 训练的显式工具（例如 KL 惩罚或重播缓冲区（replay buffers））也是如此。
+本章其他小节描述的是*显式*（explicit）正则化：KL 惩罚、预训练梯度（pretraining gradients）与间距损失（margin losses），这些都是实践工作者刻意加入训练目标的项目。愈来愈多的实证研究显示，基于 RL 的后训练（post-training）也提供了*隐式*（implicit）正则化——一种对记忆化（memorization）与灾难性遗忘（catastrophic forgetting）的内建抵抗力，源自 on-policy 优化本身的结构。这是损失更新的本质使然，即使不使用任何用来控制 RL 训练的显式工具（例如 KL 惩罚或重播缓冲区（replay buffers））也是如此。
 
 ### 15.2.1 SFT 记忆、RL 泛化（SFT Memorizes, RL Generalizes）
 
-后训练社区一直面临一个核心问题：在单一任务上训练时，模型学到的是可以迁移到未见变体的可泛化规则，还是记住了训练分布的表面模式？Chu et al. 2025 [9] 以一项受控实证研究回答了这个问题，直接分离出后训练方法——SFT 对上 RL——对分布外（out-of-distribution, OOD）泛化的影响。答案十分明确：RL 学到可迁移的规则，而 SFT 记忆训练资料，并在分布偏移下崩溃。
+后训练社区一直面临一个核心问题：在单一任务上训练时，模型学到的是可以迁移到未见变体的可泛化规则，还是记住了训练分布的表面模式？Chu et al. 2025 [9] 以一项受控实证研究回答了这个问题，直接分离出后训练方法——SFT 对上 RL——对分布外（out-of-distribution, OOD）泛化的影响。答案十分明确：RL 学到可迁移的规则，而 SFT 记忆训练数据，并在分布偏移下崩溃。
 
 该研究使用两个内建规则变化的环境来理解其中的权衡：
 
@@ -110,7 +109,7 @@ kl_full   = F.kl_div(ref_logprobs, logprobs, reduction='batchmean')
 
 在所有任务变体中，随着训练计算量扩大，RL 持续改善 OOD 表现，而 SFT 尽管改善了分布内（in-distribution）表现，却持续*劣化* OOD 表现。差异幅度十分惊人：在仅有语言输入的 V-IRL 上，OOD 偏移是从绝对方向座标改为相对方向座标，RL 将 OOD 逐步准确率从 80.8% 提升到 91.8%，而 SFT 却使其从 80.8% 崩溃到 1.3%。SFT 模型不只是未能泛化：它摧毁了基础模型原本就具备的空间推理能力，退化成一张从指令片语对应到绝对方向的查找表。
 
-### 15.2.2 以做促记：On-Policy 资料减缓遗忘（Retaining by Doing: On-Policy Data Mitigates Forgetting）
+### 15.2.2 以做促记：On-Policy 数据减缓遗忘（Retaining by Doing: On-Policy Data Mitigates Forgetting）
 
 上一节显示，在单一任务上 RL 能泛化、而 SFT 会记忆。Chen et al. 2025 [356] 则提出互补的问题：当*依次*（sequentially）在多个任务上训练时，模型能否保留它原本已经知道的东西？他们发现，RL 在目标任务上取得与 SFT 相当或更高的增益，同时遗忘的程度远低于 SFT，并将这项优势追溯至两个目标函数在优化内容上的根本差异。
 
@@ -121,7 +120,7 @@ KL 散度定义为两个分布之间对数比值的期望，$\mathbb{E}_{x\sim P
 - **前向 KL（Forward KL）**：$\text{KL}(P\|Q) = \mathbb{E}_{x\sim P}[\log P(x) - \log Q(x)]$
 - **反向 KL（Reverse KL）**：$\text{KL}(Q\|P) = \mathbb{E}_{x\sim Q}[\log Q(x) - \log P(x)]$
 
-其中 $P$ 是目标分布，$Q$ 是我们以参数 $\theta$ 建模的分布。关键差异在于我们从哪个分布取样：前向 KL 从目标（或最佳）分布 $P$ 取样，而反向 KL 从我们的策略 $Q$ 取样。在下面的推导中，$P$ 对应到目标 $\pi_\star$（分析 SFT 时是训练资料分布，分析 RL 时是奖励最佳策略（reward-optimal policy）），$Q$ 则对应到所学的策略 $\pi_\theta$（我们正在训练的对象）。SFT 把目标放在前面——$\text{KL}(\pi_\star\|\pi_\theta)$——而 RL 颠倒了顺序——$\text{KL}(\pi_\theta\|\pi_\star)$——改变了我们取样的分布。样本提供了学习所需的资料，而目标函数（SFT 或 RL）则依据这些资料形塑模型。
+其中 $P$ 是目标分布，$Q$ 是我们以参数 $\theta$ 建模的分布。关键差异在于我们从哪个分布取样：前向 KL 从目标（或最佳）分布 $P$ 取样，而反向 KL 从我们的策略 $Q$ 取样。在下面的推导中，$P$ 对应到目标 $\pi_\star$（分析 SFT 时是训练数据分布，分析 RL 时是奖励最佳策略（reward-optimal policy）），$Q$ 则对应到所学的策略 $\pi_\theta$（我们正在训练的对象）。SFT 把目标放在前面——$\text{KL}(\pi_\star\|\pi_\theta)$——而 RL 颠倒了顺序——$\text{KL}(\pi_\theta\|\pi_\star)$——改变了我们取样的分布。样本提供了学习所需的数据，而目标函数（SFT 或 RL）则依据这些数据形塑模型。
 
 #### 15.2.2.1 SFT 前向 KL（SFT Forward KL）
 
@@ -133,7 +132,7 @@ $$\text{KL}(\pi_\star \| \pi_\theta) = \mathbb{E}_{(x,y)\sim\mathcal{D}} \left[ 
 
 $$= \mathbb{E}_{(x,y)\sim\mathcal{D}} \left[ \log \pi_\star(y \mid x) \right] - \mathbb{E}_{(x,y)\sim\mathcal{D}} \left[ \log \pi_\theta(y \mid x) \right]$$
 
-第一项 $\mathbb{E}[\log \pi_\star(y \mid x)]$ 只依赖于资料分布，等于负熵 $-H(\pi_\star)$——一个不随 $\theta$ 改变的常数。第二项 $-\mathbb{E}[\log \pi_\theta(y \mid x)]$ 是资料集上的负对数概度（negative log-likelihood），也就是标准的 SFT 交叉熵损失 $\mathcal{L}_{\text{SFT}}(\theta)$。代入后得到：
+第一项 $\mathbb{E}[\log \pi_\star(y \mid x)]$ 只依赖于数据分布，等于负熵 $-H(\pi_\star)$——一个不随 $\theta$ 改变的常数。第二项 $-\mathbb{E}[\log \pi_\theta(y \mid x)]$ 是数据集上的负对数概度（negative log-likelihood），也就是标准的 SFT 交叉熵损失 $\mathcal{L}_{\text{SFT}}(\theta)$。代入后得到：
 
 $$= \underbrace{-H(\pi_\star)}_{\text{const}} + \mathcal{L}_{\text{SFT}}(\theta) \propto \mathcal{L}_{\text{SFT}}(\theta) \tag{142}$$
 
@@ -191,8 +190,8 @@ RL 的模式寻求行为——反向 KL 的一种结构性性质——保留了�
 
 总结如下：
 
-- **SFT（前向 KL）**：$\text{KL}(\pi_\star\|\pi_\theta)$——样本来自目标 $\pi_\star$，一个由人类撰写的补全所构成的固定资料集。对每个范例，我们问：我们的模型 $\pi_\theta$ 对它指派了多少机率？模型从不生成任何东西；它学习模仿。这种模式涵盖的压力迫使策略广泛地重新分配机率质量，可能因此破坏先验知识。
-- **RL（反向 KL）**：$\text{KL}(\pi_\theta\|\pi_\star)$——样本来自我们自己的策略 $\pi_\theta$。对模型生成的每个补全，我们问：它与奖励最佳策略 $\pi_\star$ 有多接近？由于模型只在自己的生成内容上训练，更新会停留在它原本就放置机率质量的局部区域——奖励讯号告诉它应该强化其中哪些生成内容，将机率朝 $\pi_\star$ 移动，而不干扰分布的其余部分。
+- **SFT（前向 KL）**：$\text{KL}(\pi_\star\|\pi_\theta)$——样本来自目标 $\pi_\star$，一个由人类撰写的补全所构成的固定数据集。对每个示例，我们问：我们的模型 $\pi_\theta$ 对它指派了多少机率？模型从不生成任何东西；它学习模仿。这种模式涵盖的压力迫使策略广泛地重新分配机率质量，可能因此破坏先验知识。
+- **RL（反向 KL）**：$\text{KL}(\pi_\theta\|\pi_\star)$——样本来自我们自己的策略 $\pi_\theta$。对模型生成的每个补全，我们问：它与奖励最佳策略 $\pi_\star$ 有多接近？由于模型只在自己的生成内容上训练，更新会停留在它原本就放置机率质量的局部区域——奖励信号告诉它应该强化其中哪些生成内容，将机率朝 $\pi_\star$ 移动，而不干扰分布的其余部分。
 
 ### 15.2.3 RL 的剃刀：为何线上 RL 遗忘得更少（RL's Razor: Why Online RL Forgets Less）
 
@@ -204,9 +203,9 @@ RL 的模式寻求行为——反向 KL 的一种结构性性质——保留了�
 
 $$\text{Forgetting} \approx f\left( \mathbb{E}_{x\sim\tau} \left[ \text{KL}(\pi_0(\cdot \mid x) \| \pi(\cdot \mid x)) \right] \right) \tag{147}$$
 
-在多种 RL 与 SFT 的训练变体中，作者以实证方式证明，遗忘与训练后策略和初始策略之间的 KL 散度高度相关（$R^2 = 0.96$），**而且是以新任务资料衡量的**。这一点令人惊讶，因为 KL 是在*新任务的*输入分布上衡量的，而不是在先前任务的保留资料上，但它仍然能够预测过去任务的表现下降。在实务上，这为我们提供了一个强大的工具，可以直接从基础策略与训练后策略之间的漂移来估计遗忘——在我们新的专门资料上衡量 KL 距离。
+在多种 RL 与 SFT 的训练变体中，作者以实证方式证明，遗忘与训练后策略和初始策略之间的 KL 散度高度相关（$R^2 = 0.96$），**而且是以新任务数据衡量的**。这一点令人惊讶，因为 KL 是在*新任务的*输入分布上衡量的，而不是在先前任务的保留数据上，但它仍然能够预测过去任务的表现下降。在实践上，这为我们提供了一个强大的工具，可以直接从基础策略与训练后策略之间的漂移来估计遗忘——在我们新的专门数据上衡量 KL 距离。
 
-为了厘清是什么驱动了 RL 策略较小的 KL 偏移，作者沿着两个轴分解 RL 与 SFT 的差异——on-policy 对上离线（offline）资料，以及目标函数是否包含负梯度（negative gradients）（RL 中存在：当样本得分低于奖励基线时；SFT 中则不存在：它只强化正确的示范），负梯度会将机率从错误的输出推开。值得注意的是，他们发现 on-policy 对上离线资料完全解释了泛化表现的差异，而负梯度没有可辨别的影响。
+为了厘清是什么驱动了 RL 策略较小的 KL 偏移，作者沿着两个轴分解 RL 与 SFT 的差异——on-policy 对上离线（offline）数据，以及目标函数是否包含负梯度（negative gradients）（RL 中存在：当样本得分低于奖励基线时；SFT 中则不存在：它只强化正确的示范），负梯度会将机率从错误的输出推开。值得注意的是，他们发现 on-policy 对上离线数据完全解释了泛化表现的差异，而负梯度没有可辨别的影响。
 
 ![图](../webapp/assets/figures/fig-p182-1.png)
 
@@ -220,11 +219,11 @@ $$\text{Forgetting} \approx f\left( \mathbb{E}_{x\sim\tau} \left[ \text{KL}(\pi_
 
 ### 15.3.1 预训练梯度（Pretraining Gradients）
 
-看待正则化的另一种方式是：你可能有一个希望模型保持接近的*资料集*，如同 InstructGPT [3] 所做的那样，「为了修复在公开 NLP 资料集上的性能退化」。为了实作这一点，他们修改了 RLHF 的训练目标。以公式 138 为出发点，我们可以将其转换为一个透过从 RL 策略模型取样来优化的目标函数——补全 $y$ 来自 RLHF 所用之 RL 资料集中的提示 $x$——得到：
+看待正则化的另一种方式是：你可能有一个希望模型保持接近的*数据集*，如同 InstructGPT [3] 所做的那样，「为了修复在公开 NLP 数据集上的性能退化」。为了实现这一点，他们修改了 RLHF 的训练目标。以公式 138 为出发点，我们可以将其转换为一个透过从 RL 策略模型取样来优化的目标函数——补全 $y$ 来自 RLHF 所用之 RL 数据集中的提示 $x$——得到：
 
 $$J(\theta) = \mathbb{E}_{(x,y)\sim\mathcal{D}_{\pi_{\text{RL},\theta}}} \left[ r_\theta(y \mid x) - \lambda r_{\text{reg.}} \right] \tag{148}$$
 
-接着，我们可以在预训练期间使用的标准自回归下一词元预测损失（next-token prediction loss）之上，针对从预训练语料库（或其他资料集）取样的一组文件，加入一个鼓励较高机率的额外奖励，以维持文本的连贯性：
+接着，我们可以在预训练期间使用的标准自回归下一词元预测损失（next-token prediction loss）之上，针对从预训练语料库（或其他数据集）取样的一组文件，加入一个鼓励较高机率的额外奖励，以维持文本的连贯性：
 
 $$J(\theta) = \mathbb{E}_{(x,y)\sim\mathcal{D}_{\pi_{\text{RL},\theta}}} \left[ r_\theta(y \mid x) - \lambda r_{\text{reg.}} \right] + \gamma \mathbb{E}_{x\sim\mathcal{D}_{\text{pretrain}}} \left[ \log(\pi_{\text{RL},\theta}(x)) \right] \tag{149}$$
 
@@ -236,17 +235,17 @@ $$\mathcal{L}_{\text{DPO+NLL}} = \mathcal{L}_{\text{DPO}}(c_i^w, y_i^w, c_i^l, y
 
 $$= -\log \sigma \left( \beta \log \frac{P_\theta(c_i^w, y_i^w \mid x_i)}{P_{\text{ref.}}(c_i^w, y_i^w \mid x_i)} - \beta \log \frac{P_\theta(c_i^l, y_i^l \mid x_i)}{P_{\text{ref.}}(c_i^l, y_i^l \mid x_i)} \right) - \alpha \frac{\log P_\theta(c_i^w, y_i^w \mid x_i)}{|c_i^w| + |y_i^w|}, \tag{151}$$
 
-其中 $P_\theta$ 是可训练的策略模型，$P_{\text{ref.}}$ 是固定的参考模型（通常是 SFT 检查点），而 $(c_i^w, y_i^w)$ 与 $(c_i^l, y_i^l)$ 分别表示提示 $x_i$ 所对应的获胜与落败补全。第一项是标准的 DPO 逻辑斯损失（logistic loss）：它利用对数概度比之差 $\log \frac{P_\theta}{P_{\text{ref.}}}$ 来扩大胜、负之间的间距（margin），而 $\beta$ 控制这个偏好讯号将模型拉离参考模型的强度。第二项是对获胜补全施加的长度正规化（length-normalized）负对数概度惩罚，以 $\alpha$ 加权，有助于让偏好文本在绝对的语言建模意义上维持高概度，而不仅仅是相对于被拒绝的样本更好而已。
+其中 $P_\theta$ 是可训练的策略模型，$P_{\text{ref.}}$ 是固定的参考模型（通常是 SFT 检查点），而 $(c_i^w, y_i^w)$ 与 $(c_i^l, y_i^l)$ 分别表示提示 $x_i$ 所对应的获胜与落败补全。第一项是标准的 DPO 逻辑斯损失（logistic loss）：它利用对数概度比之差 $\log \frac{P_\theta}{P_{\text{ref.}}}$ 来扩大胜、负之间的间距（margin），而 $\beta$ 控制这个偏好信号将模型拉离参考模型的强度。第二项是对获胜补全施加的长度正规化（length-normalized）负对数概度惩罚，以 $\alpha$ 加权，有助于让偏好文本在绝对的语言建模意义上维持高概度，而不仅仅是相对于被拒绝的样本更好而已。
 
 ### 15.3.2 基于间距的正则化（Margin-Based Regularization）
 
-在 RLHF 技术堆叠的其他部分，对优化的控制较不明确。大多数奖励模型除了标准的对比损失函数（contrastive loss function）之外，没有任何正则化。直接对齐演算法（Direct Alignment Algorithms）则以不同的方式处理对 KL 散度的正则化——透过 $\beta$ 参数（见直接对齐一章）。
+在 RLHF 技术堆叠的其他部分，对优化的控制较不明确。大多数奖励模型除了标准的对比损失函数（contrastive loss function）之外，没有任何正则化。直接对齐算法（Direct Alignment Algorithms）则以不同的方式处理对 KL 散度的正则化——透过 $\beta$ 参数（见直接对齐一章）。
 
 Llama 2 为奖励模型训练提出了一种间距损失（margin loss）[49]：
 
 $$\mathcal{L}(\theta) = -\log\left( \sigma\left( r_\theta(y_c \mid x) - r_\theta(y_r \mid x) - m(y_c, y_r) \right) \right) \tag{152}$$
 
-其中 $m(y_c, y_r)$ 是两个资料点 $y_c$ 与 $y_r$ 之间的间距，代表两位标注者评分之差的数值大小。这可以透过让标注者以数值量表对输出评分，或使用量化的排序方法（例如李克特量表（Likert scales））来达成。
+其中 $m(y_c, y_r)$ 是两个数据点 $y_c$ 与 $y_r$ 之间的间距，代表两位标注者评分之差的数值大小。这可以透过让标注者以数值量表对输出评分，或使用量化的排序方法（例如李克特量表（Likert scales））来达成。
 
 奖励间距在直接对齐文献中被大量使用，例如奖励加权 DPO（Reward-weighted DPO）；奖励感知偏好优化（Reward-aware Preference Optimization, RPO），它遵循 DPO 损失的形式，将奖励模型分数整合进更新规则 [30]；以及 REBEL [190]，它在回归损失（regression-loss）的形式中带有奖励差值加权。
 

@@ -82,15 +82,15 @@ export default function Footer({ locale }: FooterProps) {
     <footer className="max-w-[1120px] mx-auto px-[1.2rem] py-[3rem] text-[0.78rem] text-[var(--fg-muted)]">
       本站为{" "}
       <Link
-        href="https://github.com/ai-twinkle"
+        href="https://github.com/gavin-richie"
         className="text-[var(--link)]"
         target="_blank"
         rel="noopener noreferrer"
       >
-        Twinkle AI Community
+        Gavin Richie
       </Link>
       的
-      非官方社群翻译（unofficial community translation），已获得原作者知悉（
+      非官方个人简体中文翻译（unofficial personal translation），已获得原作者知悉（
       <Link
         href="https://github.com/natolambert/rlhf-book/issues/472"
         className="text-[var(--link)]"
