@@ -15,7 +15,8 @@ export default function LabSection({ chapterId, locale }: LabSectionProps) {
 
     async function load() {
       // Use zh-CN widget directory when locale is zh-cn, otherwise default to regular widgets
-      const widgetPrefix = locale === "zh-cn" ? "/assets/widgets-zh-cn" : "/assets/widgets";
+      const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+      const widgetPrefix = locale === "zh-cn" ? `${base}/assets/widgets-zh-cn` : `${base}/assets/widgets`;
       const scriptUrl = `${widgetPrefix}/${chapterId}.js`;
 
       // Clear DOM content immediately to remove stale widget during navigation
@@ -25,7 +26,7 @@ export default function LabSection({ chapterId, locale }: LabSectionProps) {
       if (labIntro) labIntro.textContent = "";
 
       // Remove ALL widget scripts so they don't accumulate across navigations
-      const prefixRegex = new RegExp(`^${widgetPrefix}/`);
+      const prefixRegex = new RegExp(`^${widgetPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/`);
       document.querySelectorAll('script[src]').forEach(el => {
         const s = el as HTMLScriptElement;
         if (s.src.startsWith(widgetPrefix)) s.remove();
@@ -44,12 +45,14 @@ export default function LabSection({ chapterId, locale }: LabSectionProps) {
             const cssLink = document.createElement("link");
             cssLink.id = "katex-css";
             cssLink.rel = "stylesheet";
-            cssLink.href = "/assets/katex/katex.min.css";
+            const katexBase = process.env.NEXT_PUBLIC_BASE_PATH || "";
+            cssLink.href = `${katexBase}/assets/katex/katex.min.css`;
             document.head.appendChild(cssLink);
           }
           const ktScript = document.createElement("script");
           ktScript.id = "katex-js";
-          ktScript.src = "/assets/katex/katex.min.js";
+          const katexBase = process.env.NEXT_PUBLIC_BASE_PATH || "";
+          ktScript.src = `${katexBase}/assets/katex/katex.min.js`;
           ktScript.onload = () => resolve();
           document.head.appendChild(ktScript);
         });

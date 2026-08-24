@@ -4,6 +4,10 @@ import type { Locale } from "@/i18n/routing";
 import HeroSection from "@/components/HeroSection";
 import ChapterGrid from "@/components/ChapterGrid";
 
+export async function generateStaticParams() {
+  return [{ locale: "zh-tw" }, { locale: "zh-cn" }];
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
   return {

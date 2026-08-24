@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import type { Locale } from "@/i18n/routing";
 import { LocaleProvider } from "@/i18n/locale-context";
-import Script from "next/script";
 import "../globals.css";
 import { notFound } from "next/navigation";
 
@@ -39,9 +38,6 @@ export default async function LocaleLayout({
 
   return (
     <LocaleProvider locale={locale as Locale}>
-      <link rel="stylesheet" href="/assets/katex/katex.min.css" />
-      <Script src="/assets/katex/katex.min.js" strategy="beforeInteractive" />
-      <Script src="/assets/katex/auto-render.min.js" strategy="beforeInteractive" />
       <ClientLayout>{children}</ClientLayout>
     </LocaleProvider>
   );

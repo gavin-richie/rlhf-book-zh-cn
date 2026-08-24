@@ -16,7 +16,7 @@ export default function TopBar({ locale, current, prev, next }: TopBarProps) {
   const brand = locale === "zh-tw" ? "繁體中文全譯本 · 互動版" : "繁体中文全译本 · 互动版";
   const githubRepo = locale === "zh-tw"
     ? "https://github.com/ai-twinkle/rlhf-book-zh-tw"
-    : "https://github.com/ai-twinkle/rlhf-book-zh-cn";
+    : "https://github.com/gavin-richie/rlhf-book-zh-cn";
   const homeHref = locale === "zh-tw" ? "/zh-tw" : "/zh-cn";
   const chaptersHref = locale === "zh-tw" ? "/zh-tw/chapters" : "/zh-cn/chapters";
 

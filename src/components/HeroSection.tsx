@@ -42,7 +42,7 @@ export default function HeroSection({ locale }: HeroSectionProps) {
 
   const githubHref = isZhTw
     ? "https://github.com/ai-twinkle/rlhf-book-zh-tw"
-    : "https://github.com/ai-twinkle/rlhf-book-zh-cn";
+    : "https://github.com/gavin-richie/rlhf-book-zh-cn";
 
   return (
     <section className="max-w-[1120px] mx-auto px-[1.2rem] pt-[4rem] pb-[2.4rem]">

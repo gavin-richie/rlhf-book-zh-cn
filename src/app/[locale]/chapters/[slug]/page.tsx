@@ -5,6 +5,14 @@ import ScrollToHash from "@/components/ScrollToHash";
 import { ALL_CHAPTERS, getChapterContent } from "@/i18n/chapters-zh-tw";
 import { ALL_CHAPTERS as ALL_CHAPTERS_ZHCN, getChapterContent as getChapterContentZHCN } from "@/i18n/chapters-zh-cn";
 
+export function generateStaticParams() {
+  const slugs = [
+    ...ALL_CHAPTERS.map((c) => ({ locale: "zh-tw", slug: c.id })),
+    ...ALL_CHAPTERS_ZHCN.map((c) => ({ locale: "zh-cn", slug: c.id })),
+  ];
+  return slugs;
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }) {
   const { locale, slug } = await params;
   const chapters = locale === "zh-cn" ? ALL_CHAPTERS_ZHCN : ALL_CHAPTERS;

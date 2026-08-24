@@ -45,5 +45,33 @@ next-env.d.ts
 .claude/skills/customize/
 .claude/skills/release/
 
+# AI agent configs (not part of the project)
+.claude/
+.amazonq/
+.augment/
+.clinerules
+.codex/
+.continue/
+.cursor/
+.gemini/
+.opencode/
+.windsurf/
+.windsurfrules
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.aider.conf.yml
+
+# Docker (not used for GitHub Pages deploy)
+Dockerfile
+Dockerfile.dev
+.dockerignore
+
+# Local one-off scripts
+bash.exe.stackdump
+scan_terms.py
+translate_terms.py
+scripts/
+
 # Local temp files
 temp/

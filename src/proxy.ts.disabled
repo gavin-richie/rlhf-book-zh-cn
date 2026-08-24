@@ -1,0 +1,36 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+const LOCALES = ["zh-tw", "zh-cn"];
+const DEFAULT_LOCALE = "zh-cn";
+
+function getLocale(request: NextRequest): string {
+  // Check cookie first
+  const cookieLocale = request.cookies.get("NEXT_LOCALE")?.value;
+  if (cookieLocale && LOCALES.includes(cookieLocale)) return cookieLocale;
+  // Otherwise default
+  return DEFAULT_LOCALE;
+}
+
+export default function middleware(request: NextRequest) {
+  const url = request.nextUrl;
+  const path = url.pathname;
+
+  // i18n routing: add locale prefix if missing
+  const hasLocaleInPath = LOCALES.some(
+    (locale) => path === `/${locale}` || path.startsWith(`/${locale}/`)
+  );
+
+  if (!hasLocaleInPath) {
+    const locale = getLocale(request);
+    // Preserve trailing slash behavior
+    url.pathname = `/${locale}${path}`;
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: "/((?!_next|assets|favicon.ico|fonts|images|widgets|widgets-zh-cn).*)",
+};

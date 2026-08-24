@@ -14,7 +14,7 @@ export default function Footer({ locale }: FooterProps) {
 
   const githubHref = isZhTw
     ? "https://github.com/ai-twinkle/rlhf-book-zh-tw"
-    : "https://github.com/ai-twinkle/rlhf-book-zh-cn";
+    : "https://github.com/gavin-richie/rlhf-book-zh-cn";
 
   if (isZhTw) {
     return (

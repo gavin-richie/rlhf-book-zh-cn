@@ -81,12 +81,13 @@ async function loadBibliography(): Promise<{ html: string; entries: Map<number, 
 }
 
 function wrapCitations(md: string, entries: Map<number, string>): string {
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   return md.replace(/\[([\d]+)\]/g, (_match, numStr: string) => {
     const n = Number(numStr);
     const refText = entries.get(n);
     if (!refText) return _match;
     const safeTitle = refText.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/'/g, "\\'");
-    return `<span class="citation"><a href="/chapters/bibliography#ref-${n}" title="${safeTitle}">[${numStr}]</a></span>`;
+    return `<span class="citation"><a href="${base}/chapters/bibliography#ref-${n}" title="${safeTitle}">[${numStr}]</a></span>`;
   });
 }
 
@@ -123,8 +124,9 @@ function injectHeadingIds(html: string, headings: { id: string; text: string }[]
 }
 
 function rewriteImages(html: string): string {
-  return html.replaceAll('../webapp/assets/figures/', '/images/figures/')
-             .replaceAll('../assets/figures/', '/images/figures/');
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+  return html.replaceAll('../webapp/assets/figures/', `${base}/images/figures/`)
+             .replaceAll('../assets/figures/', `${base}/images/figures/`);
 }
 
 function preprocessMath(md: string): string {
